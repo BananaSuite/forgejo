@@ -12,6 +12,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	sender_service "forgejo.org/services/mailer/sender"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,7 +22,7 @@ func Test_sendActionRunJobFailureNotification(t *testing.T) {
 	t.Run("Skipped if not failed", func(t *testing.T) {
 		require.NoError(t, unittest.PrepareTestDatabase())
 
-		defer MockMailSettings(func(msgs ...*Message) { require.Fail(t, "an email was sent") })()
+		defer MockMailSettings(func(msgs ...*sender_service.Message) { require.Fail(t, "an email was sent") })()
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo62 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 62})
@@ -40,7 +41,7 @@ func Test_sendActionRunJobFailureNotification(t *testing.T) {
 	t.Run("Skipped if mail disabled", func(t *testing.T) {
 		require.NoError(t, unittest.PrepareTestDatabase())
 
-		defer MockMailSettings(func(msgs ...*Message) { require.Fail(t, "an email was sent") })()
+		defer MockMailSettings(func(msgs ...*sender_service.Message) { require.Fail(t, "an email was sent") })()
 		defer test.MockVariableValue(&setting.MailService, nil)()
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -60,7 +61,7 @@ func Test_sendActionRunJobFailureNotification(t *testing.T) {
 	t.Run("Skipped if run notifications disabled", func(t *testing.T) {
 		require.NoError(t, unittest.PrepareTestDatabase())
 
-		defer MockMailSettings(func(msgs ...*Message) { require.Fail(t, "an email was sent") })()
+		defer MockMailSettings(func(msgs ...*sender_service.Message) { require.Fail(t, "an email was sent") })()
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo62 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 62})
@@ -79,7 +80,7 @@ func Test_sendActionRunJobFailureNotification(t *testing.T) {
 	t.Run("Skipped if user disabled notifications", func(t *testing.T) {
 		require.NoError(t, unittest.PrepareTestDatabase())
 
-		defer MockMailSettings(func(msgs ...*Message) { require.Fail(t, "an email was sent") })()
+		defer MockMailSettings(func(msgs ...*sender_service.Message) { require.Fail(t, "an email was sent") })()
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo62 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 62})
@@ -100,7 +101,7 @@ func Test_sendActionRunJobFailureNotification(t *testing.T) {
 	t.Run("Skipped if user has no email", func(t *testing.T) {
 		require.NoError(t, unittest.PrepareTestDatabase())
 
-		defer MockMailSettings(func(msgs ...*Message) { require.Fail(t, "an email was sent") })()
+		defer MockMailSettings(func(msgs ...*sender_service.Message) { require.Fail(t, "an email was sent") })()
 
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		repo62 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 62})
@@ -121,8 +122,8 @@ func Test_sendActionRunJobFailureNotification(t *testing.T) {
 	t.Run("To repo owner if triggered by system", func(t *testing.T) {
 		require.NoError(t, unittest.PrepareTestDatabase())
 
-		var messages []*Message
-		defer MockMailSettings(func(msgs ...*Message) {
+		var messages []*sender_service.Message
+		defer MockMailSettings(func(msgs ...*sender_service.Message) {
 			messages = msgs
 		})()
 
@@ -164,8 +165,8 @@ func Test_sendActionRunJobFailureNotification(t *testing.T) {
 	t.Run("To triggering user", func(t *testing.T) {
 		require.NoError(t, unittest.PrepareTestDatabase())
 
-		var messages []*Message
-		defer MockMailSettings(func(msgs ...*Message) {
+		var messages []*sender_service.Message
+		defer MockMailSettings(func(msgs ...*sender_service.Message) {
 			messages = msgs
 		})()
 

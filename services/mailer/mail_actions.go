@@ -13,6 +13,7 @@ import (
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/translation"
+	sender_service "forgejo.org/services/mailer/sender"
 )
 
 const (
@@ -66,7 +67,7 @@ var sendActionRunJobFailureNotification = func(ctx context.Context, job *actions
 
 	subject := fmt.Sprintf("[%[1]s] %s", job.Run.Repo.FullName(),
 		locale.TrString("mail.actions.job_failure_subject", job.Name))
-	msg := NewMessage(user.EmailTo(), subject, content.String())
+	msg := sender_service.NewMessage(user.EmailTo(), subject, content.String())
 	msg.Info = subject
 	SendAsync(msg)
 

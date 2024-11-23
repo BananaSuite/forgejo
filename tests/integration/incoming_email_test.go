@@ -19,12 +19,12 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/services/mailer/incoming"
 	incoming_payload "forgejo.org/services/mailer/incoming/payload"
+	sender_service "forgejo.org/services/mailer/sender"
 	token_service "forgejo.org/services/mailer/token"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/gomail.v2"
 )
 
 func TestIncomingEmail(t *testing.T) {
@@ -281,11 +281,11 @@ func TestIncomingEmail(t *testing.T) {
 			token, err := token_service.CreateToken(token_service.ReplyHandlerType, user, payload)
 			require.NoError(t, err)
 
-			msg := gomail.NewMessage()
-			msg.SetHeader("To", strings.Replace(setting.IncomingEmail.ReplyToAddress, setting.IncomingEmail.TokenPlaceholder, token, 1))
-			msg.SetHeader("From", user.Email)
-			msg.SetBody("text/plain", token)
-			err = gomail.Send(&smtpTestSender{}, msg)
+			msg := sender_service.NewMessageFrom(
+				strings.Replace(setting.IncomingEmail.ReplyToAddress,
+					setting.IncomingEmail.TokenPlaceholder, token, 1),
+				user.Name, user.Email, "This is a test email", token)
+			err = sender_service.Send(&smtpTestSender{}, msg)
 			require.NoError(t, err)
 
 			assert.Eventually(t, func() bool {

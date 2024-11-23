@@ -13,6 +13,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
+	sender_service "forgejo.org/services/mailer/sender"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,7 +54,7 @@ func TestTeamNotificationMail_test(t *testing.T) {
 		require.NoError(t, err)
 
 		called := false
-		defer MockMailSettings(func(msgs ...*Message) {
+		defer MockMailSettings(func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1, "Test provides only one user, so only one email must be sent")
 			assert.Equal(t, invitedUser.Email, msgs[0].To, "checks if the recipient is invited user")
 			locale := translation.NewLocale("de-DE")
@@ -73,7 +74,7 @@ func TestTeamNotificationMail_test(t *testing.T) {
 		require.NoError(t, err)
 
 		called := false
-		defer MockMailSettings(func(msgs ...*Message) {
+		defer MockMailSettings(func(msgs ...*sender_service.Message) {
 			assert.Len(t, msgs, 1, "Test provides only one user, so only one email must be sent")
 			assert.Equal(t, "non-user@example.com", msgs[0].To, "checks if the recipient is invited user")
 			locale := translation.NewLocale("en_US")

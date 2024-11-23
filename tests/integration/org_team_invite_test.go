@@ -20,6 +20,7 @@ import (
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/services/mailer"
+	sender_service "forgejo.org/services/mailer/sender"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ func TestOrgTeamEmailInvite(t *testing.T) {
 
 	defer tests.PrepareTestEnv(t)()
 	mailerCalled := false
-	defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+	defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 		assert.Len(t, msgs, 1)
 		assert.Equal(t, "user5@example.com", msgs[0].To)
 		assert.Equal(t, "User One has invited you to join the <<<< >> >> > >> > >>> >> organization", msgs[0].Subject)

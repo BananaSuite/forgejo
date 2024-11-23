@@ -46,6 +46,7 @@ import (
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/forms"
 	"forgejo.org/services/mailer"
+	sender_service "forgejo.org/services/mailer/sender"
 	"forgejo.org/services/pull"
 	commitstatus_service "forgejo.org/services/repository/commitstatus"
 	webhook_service "forgejo.org/services/webhook"
@@ -1615,7 +1616,7 @@ func TestMergeClosesIssueInOtherRepo(t *testing.T) {
 
 		// merge PR with a comment that uses the close keyword
 		messageText := ""
-		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*sender_service.Message) {
 			linkFragment := fmt.Sprintf("%s/%s/commit/", org.Name, repoPR.Name)
 			if len(msgs) > 0 && strings.Contains(msgs[0].Body, linkFragment) {
 				messageText = msgs[0].Body
