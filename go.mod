@@ -94,6 +94,7 @@ require (
 	github.com/ulikunitz/xz v0.5.17
 	github.com/urfave/cli/v3 v3.9.1
 	github.com/valyala/fastjson v1.6.10
+	github.com/wneessen/go-mail v0.7.3
 	github.com/yohcop/openid-go v1.0.1
 	github.com/yuin/goldmark v1.8.6
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
@@ -109,7 +110,6 @@ require (
 	golang.org/x/text v0.43.0
 	golang.org/x/tools v0.51.0
 	google.golang.org/protobuf v1.36.12
-	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.67.3
 	mvdan.cc/xurls/v2 v2.6.0
 	xorm.io/builder v0.3.13
@@ -266,7 +266,6 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/grpc v1.83.2 // indirect
-	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 )
 
 replace github.com/hashicorp/go-version => github.com/6543/go-version v1.3.1
