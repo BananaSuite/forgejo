@@ -1,5 +1,6 @@
 {
 	"auth.signup.username.prefix.info": "This prefix (%s) will be prepended to your username and cannot be changed.",
+	"auth.invite_only_register_prompt": "Registration is by invite only and you did not provide a valid invitation link. Please contact your site administrator. Reason: ",
 	"repo.issues.review.apply_suggestion": "Apply suggestion",
 	"repo.issues.review.suggested_change_commit": "Apply suggestion",
 	"repo.issues.review.add_suggestion_to_batch": "Add suggestion to batch",
@@ -647,6 +648,7 @@
 	"settings.authorized_integration.forgejo_actions_local.git_ref.error": "Error parsing git reference: %s",
 	"settings.authorized_integration.forgejo_actions_local.event.label": "Event:",
 	"settings.authorized_integration.forgejo_actions_local.event.help": "If no events are selected, any event will be permitted.",
+	"settings.invitations": "Invitations",
 	"user.visibility.label": "Profile visibility",
 	"user.visibility.public.title": "Public",
 	"user.visibility.public.tooltip": "Visible to everyone",
