@@ -24,6 +24,7 @@ import (
 	auth_module "forgejo.org/modules/auth"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/container"
+	"forgejo.org/modules/httplib"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/jwtx"
 	"forgejo.org/modules/log"
@@ -1637,4 +1638,39 @@ func oAuth2GothUserToUser(ctx go_context.Context, authSource *auth.Source, gothU
 
 	// no user found to login
 	return nil, nil
+}
+
+// buildOIDCEndSessionURL constructs an OIDC RP-Initiated Logout URL for the
+// given user. Returns "" if the user's auth source is not OIDC or doesn't
+// advertise an end_session_endpoint.
+func buildOIDCEndSessionURL(ctx *context.Context, doer *user_model.User) string {
+	authSource, err := auth.GetSourceByID(ctx, doer.LoginSource)
+	if err != nil {
+		log.Error("Failed to get auth source for OIDC logout (source=%d): %v", doer.LoginSource, err)
+		return ""
+	}
+
+	oauth2Cfg, ok := authSource.Cfg.(*oauth2.Source)
+	if !ok {
+		return ""
+	}
+
+	endSessionEndpoint := oauth2.GetOIDCEndSessionEndpoint(authSource.Name)
+	if endSessionEndpoint == "" {
+		return ""
+	}
+
+	endSessionURL, err := url.Parse(endSessionEndpoint)
+	if err != nil {
+		log.Error("Failed to parse end_session_endpoint %q: %v", endSessionEndpoint, err)
+		return ""
+	}
+
+	// RP-Initiated Logout 1.0: use client_id to identify the client to the IdP.
+	// https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout
+	params := endSessionURL.Query()
+	params.Set("client_id", oauth2Cfg.ClientID)
+	params.Set("post_logout_redirect_uri", httplib.GuessCurrentAppURL(ctx))
+	endSessionURL.RawQuery = params.Encode()
+	return endSessionURL.String()
 }

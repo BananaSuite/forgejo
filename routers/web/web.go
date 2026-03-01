@@ -876,7 +876,7 @@ func registerRoutes(m *web.Route) {
 		m.Post("/recover_account", auth.ResetPasswdPost)
 		m.Get("/forgot_password", auth.ForgotPasswd)
 		m.Post("/forgot_password", auth.ForgotPasswdPost)
-		m.Post("/logout", auth.SignOut)
+		m.Get("/logout", auth.SignOut)
 		m.Get("/task/{task}", reqSignIn, user.TaskStatus)
 		m.Get("/stopwatches", reqSignIn, user.GetStopwatches)
 		m.Get("/search_candidates", ignExploreSignIn, user.SearchCandidates)
