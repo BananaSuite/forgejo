@@ -199,5 +199,4 @@ func init() {
 	consistencyCheckMap["label"] = checkForLabelConsistency
 	consistencyCheckMap["team"] = checkForTeamConsistency
 	consistencyCheckMap["action"] = checkForActionConsistency
-
 }
