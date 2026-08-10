@@ -61,6 +61,8 @@ const (
 	UserTypeOrganizationReserved // 3
 
 	// UserTypeBot defines a bot user
+	//
+	// Deprecated: Use the IsBot field to check whether the user is a bot.
 	UserTypeBot // 4
 
 	// UserTypeRemoteUser defines a remote user for users created from f3
