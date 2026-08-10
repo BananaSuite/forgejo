@@ -49,7 +49,7 @@ type SearchUserOptions struct {
 func (opts *SearchUserOptions) toSearchQueryBase(ctx context.Context) *xorm.Session {
 	var cond builder.Cond
 	if opts.Type == UserTypeIndividual {
-		cond = builder.In("type", UserTypeIndividual, UserTypeBot, UserTypeRemoteUser)
+		cond = builder.In("type", UserTypeIndividual, UserTypeRemoteUser)
 	} else {
 		cond = builder.Eq{"type": opts.Type}
 	}
@@ -57,8 +57,6 @@ func (opts *SearchUserOptions) toSearchQueryBase(ctx context.Context) *xorm.Sess
 		switch opts.Type {
 		case UserTypeIndividual:
 			cond = cond.Or(builder.Eq{"type": UserTypeUserReserved}).Or(
-				builder.Eq{"type": UserTypeBot},
-			).Or(
 				builder.Eq{"type": UserTypeRemoteUser},
 			)
 		case UserTypeOrganization:

@@ -126,7 +126,7 @@ func IsUserOrgOwner(ctx context.Context, users user_model.UserList, orgID int64)
 func IsAnEligibleTeamMemberByID(ctx context.Context, uid int64) (bool, error) {
 	return db.GetEngine(ctx).
 		Where("id=?", uid).
-		In("type", user_model.UserTypeIndividual, user_model.UserTypeBot, user_model.UserTypeRemoteUser).
+		In("type", user_model.UserTypeIndividual, user_model.UserTypeRemoteUser).
 		Table("user").
 		Exist()
 }
