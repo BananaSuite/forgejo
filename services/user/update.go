@@ -154,6 +154,7 @@ type UpdateAuthOptions struct {
 	Password           optional.Option[string]
 	MustChangePassword optional.Option[bool]
 	ProhibitLogin      optional.Option[bool]
+	CanResetPassword   optional.Option[bool]
 }
 
 func UpdateAuth(ctx context.Context, u *user_model.User, opts *UpdateAuthOptions) error {
@@ -170,7 +171,8 @@ func UpdateAuth(ctx context.Context, u *user_model.User, opts *UpdateAuthOptions
 		u.LoginName = value
 	}
 
-	if has, value := opts.Password.Get(); has && (u.IsLocal() || u.IsOAuth2()) {
+	canReset := opts.CanResetPassword.ValueOrDefault(u.IsLocal() || u.IsOAuth2())
+	if has, value := opts.Password.Get(); has && canReset {
 		password := value
 
 		if len(password) < setting.MinPasswordLength {

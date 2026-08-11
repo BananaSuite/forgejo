@@ -11,6 +11,7 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/templates"
 	"forgejo.org/modules/test"
@@ -73,6 +74,56 @@ func TestSignUpPostDisabled(t *testing.T) {
 	defer test.MockVariableValue(&setting.Service.DisableRegistration, true)()
 	SignUpPost(ctx)
 	assert.Equal(t, http.StatusForbidden, resp.Code)
+}
+
+func TestCanResetPassword(t *testing.T) {
+	defer unittest.OverrideFixtures("models/user/fixtures")()
+	require.NoError(t, unittest.PrepareTestDatabase())
+	ctx, _ := contexttest.MockContext(t, "/user/forgot_password")
+
+	// local account
+	u := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	canReset, unlinksAccount, err := canResetPassword(ctx, u)
+	require.NoError(t, err)
+	assert.True(t, canReset)
+	assert.False(t, unlinksAccount)
+
+	// ShowUnlinksAccountWarning only gets set after doing the IsLocal and
+	// IsOAuth2 && IsPasswordSet check
+	_, ok := ctx.Data["ShowUnlinksAccountWarning"].(bool)
+	assert.False(t, ok)
+
+	// non local OAuth2 account with password
+	u = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1043})
+	canReset, unlinksAccount, err = canResetPassword(ctx, u)
+	require.NoError(t, err)
+	assert.True(t, canReset)
+	assert.False(t, unlinksAccount)
+
+	_, ok = ctx.Data["ShowUnlinksAccountWarning"].(bool)
+	assert.False(t, ok)
+
+	// non local account without password not allowing unlinking
+	u = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1044})
+	canReset, unlinksAccount, err = canResetPassword(ctx, u)
+	require.NoError(t, err)
+	assert.False(t, canReset)
+	assert.False(t, unlinksAccount)
+
+	data, ok := ctx.Data["ShowUnlinksAccountWarning"].(bool)
+	assert.True(t, ok)
+	assert.False(t, data)
+
+	// non local account without password allowing unlinking
+	u = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1045})
+	canReset, unlinksAccount, err = canResetPassword(ctx, u)
+	require.NoError(t, err)
+	assert.True(t, canReset)
+	assert.True(t, unlinksAccount)
+
+	data, ok = ctx.Data["ShowUnlinksAccountWarning"].(bool)
+	assert.True(t, ok)
+	assert.True(t, data)
 }
 
 func TestSignUpWithUsernamePrefix(t *testing.T) {

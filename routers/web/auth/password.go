@@ -48,6 +48,29 @@ func ForgotPasswd(ctx *context.Context) {
 	ctx.HTML(http.StatusOK, tplForgotPassword)
 }
 
+// In addition to local accounts, allow accounts from OAuth2 with passwords set
+// to reset them OR accounts from an external authentication sources which
+// allows unlinking accounts to reset their passwords.
+func canResetPassword(ctx *context.Context, u *user_model.User) (canReset, unlinks bool, err error) {
+	if u.IsLocal() {
+		return true, false, nil
+	}
+
+	if u.IsOAuth2() && u.IsPasswordSet() {
+		return true, false, nil
+	}
+
+	source, err := auth.GetSourceByID(ctx, u.LoginSource)
+	if err != nil {
+		return false, false, err
+	}
+
+	ctx.Data["ShowUnlinksAccountWarning"] = source.AllowUnlinking
+	ctx.Data["ProviderName"] = source.Name
+
+	return source.AllowUnlinking, source.AllowUnlinking, nil
+}
+
 // ForgotPasswdPost response for forget password request
 func ForgotPasswdPost(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("auth.forgot_password_title")
@@ -74,7 +97,13 @@ func ForgotPasswdPost(ctx *context.Context) {
 		return
 	}
 
-	if !u.IsLocal() && !(u.IsOAuth2() && u.IsPasswordSet()) {
+	canReset, _, err := canResetPassword(ctx, u)
+	if err != nil {
+		ctx.ServerError("canResetPassword", err)
+		return
+	}
+
+	if !canReset {
 		ctx.Data["Err_Email"] = true
 		ctx.RenderWithErr(ctx.Tr("auth.non_local_account"), tplForgotPassword, nil)
 		return
@@ -134,8 +163,15 @@ func commonResetPassword(ctx *context.Context, shouldDeleteToken bool) (*user_mo
 		}
 	}
 
-	if !u.IsLocal() && !(u.IsOAuth2() && u.IsPasswordSet()) {
-		ctx.Flash.Error(ctx.Tr("auth.non_local_account"), true)
+	canReset, _, err := canResetPassword(ctx, u)
+	if err != nil {
+		ctx.ServerError("canResetPassword", err)
+		return nil, nil
+	}
+
+	if !canReset {
+		ctx.Data["Err_Email"] = true
+		ctx.RenderWithErr(ctx.Tr("auth.non_local_account"), tplForgotPassword, nil)
 		return nil, nil
 	}
 
@@ -223,6 +259,25 @@ func ResetPasswdPost(ctx *context.Context) {
 		Password:           optional.Some(ctx.FormString("password")),
 		MustChangePassword: optional.Some(false),
 	}
+
+	canReset, unlinksAccount, err := canResetPassword(ctx, u)
+	if err != nil {
+		ctx.ServerError("canResetPassword", err)
+		return
+	}
+
+	if !canReset {
+		ctx.Data["Err_Email"] = true
+		ctx.RenderWithErr(ctx.Tr("auth.non_local_account"), tplForgotPassword, nil)
+		return
+	}
+
+	if unlinksAccount {
+		opts.LoginSource = optional.Some(int64(0))
+		opts.LoginName = optional.Some("")
+	}
+
+	opts.CanResetPassword = optional.Some(canReset)
 	if err := user_service.UpdateAuth(ctx, u, opts); err != nil {
 		ctx.Data["IsResetForm"] = true
 		ctx.Data["Err_Password"] = true

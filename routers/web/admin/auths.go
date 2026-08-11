@@ -251,11 +251,12 @@ func NewAuthSourcePost(ctx *context.Context) {
 	}
 
 	if err := auth.CreateSource(ctx, &auth.Source{
-		Type:          auth.Type(form.Type),
-		Name:          form.Name,
-		IsActive:      form.IsActive,
-		IsSyncEnabled: form.IsSyncEnabled,
-		Cfg:           config,
+		Type:           auth.Type(form.Type),
+		Name:           form.Name,
+		IsActive:       form.IsActive,
+		IsSyncEnabled:  form.IsSyncEnabled,
+		Cfg:            config,
+		AllowUnlinking: form.AllowUnlinking,
 	}); err != nil {
 		if auth.IsErrSourceAlreadyExist(err) {
 			ctx.Data["Err_Name"] = true
@@ -363,6 +364,7 @@ func EditAuthSourcePost(ctx *context.Context) {
 	source.Name = form.Name
 	source.IsActive = form.IsActive
 	source.IsSyncEnabled = form.IsSyncEnabled
+	source.AllowUnlinking = form.AllowUnlinking
 	source.Cfg = config
 	if err := auth.UpdateSource(ctx, source); err != nil {
 		if auth.IsErrSourceAlreadyExist(err) {

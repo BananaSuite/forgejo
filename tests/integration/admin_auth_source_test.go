@@ -53,3 +53,16 @@ func TestAdminAuthTrimSpace(t *testing.T) {
 	assert.Equal(t, "public_id", htmlDoc.GetInputValueByName("oauth2_key"))
 	assert.Equal(t, "secret_key", htmlDoc.GetInputValueByName("oauth2_secret"))
 }
+
+func TestAdminAuthUnlinkSetting(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	source := addAuthSource(t, map[string]string{
+		"type":            fmt.Sprintf("%d", auth.OAuth2),
+		"name":            "some-name",
+		"is_active":       "on",
+		"oauth2_provider": "gitlab",
+		"allow_unlinking": "on",
+	})
+
+	assert.True(t, source.AllowUnlinking)
+}

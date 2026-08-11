@@ -1,0 +1,15 @@
+-
+  id: 1043
+  uid: 1043
+  email: user1043@example.com
+  lower_email: user1043@example.com
+  is_activated: true
+  is_primary: true
+
+-
+  id: 1045
+  uid: 1045
+  email: user1045@example.com
+  lower_email: user1045@example.com
+  is_activated: true
+  is_primary: true
