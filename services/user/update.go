@@ -154,6 +154,11 @@ type UpdateAuthOptions struct {
 	Password           optional.Option[string]
 	MustChangePassword optional.Option[bool]
 	ProhibitLogin      optional.Option[bool]
+
+	// If provided, this option will be used to determine if the password can be
+	// updated for an account, otherwise the legacy user.IsLocal() ||
+	// user.IsOAuth2() check will be used.
+	CanResetPassword optional.Option[bool]
 }
 
 func UpdateAuth(ctx context.Context, u *user_model.User, opts *UpdateAuthOptions) error {
@@ -170,7 +175,8 @@ func UpdateAuth(ctx context.Context, u *user_model.User, opts *UpdateAuthOptions
 		u.LoginName = value
 	}
 
-	if has, value := opts.Password.Get(); has && (u.IsLocal() || u.IsOAuth2()) {
+	canReset := opts.CanResetPassword.ValueOrDefault(u.IsLocal() || u.IsOAuth2())
+	if has, value := opts.Password.Get(); has && canReset {
 		password := value
 
 		if len(password) < setting.MinPasswordLength {
