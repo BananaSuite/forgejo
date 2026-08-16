@@ -81,16 +81,12 @@ func userProfile(ctx *context.Context) {
 	prepareUserProfileFunding(ctx, profileFunding)
 	// call PrepareContextForProfileBigAvatar later to avoid re-querying the NumFollowers & NumFollowing
 	shared_user.PrepareContextForProfileBigAvatar(ctx)
-	orgName := ""
-	if ctx.Org.Organization != nil {
-		orgName = ctx.Org.Organization.Name
-	}
-	starCount, err := user_model.GetUserStarCount(ctx, ctx.ContextUser, ctx.Doer, orgName)
+	starCount, err := repo_model.GetUserStarCount(ctx, ctx.ContextUser, ctx.Doer)
 	if err != nil {
 		ctx.ServerError("GetUserStarCount", err)
 		return
 	}
-	ctx.Data["StarredRepos"] = starCount
+	ctx.Data["StarredReposCount"] = starCount
 	ctx.HTML(http.StatusOK, tplProfile)
 }
 

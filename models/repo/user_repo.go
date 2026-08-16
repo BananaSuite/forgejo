@@ -18,6 +18,26 @@ import (
 	"xorm.io/builder"
 )
 
+func GetUserStarCount(ctx context.Context, profileUser, doer *user_model.User) (int64, error) {
+	e := db.GetEngine(ctx)
+
+	sess := e.
+		Table("star").
+		Join("INNER", "repository", "star.repo_id = repository.id").
+		Where("star.uid = ?", profileUser.ID)
+
+	// Owner of the profile, or a site admin, sees every starred repo.
+	if doer != nil && (doer.ID == profileUser.ID || doer.IsAdmin) {
+		count, err := sess.Count()
+		return count, err
+	}
+
+	count, err := sess.
+		And(AccessibleRepositoryCondition(doer, unit.TypeInvalid)).
+		Count()
+	return count, err
+}
+
 // GetRepoAssignees returns all users that have write access and can be assigned to issues
 // of the repository,
 func GetRepoAssignees(ctx context.Context, repo *Repository) (_ []*user_model.User, err error) {
