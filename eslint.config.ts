@@ -23,7 +23,7 @@ export default defineConfig(
   eslintPluginImportX.flatConfigs.typescript,
   vueScopedCss.configs.recommended,
   {
-    ignores: ['web_src/js/vendor', 'web_src/fomantic', 'public/assets/js', 'tests/e2e/reports/'],
+    ignores: ['web_src/fomantic', 'public/assets/js', 'tests/e2e/reports/'],
   },
   {
     plugins: {
