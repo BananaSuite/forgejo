@@ -13,7 +13,7 @@ import '../htmx.ts';
 import {initTab} from '../modules/tab.ts';
 import {initGlobalShowModal} from './show-modal.ts';
 import {showModal} from '../modules/modal.ts';
-import {ATTR_DIRTY} from './leave-confirm.ts';
+import {ATTR_DIRTY, EVENT_CHECKFORM} from './leave-confirm.ts';
 
 const {appUrl, appSubUrl, i18n} = window.config;
 
@@ -253,7 +253,7 @@ export async function initDropzone(dropzoneEl, zone = undefined) {
     inputPath.type = 'hidden';
     inputPath.value = htmlEscape(file.fullPath || file.name);
     dropzoneEl.querySelector('.files').append(input, inputPath);
-    dropzoneEl.dispatchEvent(new Event('rescan', {bubbles: true})); // re-check form inputs (we just added one, so probably "dirty")
+    dropzoneEl.dispatchEvent(new Event(EVENT_CHECKFORM, {bubbles: true})); // re-check form inputs (we just added one, so probably "dirty")
 
     // Create a "Copy Link" element, to conveniently copy the image
     // or file link as Markdown to the clipboard
@@ -298,7 +298,7 @@ export async function initDropzone(dropzoneEl, zone = undefined) {
       this.on('removedfile', async (file) => {
         document.getElementById(file.uuid)?.remove();
         document.querySelector(`input[name="files_fullpath[${file.uuid}]"]`)?.remove();
-        dropzoneEl.dispatchEvent(new Event('checkform', {bubbles: true})); // re-check form inputs (is it still "dirty"? have we removed all file previews?)
+        dropzoneEl.dispatchEvent(new Event(EVENT_CHECKFORM, {bubbles: true})); // re-check form inputs (is it still "dirty"? have we removed all file previews?)
         if (disableRemovedfileEvent) return;
         if (dropzoneEl.getAttribute('data-remove-url') && !fileUuidDict[file.uuid].submitted) {
           try {
