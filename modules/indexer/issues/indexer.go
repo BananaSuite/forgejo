@@ -331,6 +331,12 @@ func ParseSortBy(sortBy string, defaultSortBy internal.SortBy) internal.SortBy {
 
 // SearchIssues search issues by options.
 func SearchIssues(ctx context.Context, opts *SearchOptions) ([]int64, int64, error) {
+	// The RepoCond are SQL conditions applied to the query instead of querying
+	// for the repo IDs directly, which is only supported by the db indexer
+	if setting.Indexer.IssueType != "db" && opts.RepoCond != nil {
+		return nil, 0, ErrRepoCondNotDb
+	}
+
 	indexer := *globalIndexer.Load()
 
 	if len(opts.Tokens) == 0 {

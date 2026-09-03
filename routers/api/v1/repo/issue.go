@@ -29,6 +29,8 @@ import (
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 	issue_service "forgejo.org/services/issue"
+
+	"xorm.io/builder"
 )
 
 // SearchIssues searches for issues across the repositories that the user has access to
@@ -153,6 +155,7 @@ func SearchIssues(ctx *context.APIContext) {
 
 	var (
 		repoIDs   []int64
+		repoCond  builder.Cond
 		allPublic bool
 	)
 	{
@@ -209,14 +212,21 @@ func SearchIssues(ctx *context.APIContext) {
 			allPublic = true
 			opts.AllPublic = false // set it false to avoid returning too many repos, we could filter by indexer
 		}
-		repoIDs, _, err = repo_model.SearchRepositoryIDs(ctx, opts)
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, "SearchRepositoryIDs", err)
-			return
-		}
-		if len(repoIDs) == 0 {
-			// no repos found, don't let the indexer return all repos
-			repoIDs = []int64{0}
+
+		// Only the database indexer can use the repo conditions, which is are SQL
+		// conditions instead of a list of repository IDs
+		if setting.Indexer.IssueType == "db" {
+			repoCond = builder.In("repo_id", builder.Select("id").From("repository").Where(repo_model.SearchRepositoryCondition(opts)))
+		} else {
+			repoIDs, _, err = repo_model.SearchRepositoryIDs(ctx, opts)
+			if err != nil {
+				ctx.Error(http.StatusInternalServerError, "SearchRepositoryIDs", err)
+				return
+			}
+			if len(repoIDs) == 0 {
+				// no repos found, don't let the indexer return all repos
+				repoIDs = []int64{0}
+			}
 		}
 	}
 
@@ -278,6 +288,7 @@ func SearchIssues(ctx *context.APIContext) {
 			Page:     ctx.FormInt("page"),
 		},
 		RepoIDs:             repoIDs,
+		RepoCond:            repoCond,
 		AllPublic:           allPublic,
 		IsPull:              isPull,
 		IsClosed:            isClosed,

@@ -13,6 +13,7 @@ import (
 	"forgejo.org/models/db"
 	"forgejo.org/models/issues"
 	"forgejo.org/models/unittest"
+	db_index "forgejo.org/modules/indexer/issues/db"
 	"forgejo.org/modules/indexer/issues/internal"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"xorm.io/builder"
 )
 
 func TestMain(m *testing.M) {
@@ -43,6 +45,7 @@ func TestDBSearchIssues(t *testing.T) {
 	t.Run("search issues with order", searchIssueWithOrder)
 	t.Run("search issues in project", searchIssueInProject)
 	t.Run("search issues with paginator", searchIssueWithPaginator)
+	t.Run("search issues repoIDs repoCond exclusive", searchIssueRepoCndRepoIDs)
 }
 
 func searchIssueWithKeyword(t *testing.T) {
@@ -420,6 +423,17 @@ func searchIssueWithPaginator(t *testing.T) {
 	}
 }
 
+func searchIssueRepoCndRepoIDs(t *testing.T) {
+	opts := &SearchOptions{
+		RepoCond: builder.NewCond(),
+		RepoIDs:  []int64{1337},
+	}
+
+	_, _, err := SearchIssues(t.Context(), opts)
+	require.Error(t, err)
+	assert.ErrorIs(t, db_index.ErrRepoCondAndRepoID, err)
+}
+
 func TestBleveDeleteIssue(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
@@ -454,4 +468,14 @@ func TestBleveDeleteIssue(t *testing.T) {
 		assert.NoError(t, err)
 		return !slices.Contains(ids, issue.ID)
 	}, time.Second*60, time.Millisecond*100, "failed to delete issue")
+
+	t.Run("RepoCond outside db indexer", func(t *testing.T) {
+		opts := &internal.SearchOptions{
+			RepoCond: builder.NewCond(),
+		}
+
+		_, _, err := SearchIssues(ctx, opts)
+		require.Error(t, err)
+		assert.ErrorIs(t, ErrRepoCondNotDb, err)
+	})
 }
