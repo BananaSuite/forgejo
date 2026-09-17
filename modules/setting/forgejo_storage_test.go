@@ -21,6 +21,10 @@ func TestForgejoDocs_StorageTypes(t *testing.T) {
 	iniStr := `
 [server]
 APP_DATA_PATH = /
+
+[actions]
+# Avoid transition from GeneralTokenSigningSecret
+ARTIFACTSV4_SECRET = ForgejoForgejoForgejoForgejoForgejoForgejo_
 `
 	testStorageTypesDefaultAndSpecificStorage(t, iniStr)
 }
@@ -256,7 +260,7 @@ STORAGE_TYPE = %s
 }
 
 func testStoragePathMatch(t *testing.T, iniStr string, storageType StorageType, testSectionToPath testSectionToPathFun, section string, storage **Storage) {
-	cfg, err := NewConfigProviderFromData(iniStr)
+	cfg, err := NewVolatileConfigProvider(NewConfigProviderFromData(iniStr))
 	require.NoError(t, err, iniStr)
 	require.NoError(t, loadCommonSettingsFrom(cfg), iniStr)
 	assert.Equal(t, testSectionToPath(storageType, section), testStorageGetPath(*storage), iniStr)

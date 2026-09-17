@@ -29,7 +29,8 @@ var (
 		ConcurrencyGroupQueueEnabled bool              `ini:"CONCURRENCY_GROUP_QUEUE_ENABLED"`
 		IDTokenExpirationTime        int64             `ini:"ID_TOKEN_EXPIRATION_TIME"`
 
-		IDTokenKeyCfg *jwtx.KeyCfg
+		IDTokenKeyCfg     *jwtx.KeyCfg
+		ArtifactsV4KeyCfg *jwtx.KeyCfg
 	}{
 		Enabled:                      true,
 		DefaultActionsURL:            defaultActionsURLForgejo,
@@ -123,6 +124,10 @@ func loadActionsFrom(rootCfg ConfigProvider) error {
 	}
 
 	Actions.IDTokenKeyCfg, err = loadKeyCfg(rootCfg, secName, "ID_TOKEN_", "RS256", "actions_id_token/private.pem", onlyAsymmetric())
+	if err != nil {
+		return err
+	}
+	Actions.ArtifactsV4KeyCfg, err = loadKeyCfgTransition(rootCfg, secName, "ARTIFACTSV4_", "HS256", "", onlyHS256())
 	if err != nil {
 		return err
 	}

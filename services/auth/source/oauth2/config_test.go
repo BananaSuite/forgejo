@@ -16,11 +16,11 @@ import (
 
 // regressions: Components used even if OAuth2 disabled
 func TestOAuth2Disabled(t *testing.T) {
-	cfg, _ := setting.NewConfigProviderFromData(`
+	cfg, _ := setting.NewVolatileConfigProvider(setting.NewConfigProviderFromData(`
 [oauth2]
 ENABLED=false
-`)
-	defer test.MockVariableValue(&setting.CfgProvider, cfg)()
+`))
+	defer test.MockVariableValue(&setting.CfgProvider, cfg.(setting.ConfigProvider))()
 	setting.LoadCommonSettings()
 	err := oauth2.Init(t.Context())
 	// #13478

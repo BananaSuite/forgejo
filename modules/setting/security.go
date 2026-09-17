@@ -476,6 +476,41 @@ func loadKeyCfg(rootCfg ConfigProvider, cfgSection, pfx, defaultAlg, defaultPriv
 	return nil, err
 }
 
+// same as loadKeyCfg, but if there is no configuration, initialize it from the
+// generalSigningSecret. This is to transition seamlessly from the darn general
+// signing secret hack to inidividual key configurations per component. The
+// component initializing a key config via this function should see the previous
+// general secret, but from this point on, the admin can change it individually
+// in the configuration.
+//
+// This function can be removed once we stop automatic migration from versions
+// pre-XXX (1.22 ?) [XXX replace with whatever release this goes into]
+//
+// partial code duplication is intentional to avoid changing the long term code
+// path
+func loadKeyCfgTransition(rootCfg ConfigProvider, cfgSection, pfx, defaultAlg, defaultPrivateKeyFile string, checks ...checkKeyCfg) (*jwtx.KeyCfg, error) {
+	if !jwtx.IsValidSymmetricAlgorithm(defaultAlg) {
+		panic("loadKeyCfgTransition must only be used for implicit symmetric algorithms")
+	}
+
+	sec := rootCfg.Section(cfgSection)
+
+	cfgSecretURI := pfx + "SECRET_URI"
+	cfgSecret := pfx + "SECRET"
+	cfgAlg := pfx + "SIGNING_ALGORITHM"
+
+	if (!sec.HasKey(cfgAlg) || jwtx.IsValidSymmetricAlgorithm(sec.Key(cfgAlg).String())) &&
+		!sec.HasKey(cfgSecret) &&
+		!sec.HasKey(cfgSecretURI) {
+		err := createSymmetricSigningKeyCfg(rootCfg, cfgSection, cfgSecret, GetGeneralTokenSigningSecret())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return loadKeyCfg(rootCfg, cfgSection, pfx, defaultAlg, defaultPrivateKeyFile, checks...)
+}
+
 func loadSecurityFrom(rootCfg ConfigProvider) {
 	sec := rootCfg.Section("security")
 	InstallLock = HasInstallLock(rootCfg)

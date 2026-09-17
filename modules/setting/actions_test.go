@@ -15,6 +15,34 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// test GeneralTokenSigningSecret transition once, remaining tests set
+// ARTIFACTSV4_SECRET explicitly
+func Test_ActionsGeneralTokenSigningSecretTransition(t *testing.T) {
+	secret := "ForgejoForgejoForgejoForgejoForgejoForgejo8"
+	iniStr := fmt.Sprintf(`
+[oauth2]
+JWT_SECRET = %s
+[storage]
+STORAGE_TYPE = minio
+`, secret)
+	cfg, err := NewVolatileConfigProvider(NewConfigProviderFromData(iniStr))
+	require.NoError(t, err)
+	// Transition only works if OAuth is initialized first, otherwise we get a
+	// random secret
+	InstallLock = true
+	loadOAuth2From(cfg)
+	require.NoError(t, loadActionsFrom(cfg))
+
+	sec := cfg.Section("actions")
+	assert.NotNil(t, sec)
+	assert.Equal(t, secret, sec.Key("ARTIFACTSV4_SECRET").String())
+}
+
+var iniPfx = `
+[actions]
+ARTIFACTSV4_SECRET = ForgejoForgejoForgejoForgejoForgejoForgejo8
+`
+
 func storageType(defaultStorageType, override string) string {
 	storageType := defaultStorageType
 	if storageType == "" {
@@ -70,7 +98,7 @@ func Test_getStorageInheritNameSectionTypeForActions(t *testing.T) {
 	}
 
 	for _, c := range tCase {
-		iniStr := ""
+		iniStr := iniPfx
 
 		if c.defaultStorageType != "" {
 			iniStr += fmt.Sprintf("[storage]\nSTORAGE_TYPE = %s\n", c.defaultStorageType)
@@ -114,16 +142,13 @@ func Test_getDefaultActionsURLForActions(t *testing.T) {
 		wantURL string
 	}{
 		{
-			name: "default",
-			iniStr: `
-[actions]
-`,
+			name:    "default",
+			iniStr:  ``,
 			wantURL: "https://data.forgejo.org",
 		},
 		{
 			name: "github",
 			iniStr: `
-[actions]
 DEFAULT_ACTIONS_URL = github
 `,
 			wantURL: "https://github.com",
@@ -131,7 +156,6 @@ DEFAULT_ACTIONS_URL = github
 		{
 			name: "self",
 			iniStr: `
-[actions]
 DEFAULT_ACTIONS_URL = self
 `,
 			wantURL: "http://test_get_default_actions_url_for_actions:3000",
@@ -139,7 +163,6 @@ DEFAULT_ACTIONS_URL = self
 		{
 			name: "custom urls",
 			iniStr: `
-[actions]
 DEFAULT_ACTIONS_URL = https://example.com
 `,
 			wantURL: "https://example.com",
@@ -148,7 +171,7 @@ DEFAULT_ACTIONS_URL = https://example.com
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := NewConfigProviderFromData(tt.iniStr)
+			cfg, err := NewConfigProviderFromData(iniPfx + tt.iniStr)
 			require.NoError(t, err)
 			require.NoError(t, loadActionsFrom(cfg))
 
@@ -167,8 +190,7 @@ func Test_getIDTokenSettingsForActions(t *testing.T) {
 		AppURL = oldAppURL
 	}()
 
-	iniStr := `
-  [actions]
+	iniStr := iniPfx + `
   `
 	cfg, err := NewConfigProviderFromData(iniStr)
 	require.NoError(t, err)
@@ -178,12 +200,11 @@ func Test_getIDTokenSettingsForActions(t *testing.T) {
 	assert.Equal(t, "/home/app/data/actions_id_token/private.pem", *Actions.IDTokenKeyCfg.Signing.PrivateKeyPath)
 	assert.EqualValues(t, 3600, Actions.IDTokenExpirationTime)
 
-	iniStr = `
-  [actions]
-	ID_TOKEN_SIGNING_ALGORITHM = ES256
-  ID_TOKEN_SIGNING_PRIVATE_KEY_FILE = /test/test.pem
-  ID_TOKEN_EXPIRATION_TIME = 120
-	`
+	iniStr = iniPfx + `
+ID_TOKEN_SIGNING_ALGORITHM = ES256
+ID_TOKEN_SIGNING_PRIVATE_KEY_FILE = /test/test.pem
+ID_TOKEN_EXPIRATION_TIME = 120
+`
 	cfg, err = NewConfigProviderFromData(iniStr)
 	require.NoError(t, err)
 	require.NoError(t, loadActionsFrom(cfg))
@@ -192,12 +213,11 @@ func Test_getIDTokenSettingsForActions(t *testing.T) {
 	assert.Equal(t, "/test/test.pem", *Actions.IDTokenKeyCfg.Signing.PrivateKeyPath)
 	assert.EqualValues(t, 120, Actions.IDTokenExpirationTime)
 
-	iniStr = `
-  [actions]
-	ID_TOKEN_SIGNING_ALGORITHM = EdDSA
-  ID_TOKEN_SIGNING_PRIVATE_KEY_FILE = ./test/test.pem
-  ID_TOKEN_EXPIRATION_TIME = 123
-	`
+	iniStr = iniPfx + `
+ID_TOKEN_SIGNING_ALGORITHM = EdDSA
+ID_TOKEN_SIGNING_PRIVATE_KEY_FILE = ./test/test.pem
+ID_TOKEN_EXPIRATION_TIME = 123
+`
 	cfg, err = NewConfigProviderFromData(iniStr)
 	require.NoError(t, err)
 	require.NoError(t, loadActionsFrom(cfg))
@@ -206,37 +226,33 @@ func Test_getIDTokenSettingsForActions(t *testing.T) {
 	assert.Equal(t, "/home/app/data/test/test.pem", *Actions.IDTokenKeyCfg.Signing.PrivateKeyPath)
 	assert.EqualValues(t, 123, Actions.IDTokenExpirationTime)
 
-	iniStr = `
-  [actions]
-	ID_TOKEN_SIGNING_ALGORITHM = HS256
-	`
+	iniStr = iniPfx + `
+ID_TOKEN_SIGNING_ALGORITHM = HS256
+`
 	cfg, err = NewConfigProviderFromData(iniStr)
 	require.NoError(t, err)
 	err = loadActionsFrom(cfg)
 	require.ErrorContains(t, err, "[actions] Unexpected algorithm: ID_TOKEN_SIGNING_ALGORITHM = HS256, needs to be one of [RS256 RS384 RS512 ES256 ES384 ES512 EdDSA]")
 
-	iniStr = `
-  [actions]
-	ID_TOKEN_SECRET = ABC
-	`
+	iniStr = iniPfx + `
+ID_TOKEN_SECRET = ABC
+`
 	cfg, err = NewConfigProviderFromData(iniStr)
 	require.NoError(t, err)
 	err = loadActionsFrom(cfg)
 	require.ErrorContains(t, err, "[actions] Invalid config key: ID_TOKEN_SECRET - must be removed")
 
-	iniStr = `
-  [actions]
-	ID_TOKEN_SECRET_URI = ABC
-	`
+	iniStr = iniPfx + `
+ID_TOKEN_SECRET_URI = ABC
+`
 	cfg, err = NewConfigProviderFromData(iniStr)
 	require.NoError(t, err)
 	err = loadActionsFrom(cfg)
 	require.ErrorContains(t, err, "[actions] Invalid config key: ID_TOKEN_SECRET_URI - must be removed")
 
-	iniStr = `
-  [actions]
-	ID_TOKEN_KEYS_ACCEPTED = HS384:ForgejoForgejoForgejoForgejoForgejoForgejo_
-	`
+	iniStr = iniPfx + `
+ID_TOKEN_KEYS_ACCEPTED = HS384:ForgejoForgejoForgejoForgejoForgejoForgejo_
+`
 	cfg, err = NewConfigProviderFromData(iniStr)
 	require.NoError(t, err)
 	err = loadActionsFrom(cfg)

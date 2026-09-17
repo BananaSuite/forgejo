@@ -86,6 +86,7 @@ package actions
 // GET: http://localhost:3000/twirp/github.actions.results.api.v1.ArtifactService/DownloadArtifact?sig=wHzFOwpF-6220-5CA0CIRmAX9VbiTC2Mji89UOqo1E8=&expires=2024-01-23+21%3A51%3A56.872846295+%2B0100+CET&artifactName=test&taskID=76
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -102,6 +103,7 @@ import (
 	"forgejo.org/models/actions"
 	"forgejo.org/models/db"
 	quota_model "forgejo.org/models/quota"
+	"forgejo.org/modules/jwtx"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
@@ -110,6 +112,7 @@ import (
 	"forgejo.org/routers/common"
 	"forgejo.org/services/context"
 
+	"github.com/golang-jwt/jwt/v5"
 	"google.golang.org/protobuf/encoding/protojson"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -123,6 +126,39 @@ const (
 type artifactV4Routes struct {
 	prefix string
 	fs     storage.ObjectStorage
+}
+
+var signKey []byte
+
+type verifyKey []byte
+
+var verifyKeys []verifyKey
+
+func InitActionsV4() error {
+	// we do not use the actual JWT functionality, only the standardized key
+	// management
+
+	signingKey, verifier, err := jwtx.Init(&setting.Actions.ArtifactsV4KeyCfg)
+	if err != nil {
+		return err
+	}
+
+	if signingKey.SigningMethod() != jwt.SigningMethodHS256 {
+		panic("setting.loadActionsFrom() should only allow HS256")
+	}
+	signKey = signingKey.SignKey().([]byte)
+
+	vks := verifier.KeysByMethod[jwt.SigningMethodHS256]
+	if len(vks.Keys) == 0 {
+		panic("jwtx.Init() should ensure we have a HS256 verifier")
+	}
+
+	verifyKeys = make([]verifyKey, len(vks.Keys))
+	for i, vk := range vks.Keys {
+		verifyKeys[i] = vk.([]byte)
+	}
+
+	return nil
 }
 
 func ArtifactV4Contexter() func(next http.Handler) http.Handler {
@@ -162,8 +198,8 @@ func ArtifactsV4Routes(prefix string) *web.Route {
 	return m
 }
 
-func (r artifactV4Routes) buildSignature(endp, expires, artifactName string, taskID, artifactID int64) []byte {
-	mac := hmac.New(sha256.New, setting.GetGeneralTokenSigningSecret())
+func buildSignatureWithKey(endp, expires, artifactName string, taskID, artifactID int64, key []byte) []byte {
+	mac := hmac.New(sha256.New, key)
 	// For each string field, write the length of the string first to prevent user-controlled strings from bleeding into
 	// each other and causing a signature match when it isn't expected.
 	_ = binary.Write(mac, binary.BigEndian, int64(len(endp)))
@@ -181,11 +217,25 @@ func (r artifactV4Routes) buildSignature(endp, expires, artifactName string, tas
 	return mac.Sum(nil)
 }
 
+func buildSignature(endp, expires, artifactName string, taskID, artifactID int64) []byte {
+	return buildSignatureWithKey(endp, expires, artifactName, taskID, artifactID, signKey)
+}
+
 func (r artifactV4Routes) buildArtifactURL(endp, artifactName string, taskID, artifactID int64) string {
 	expires := time.Now().Add(60 * time.Minute).Format("2006-01-02 15:04:05.999999999 -0700 MST")
 	uploadURL := strings.TrimSuffix(setting.AppURL, "/") + strings.TrimSuffix(r.prefix, "/") +
-		"/" + endp + "?sig=" + base64.URLEncoding.EncodeToString(r.buildSignature(endp, expires, artifactName, taskID, artifactID)) + "&expires=" + url.QueryEscape(expires) + "&artifactName=" + url.QueryEscape(artifactName) + "&taskID=" + fmt.Sprint(taskID) + "&artifactID=" + fmt.Sprint(artifactID)
+		"/" + endp + "?sig=" + base64.URLEncoding.EncodeToString(buildSignature(endp, expires, artifactName, taskID, artifactID)) + "&expires=" + url.QueryEscape(expires) + "&artifactName=" + url.QueryEscape(artifactName) + "&taskID=" + fmt.Sprint(taskID) + "&artifactID=" + fmt.Sprint(artifactID)
 	return uploadURL
+}
+
+func verifySig(dsig []byte, endp, expires, artifactName string, taskID, artifactID int64) bool {
+	for _, k := range verifyKeys {
+		expected := buildSignatureWithKey(endp, expires, artifactName, taskID, artifactID, k)
+		if bytes.Equal(dsig, expected) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r artifactV4Routes) verifySignature(ctx *ArtifactContext, endp string) (*actions.ActionTask, string, bool) {
@@ -198,8 +248,7 @@ func (r artifactV4Routes) verifySignature(ctx *ArtifactContext, endp string) (*a
 	taskID, _ := strconv.ParseInt(rawTaskID, 10, 64)
 	artifactID, _ := strconv.ParseInt(rawArtifactID, 10, 64)
 
-	expecedsig := r.buildSignature(endp, expires, artifactName, taskID, artifactID)
-	if !hmac.Equal(dsig, expecedsig) {
+	if !verifySig(dsig, endp, expires, artifactName, taskID, artifactID) {
 		log.Error("Error unauthorized")
 		ctx.Error(http.StatusUnauthorized, "Error unauthorized")
 		return nil, "", false

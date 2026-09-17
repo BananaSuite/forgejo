@@ -51,7 +51,7 @@ func getLFSAuthTokenWithBearer(opts authTokenOptions) (string, error) {
 func testAuthenticate(t *testing.T, cfg string) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 	var err error
-	setting.CfgProvider, err = setting.NewConfigProviderFromData(cfg)
+	setting.CfgProvider, err = setting.NewVolatileConfigProvider(setting.NewConfigProviderFromData(cfg))
 	require.NoError(t, err, "Config")
 	setting.LoadCommonSettings()
 
