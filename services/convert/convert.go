@@ -611,3 +611,44 @@ func ToAPIProjectList(p []*project_model.Project) []*api.Project {
 	}
 	return projs
 }
+
+// ToProjectColumn converts project_model.ProjectColumn to api.ProjectColumn.
+func ToProjectColumn(c *project_model.Column) *api.ProjectColumn {
+	return &api.ProjectColumn{
+		ID:        c.ID,
+		Title:     c.Title,
+		Default:   c.Default,
+		Sorting:   c.Sorting,
+		Color:     c.Color,
+		ProjectID: c.ProjectID,
+	}
+}
+
+// ToProjectColumnList converts project_model.ProjectColumn list to api.ProjectColumn list.
+func ToProjectColumnList(c []*project_model.Column) []*api.ProjectColumn {
+	var cols []*api.ProjectColumn
+	for _, column := range c {
+		cols = append(cols, ToProjectColumn(column))
+	}
+	return cols
+}
+
+// ToProjectIssue converts project_model.ProjectIssue to api.ProjectIssue.
+func ToProjectIssue(issue *project_model.ProjectIssue) *api.ProjectIssue {
+	return &api.ProjectIssue{
+		ID:              issue.ID,
+		IssueID:         issue.IssueID,
+		ProjectID:       issue.ProjectID,
+		ProjectColumnID: issue.ProjectColumnID,
+		Sorting:         issue.Sorting,
+	}
+}
+
+// ToProjectIssueList converts project_model.ProjectIssue list to api.ProjectIssue list.
+func ToProjectIssueList(p []*project_model.ProjectIssue) []*api.ProjectIssue {
+	var apiIssues []*api.ProjectIssue
+	for _, issue := range p {
+		apiIssues = append(apiIssues, ToProjectIssue(issue))
+	}
+	return apiIssues
+}

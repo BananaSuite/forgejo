@@ -593,6 +593,29 @@ func Routes() *web.Route {
 					Get(context.ReqProjectReadPermissions, pI.GetProject).
 					Patch(reqToken(), context.ReqProjectWritePermissions, bind(api.CreateOrUpdateProjectOptions{}), pI.UpdateProject).
 					Delete(reqToken(), context.ReqProjectWritePermissions, pI.DeleteProject)
+				m.Combo("/issues").
+					Get(context.ReqProjectReadPermissions, pI.ListProjectIssues).
+					Post(reqToken(), context.ReqProjectWritePermissions, bind(api.CreateProjectIssueOptions{}), pI.CreateProjectIssue)
+				m.Group("/columns", func() {
+					m.Combo("").
+						Get(context.ReqProjectReadPermissions, pI.ListProjectColumns).
+						Post(reqToken(), context.ReqProjectWritePermissions, bind(api.CreateOrUpdateProjectColumnOptions{}), pI.CreateProjectColumn)
+					m.Group("/{column_id}", func() {
+						m.Combo("").
+							Get(context.ReqProjectReadPermissions, pI.GetProjectColumn).
+							Patch(reqToken(), context.ReqProjectWritePermissions, bind(api.CreateOrUpdateProjectColumnOptions{}), pI.UpdateProjectColumn).
+							Delete(reqToken(), context.ReqProjectWritePermissions, pI.DeleteProjectColumn)
+						m.Group("/issues", func() {
+							m.Combo("").
+								Get(reqToken(), context.ReqProjectReadPermissions, pI.ListProjectColumnIssues).
+								Post(reqToken(), context.ReqProjectWritePermissions, bind(api.CreateProjectIssueOptions{}), pI.CreateProjectColumnIssue)
+							m.Combo("/{issue_id}").
+								Get(context.ReqProjectReadPermissions, pI.GetProjectColumnIssue).
+								Patch(reqToken(), context.ReqProjectWritePermissions, bind(api.UpdateProjectIssueOptions{}), pI.UpdateProjectColumnIssue).
+								Delete(reqToken(), context.ReqProjectWritePermissions, pI.DeleteProjectColumnIssue)
+						})
+					})
+				})
 			}, context.ProjectAssignment)
 		})
 	}

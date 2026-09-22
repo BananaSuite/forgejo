@@ -4,15 +4,19 @@
 package projects
 
 import (
+	"errors"
 	"net/http"
 
 	"forgejo.org/models/db"
+	issues_model "forgejo.org/models/issues"
+	access_model "forgejo.org/models/perm/access"
 	project_model "forgejo.org/models/project"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/optional"
 	project_module "forgejo.org/modules/project"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
 	"forgejo.org/modules/validation"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
@@ -42,6 +46,46 @@ func getOwnerTypeAndOwnerAndRepoFromData(ctx *context.APIContext) (
 		repo = ctx.Repository()
 	}
 	return ownerType, owner, repo
+}
+
+func getValidColumnOrIssue(ctx *context.APIContext, getIssue bool) (*project_model.Column, *project_model.ProjectIssue) {
+	if ctx.Project().ProjectID == 0 {
+		ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", "Project ID must not be zero")
+		return nil, nil
+	}
+	var err error
+	var projectColumn *project_model.Column
+	var projectIssue *project_model.ProjectIssue
+
+	// Did we get the right columnID?
+	projectColumn, err = project_service.GetValidProjectColumnByID(ctx, ctx.Project().ProjectID, ctx.Project().ProjectColumnID)
+	if err != nil {
+		if project_model.IsErrProjectColumnNotExist(err) || project_module.IsErrMismatchedID(err) {
+			ctx.NotFound("getValidColumnAndIssue", err)
+		} else if validation.IsErrNotValid(err) {
+			ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", err)
+		} else {
+			ctx.ServerError("getValidColumnAndIssue", err)
+		}
+		return nil, nil
+	}
+
+	// Did we get the right issueID?
+	if getIssue {
+		projectIssue, err = project_service.GetValidProjectIssueByID(ctx, ctx.Project().ProjectID, ctx.Project().ProjectColumnID, ctx.Project().ProjectIssueID)
+		if err != nil {
+			if project_model.IsErrProjectIssueNotExist(err) || project_module.IsErrMismatchedID(err) {
+				ctx.NotFound("getValidColumnAndIssue", err)
+			} else if validation.IsErrNotValid(err) {
+				ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", err)
+			} else {
+				ctx.ServerError("getValidColumnAndIssue", err)
+			}
+			return nil, nil
+		}
+	}
+
+	return projectColumn, projectIssue
 }
 
 // CreateProject creates a project for the user/org/repo
@@ -165,5 +209,321 @@ func DeleteProject(ctx *context.APIContext) {
 		return
 	}
 
+	ctx.Status(http.StatusNoContent)
+}
+
+// ListProjectIssues lists project issues
+func ListProjectIssues(ctx *context.APIContext) {
+	// get project issues
+	listOptions := utils.GetListOptions(ctx)
+	projectIssues, total, err := db.FindAndCount[project_model.ProjectIssue](ctx, project_model.FindProjectIssueOptions{
+		ListOptions: listOptions,
+		ProjectID:   ctx.Project().ProjectID,
+	})
+	if err != nil {
+		ctx.ServerError("List Project Issues", err)
+		return
+	}
+
+	ctx.SetLinkHeader(int(total), listOptions.PageSize)
+	ctx.SetTotalCountHeader(total)
+	ctx.JSON(http.StatusOK, convert.ToProjectIssueList(projectIssues))
+}
+
+// CreateProjectIssue creates an issue in the default column of the project
+func CreateProjectIssue(ctx *context.APIContext) {
+	createProjectColumnIssue(ctx, true)
+}
+
+// ListProjectColumns lists columns of the project
+func ListProjectColumns(ctx *context.APIContext) {
+	listOptions := utils.GetListOptions(ctx)
+	cols, total, err := db.FindAndCount[project_model.Column](ctx, project_model.FindColumnOptions{
+		ListOptions: listOptions, ProjectID: ctx.Project().ProjectID,
+	})
+	if err != nil {
+		ctx.ServerError("ListColumns", err)
+		return
+	}
+
+	ctx.SetLinkHeader(int(total), listOptions.PageSize)
+	ctx.SetTotalCountHeader(total)
+	ctx.JSON(http.StatusOK, convert.ToProjectColumnList(cols))
+}
+
+// CreateProjectColumn creates a column in the project
+func CreateProjectColumn(ctx *context.APIContext) {
+	form := web.GetForm(ctx).(*api.CreateOrUpdateProjectColumnOptions)
+
+	col := project_service.NewColumn(form, ctx.Project().ProjectID)
+	err := project_service.CreateColumnInProject(ctx, col)
+	if err != nil {
+		if errors.Is(err, util.ErrInvalidArgument) {
+			ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", err)
+		} else if errors.Is(err, project_model.ErrMaximumColumnsReached) {
+			ctx.Error(http.StatusConflict, "CreateProjectColumn", err)
+		} else {
+			ctx.ServerError("CreateProjectColumn", err)
+		}
+		return
+	}
+	ctx.JSON(http.StatusCreated, convert.ToProjectColumn(col))
+}
+
+// GetProjectColumn gets a column from the project
+func GetProjectColumn(ctx *context.APIContext) {
+	projectColumn, _ := getValidColumnOrIssue(ctx, false)
+	if ctx.Written() {
+		return
+	}
+
+	ctx.JSON(http.StatusOK, convert.ToProjectColumn(projectColumn))
+}
+
+// UpdateProjectColumn updates a column in the project
+func UpdateProjectColumn(ctx *context.APIContext) {
+	form := web.GetForm(ctx).(*api.CreateOrUpdateProjectColumnOptions)
+
+	projectColumn, _ := getValidColumnOrIssue(ctx, false)
+	if ctx.Written() {
+		return
+	}
+
+	if err := project_service.UpdateColumnInProject(ctx, projectColumn, form, ctx.Project().ProjectID, ctx.Project().ProjectColumnID); err != nil {
+		if errors.Is(err, project_model.ErrDuplicateColumnInReorderRequest) ||
+			errors.Is(err, project_model.ErrNotAllColumnsInReorderRequest) ||
+			errors.Is(err, project_model.ErrNotAllColumnsInProject) ||
+			errors.Is(err, util.ErrInvalidArgument) {
+			ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", err)
+		} else {
+			ctx.ServerError("UpdateProjectColumn", err)
+		}
+		return
+	}
+	ctx.Status(http.StatusNoContent)
+}
+
+// DeleteProjectColumn deletes a column in the project
+func DeleteProjectColumn(ctx *context.APIContext) {
+	_, _ = getValidColumnOrIssue(ctx, false)
+	if ctx.Written() {
+		return
+	}
+
+	if err := project_service.DeleteColumnInProject(ctx, ctx.Project().ProjectColumnID); err != nil {
+		ctx.ServerError("DeleteColumn", err)
+		return
+	}
+	ctx.Status(http.StatusNoContent)
+}
+
+// ListProjectColumnIssues lists the issues in a column of a project.
+func ListProjectColumnIssues(ctx *context.APIContext) {
+	_, _ = getValidColumnOrIssue(ctx, false)
+	if ctx.Written() {
+		return
+	}
+
+	// get project issues
+	listOptions := utils.GetListOptions(ctx)
+	projectIssues, total, err := db.FindAndCount[project_model.ProjectIssue](ctx,
+		project_model.FindProjectIssueOptions{
+			ListOptions:     listOptions,
+			ProjectID:       ctx.Project().ProjectID,
+			ProjectColumnID: ctx.Project().ProjectColumnID,
+		})
+	if err != nil {
+		ctx.ServerError("List Project Column Issues", err)
+		return
+	}
+
+	ctx.SetLinkHeader(int(total), listOptions.PageSize)
+	ctx.SetTotalCountHeader(total)
+	ctx.JSON(http.StatusOK, convert.ToProjectIssueList(projectIssues))
+}
+
+// CreateProjectColumnIssue creates an issue in a column of a project.
+func CreateProjectColumnIssue(ctx *context.APIContext) {
+	createProjectColumnIssue(ctx, false)
+}
+
+// createProjectColumnIssue creates an issue in a column of a project.
+func createProjectColumnIssue(ctx *context.APIContext, defaultColumn bool) {
+	// get form parameters
+	form := web.GetForm(ctx).(*api.CreateProjectIssueOptions)
+	issueID := form.IssueID
+	if issueID == 0 {
+		ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", "Issue ID must not be zero")
+		return
+	}
+
+	if !defaultColumn {
+		getValidColumnOrIssue(ctx, false)
+		if ctx.Written() {
+			return
+		}
+	}
+
+	// get issue
+	issue, err := issues_model.GetIssueByID(ctx, issueID)
+	if err != nil {
+		if issues_model.IsErrIssueNotExist(err) {
+			ctx.NotFound("Create Project Column Issue", err)
+		} else {
+			ctx.ServerError("CreateProjectColumnIssue", err)
+		}
+		return
+	}
+
+	// skip pull request
+	if issue.IsPull {
+		ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", "Issue was pull request")
+		return
+	}
+
+	// check issue permissions
+	if err := issue.LoadRepo(ctx); err != nil {
+		ctx.ServerError("CreateProjectColumnIssue", err)
+		return
+	}
+	perm, err := access_model.GetUserRepoPermissionWithReducer(ctx, issue.Repo, ctx.Doer(), ctx.Reducer())
+	if err != nil {
+		ctx.ServerError("CreateProjectColumnIssue", err)
+		return
+	}
+	if !perm.CanWriteIssuesOrPulls(issue.IsPull) {
+		ctx.NotFound()
+		return
+	}
+
+	// create project issue
+	projIssue, err := project_service.CreateIssueInProject(ctx, issue, ctx.Doer(), ctx.Project().ProjectID, ctx.Project().ProjectColumnID)
+	if err != nil {
+		ctx.ServerError("CreateProjectColumnIssue", err)
+		return
+	}
+
+	// return project issue
+	ctx.JSON(http.StatusCreated, convert.ToProjectIssue(projIssue))
+}
+
+// GetProjectColumnIssue gets an issue in a column in a project.
+func GetProjectColumnIssue(ctx *context.APIContext) {
+	// get project issue
+	_, projectIssue := getValidColumnOrIssue(ctx, true)
+	if ctx.Written() {
+		return
+	}
+
+	// get issue to check issue permissions
+	issue, err := issues_model.GetIssueByID(ctx, projectIssue.IssueID)
+	if err != nil {
+		ctx.ServerError("Get Project Column Issue", err)
+		return
+	}
+
+	// check issue permissions
+	err = issue.LoadRepo(ctx)
+	if err != nil {
+		ctx.ServerError("Get Project Column Issue", err)
+		return
+	}
+
+	perm, err := access_model.GetUserRepoPermissionWithReducer(ctx, issue.Repo, ctx.Doer(), ctx.Reducer())
+	if err != nil {
+		ctx.ServerError("Get Project Column Issue", err)
+		return
+	}
+	if !perm.CanReadIssuesOrPulls(issue.IsPull) {
+		ctx.NotFound()
+		return
+	}
+
+	// return project issue
+	ctx.JSON(http.StatusOK, convert.ToProjectIssue(projectIssue))
+}
+
+// UpdateProjectColumnIssue updates an issue in a column in a project.
+func UpdateProjectColumnIssue(ctx *context.APIContext) {
+	// get form parameters
+	form := web.GetForm(ctx).(*api.UpdateProjectIssueOptions)
+	newColumnID := form.ProjectColumnID
+	newSorting := form.Sorting
+
+	// get project issue
+	_, projectIssue := getValidColumnOrIssue(ctx, true)
+	if ctx.Written() {
+		return
+	}
+
+	// get new column
+	column, err := project_service.GetValidProjectColumnByID(ctx, ctx.Project().ProjectID, newColumnID)
+	if err != nil {
+		if project_model.IsErrProjectColumnNotExist(err) || project_module.IsErrMismatchedID(err) {
+			ctx.NotFound("UpdateProjectColumnIssue", err)
+		} else if validation.IsErrNotValid(err) {
+			ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", err)
+		} else {
+			ctx.ServerError("Update Project Column Issue", err)
+		}
+		return
+	}
+
+	// move issue
+	moveIssues := &api.MoveIssuesOption{
+		ProjectIssues: []api.MoveProjectIssue{
+			{
+				IssueID: projectIssue.IssueID,
+				Sorting: newSorting,
+			},
+		},
+	}
+	if err := project_service.MoveIssuesOnProjectColumn(ctx, column, moveIssues); err != nil {
+		if errors.Is(err, project_model.ErrDuplicateIssuesInReorderRequest) ||
+			errors.Is(err, project_model.ErrNotAllIssuesInProject) {
+			ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", err)
+		} else {
+			ctx.ServerError("Update Project Column Issue", err)
+		}
+		return
+	}
+	ctx.Status(http.StatusNoContent)
+}
+
+// DeleteProjectColumnIssue deletes an issue in a column in a project.
+func DeleteProjectColumnIssue(ctx *context.APIContext) {
+	// get project issue
+	_, projectIssue := getValidColumnOrIssue(ctx, true)
+	if ctx.Written() {
+		return
+	}
+
+	// get issue
+	issue, err := issues_model.GetIssueByID(ctx, projectIssue.IssueID)
+	if err != nil {
+		ctx.ServerError("Delete Project Column Issue", err)
+		return
+	}
+
+	// check issue permissions
+	if err := issue.LoadRepo(ctx); err != nil {
+		ctx.ServerError("Delete Project Column Issue", err)
+		return
+	}
+	perm, err := access_model.GetUserRepoPermissionWithReducer(ctx, issue.Repo, ctx.Doer(), ctx.Reducer())
+	if err != nil {
+		ctx.ServerError("Delete Project Column Issue", err)
+		return
+	}
+	if !perm.CanWriteIssuesOrPulls(issue.IsPull) {
+		ctx.NotFound()
+		return
+	}
+
+	// remove project issue
+	if err := project_service.RemoveIssueFromProject(ctx, issue, ctx.Doer(), ctx.Project().ProjectColumnID); err != nil {
+		ctx.ServerError("Delete Project Column Issue REMOVE", err)
+		return
+	}
 	ctx.Status(http.StatusNoContent)
 }

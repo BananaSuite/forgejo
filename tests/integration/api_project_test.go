@@ -13,8 +13,12 @@ import (
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
 	project_model "forgejo.org/models/project"
+	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 	project_module "forgejo.org/modules/project"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/services/convert"
@@ -26,10 +30,12 @@ import (
 )
 
 type runOpts struct {
-	token     string
-	owner     string
-	repo      string
-	ownerType project_module.APIOwnerType
+	token         string
+	owner         string
+	repo          string
+	projectID     int64
+	shouldSucceed bool
+	ownerType     project_module.APIOwnerType
 }
 
 func getProjectAPIBaseString(opts *runOpts) string {
@@ -65,9 +71,58 @@ func getProject(t *testing.T, token, projectAPIBaseString string, pID int64, sta
 	return projectsIDEndpoint(t, token, "GET", projectAPIBaseString, pID, status)
 }
 
+func deleteProject(t *testing.T, token, projectAPIBaseString string, pID int64, status int) *httptest.ResponseRecorder {
+	return projectsIDEndpoint(t, token, "DELETE", projectAPIBaseString, pID, status)
+}
+
 func projectsIDEndpoint(t *testing.T, token, method, projectAPIBaseString string, pID int64, status int) *httptest.ResponseRecorder {
 	projectAPIString := fmt.Sprintf("%v/projects/%v", projectAPIBaseString, pID)
 	return requestWithAuth(t, token, method, projectAPIString, status)
+}
+
+// createProjectColumn creates a column.
+func createProjectColumn(t *testing.T, runOpts *runOpts, columnName string) api.ProjectColumn {
+	var projectColumn api.ProjectColumn
+	endpoint := getProjectAPIBaseString(runOpts) + fmt.Sprintf("/projects/%d/columns", runOpts.projectID)
+	resp := jsonRequestWithAuth(t, runOpts.token, "POST",
+		endpoint,
+		http.StatusCreated,
+		api.CreateOrUpdateProjectColumnOptions{
+			Title: columnName,
+		},
+	)
+	DecodeJSON(t, resp, &projectColumn)
+	return projectColumn
+}
+
+// createProjectIssue creates an issue.
+func createProjectIssue(t *testing.T, runOpts *runOpts, columnID int64, issueName string) api.ProjectIssue {
+	// create issue
+	var issue api.Issue
+	resp := jsonRequestWithAuth(t, runOpts.token, "POST",
+		fmt.Sprintf("/api/v1/repos/%s/%s/issues", runOpts.owner, runOpts.repo),
+		http.StatusCreated,
+		&api.CreateIssueOption{
+			Body:  issueName,
+			Title: issueName,
+		},
+	)
+	DecodeJSON(t, resp, &issue)
+
+	// create project issue
+	var projectIssue api.ProjectIssue
+	endpoint := getProjectAPIBaseString(runOpts) + fmt.Sprintf("/projects/%d/columns/%d/issues", runOpts.projectID, columnID)
+	if columnID == 0 {
+		endpoint = getProjectAPIBaseString(runOpts) + fmt.Sprintf("/projects/%d/issues", runOpts.projectID)
+	}
+	resp = jsonRequestWithAuth(t, runOpts.token, "POST", endpoint,
+		http.StatusCreated,
+		&api.CreateProjectIssueOptions{
+			IssueID: issue.ID,
+		},
+	)
+	DecodeJSON(t, resp, &projectIssue)
+	return projectIssue
 }
 
 func requestWithAuth(
@@ -145,6 +200,465 @@ func TestProjectAPIListProjectsPagination(t *testing.T) {
 	slices.SortFunc(gotProjects, projSort)
 	assert.Equal(t, projects, gotProjects)
 	assert.Equal(t, numProjects/limit, numCalls)
+}
+
+// TestProjectAPIListProjectColumnsPagination tests ListProjectColumns in the
+// Project API with pagination.
+func TestProjectAPIListProjectColumnsPagination(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	err := unittest.PrepareTestDatabase()
+	require.NoError(t, err)
+
+	// user and token, repo
+	user := forgery.CreateUser(t, nil)
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteProject)
+	repo := forgery.CreateRepository(t, user, nil)
+
+	// create project
+	project := forgery.CreateProject(t, repo, nil)
+
+	// create columns
+	numColumns := 20
+	columns := []api.ProjectColumn{}
+	for i := range numColumns {
+		n := fmt.Sprintf("column-%d", i)
+		columns = append(columns,
+			createProjectColumn(t, &runOpts{
+				token:     token,
+				owner:     user.LowerName,
+				repo:      repo.LowerName,
+				ownerType: project_module.APIOwnerTypeRepository,
+				projectID: project.ID,
+			}, n))
+	}
+
+	// list columns
+	limit := 2    // maximum number of entries in api call response
+	numCalls := 0 // number of performed api calls
+	gotColumns := []api.ProjectColumn{}
+	for i := range numColumns {
+		var colResp []api.ProjectColumn
+		resp := requestWithAuth(
+			t, token, "GET",
+			fmt.Sprintf(
+				"/api/v1/repos/%v/%v/projects/%d/columns?page=%d&limit=%d",
+				user.Name,
+				repo.Name,
+				project.ID,
+				i+1,
+				limit,
+			),
+			http.StatusOK,
+		)
+		DecodeJSON(t, resp, &colResp)
+		numCalls++
+
+		assert.Equal(t, strconv.Itoa(numColumns), resp.Result().Header.Get("X-Total-Count"))
+		assert.NotEmpty(t, resp.Result().Header.Get("Link"))
+		gotColumns = append(gotColumns, colResp...)
+
+		if len(gotColumns) == numColumns {
+			break
+		}
+	}
+	assert.Len(t, gotColumns, numColumns)
+	assert.Equal(t, columns, gotColumns)
+	assert.Equal(t, numColumns/limit, numCalls)
+}
+
+// TestProjectAPIListProjectIssuesPagination tests ListProjectColumnIssues and
+// ListProjectIssues in the Project API with pagination.
+func TestProjectAPIListProjectIssuesPagination(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	err := unittest.PrepareTestDatabase()
+	require.NoError(t, err)
+
+	// user and token, repo
+	user := forgery.CreateUser(t, nil)
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session,
+		auth_model.AccessTokenScopeWriteProject,
+		auth_model.AccessTokenScopeWriteIssue,
+	)
+	repo := forgery.CreateRepository(t, user, nil)
+
+	// create project
+	project := forgery.CreateProject(t, repo, nil)
+
+	// create column
+	column := createProjectColumn(t, &runOpts{
+		token:     token,
+		owner:     user.LowerName,
+		repo:      repo.LowerName,
+		ownerType: project_module.APIOwnerTypeRepository,
+		projectID: project.ID,
+	}, "test-column")
+
+	// create issues
+	numIssues := 100
+	issues := []api.ProjectIssue{}
+	for i := range numIssues {
+		n := fmt.Sprintf("issue-%d", i)
+		issues = append(issues,
+			createProjectIssue(t,
+				&runOpts{
+					token:     token,
+					owner:     user.LowerName,
+					repo:      repo.LowerName,
+					projectID: project.ID,
+					ownerType: project_module.APIOwnerTypeRepository,
+				}, column.ID, n))
+	}
+
+	// list issues
+	listIssues := func(t *testing.T, url string) {
+		limit := 10   // maximum number of entries in api call response
+		numCalls := 0 // number of performed api calls
+		gotIssues := []api.ProjectIssue{}
+		for i := range numIssues {
+			var issueResp []api.ProjectIssue
+			resp := requestWithAuth(
+				t, token, "GET",
+				fmt.Sprintf(
+					"%s?page=%d&limit=%d",
+					url,
+					i+1,
+					limit,
+				),
+				http.StatusOK,
+			)
+			DecodeJSON(t, resp, &issueResp)
+			numCalls++
+
+			assert.Equal(t, strconv.Itoa(numIssues), resp.Result().Header.Get("X-Total-Count"))
+			assert.NotEmpty(t, resp.Result().Header.Get("Link"))
+			gotIssues = append(gotIssues, issueResp...)
+
+			if len(gotIssues) == numIssues {
+				break
+			}
+		}
+		assert.Len(t, gotIssues, numIssues)
+		assert.Equal(t, issues, gotIssues)
+		assert.Equal(t, numIssues/limit, numCalls)
+	}
+	t.Run("ListProjectColumnIssues", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		url := fmt.Sprintf(
+			"/api/v1/repos/%v/%v/projects/%d/columns/%d/issues",
+			user.Name,
+			repo.Name,
+			project.ID,
+			column.ID,
+		)
+		listIssues(t, url)
+	})
+	t.Run("ListProjectIssues", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		url := fmt.Sprintf(
+			"/api/v1/repos/%s/%s/projects/%d/issues",
+			user.Name,
+			repo.Name,
+			project.ID,
+		)
+		listIssues(t, url)
+	})
+}
+
+// TestProjectAPIGetUpdateDeleteProjectColumnErrors tests GetProjectColumn,
+// UpdateProjectColumn, DeleteProjectColumn, with errors.
+func TestProjectAPIGetUpdateDeleteProjectColumnErrors(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// create user, token, project, column
+	user := forgery.CreateUser(t, nil)
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session,
+		auth_model.AccessTokenScopeWriteProject,
+	)
+	project := forgery.CreateProject(t, user, nil)
+	_ = createProjectColumn(t, &runOpts{
+		token:     token,
+		owner:     user.LowerName,
+		ownerType: project_module.APIOwnerTypeIndividual,
+		projectID: project.ID,
+	}, "Default Column")
+	column := createProjectColumn(t, &runOpts{
+		token:     token,
+		owner:     user.LowerName,
+		ownerType: project_module.APIOwnerTypeIndividual,
+		projectID: project.ID,
+	}, "Test Column")
+
+	// run tests
+	for _, tt := range []struct {
+		name      string
+		projectID int64
+		columnID  int64
+		statusGet int
+		statusUD  int
+		message   string
+	}{
+		{"Project ID 0", 0, column.ID, http.StatusUnprocessableEntity, http.StatusUnprocessableEntity, "Project ID must not be zero"},
+		{"Column ID 0", project.ID, 0, http.StatusUnprocessableEntity, http.StatusUnprocessableEntity, "column ID must not be empty"},
+		{"Mismatching IDs", column.ProjectID + 1, column.ID, http.StatusNotFound, http.StatusNotFound, "did not belong to project"},
+		{"Not existing Column", project.ID, column.ID + 1, http.StatusNotFound, http.StatusNotFound, "project column does not exist"},
+		{"OK", project.ID, column.ID, http.StatusOK, http.StatusNoContent, "Test Column"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			endpoint := fmt.Sprintf("/api/v1/users/%s/projects/%d/columns/%d",
+				user.Name, tt.projectID, tt.columnID)
+
+			// get
+			resp := requestWithAuth(t, token, "GET", endpoint, tt.statusGet)
+			assert.Contains(t, resp.Body.String(), tt.message)
+
+			// update
+			colOpts := api.CreateOrUpdateProjectColumnOptions{
+				Title: "New Column Title",
+			}
+			resp = jsonRequestWithAuth(t, token, "PATCH", endpoint, tt.statusUD, colOpts)
+			if tt.statusUD != http.StatusNoContent {
+				assert.Contains(t, resp.Body.String(), tt.message)
+			}
+
+			// delete
+			resp = requestWithAuth(t, token, "DELETE", endpoint, tt.statusUD)
+			if tt.statusUD != http.StatusNoContent {
+				assert.Contains(t, resp.Body.String(), tt.message)
+			}
+		})
+	}
+}
+
+// TestProjectAPIListProjectColumnIssuesErrors tests ListProjectColumnIssues with errors.
+func TestProjectAPIListProjectColumnIssuesErrors(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// create user, token, project, column
+	user := forgery.CreateUser(t, nil)
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session,
+		auth_model.AccessTokenScopeWriteProject,
+	)
+	project := forgery.CreateProject(t, user, nil)
+	column := createProjectColumn(t, &runOpts{
+		token:     token,
+		owner:     user.LowerName,
+		ownerType: project_module.APIOwnerTypeIndividual,
+		projectID: project.ID,
+	}, "Test Column")
+
+	// run tests
+	for _, tt := range []struct {
+		name      string
+		projectID int64
+		columnID  int64
+		status    int
+		message   string
+	}{
+		{"Project ID 0", 0, column.ID, http.StatusUnprocessableEntity, "Project ID must not be zero"},
+		{"Column ID 0", project.ID, 0, http.StatusUnprocessableEntity, "column ID must not be empty"},
+		{"Mismatching IDs", column.ProjectID + 1, column.ID, http.StatusNotFound, "did not belong to project"},
+		{"Not existing Column", project.ID, column.ID + 1, http.StatusNotFound, "project column does not exist"},
+		{"OK", project.ID, column.ID, http.StatusOK, "null"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			endpoint := fmt.Sprintf("/api/v1/users/%s/projects/%d/columns/%d/issues",
+				user.Name, tt.projectID, tt.columnID)
+			resp := requestWithAuth(t, token, "GET", endpoint, tt.status)
+			assert.Contains(t, resp.Body.String(), tt.message)
+		})
+	}
+}
+
+// TestProjectAPICreateProjectColumnIssueErrors tests CreateProjectColumnIssue with errors.
+func TestProjectAPICreateProjectColumnIssueErrors(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// create user, token, org, project, column
+	user := forgery.CreateUser(t, nil)
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session,
+		auth_model.AccessTokenScopeWriteProject,
+	)
+	project := forgery.CreateProject(t, user, nil)
+	column := createProjectColumn(t, &runOpts{
+		token:     token,
+		owner:     user.LowerName,
+		ownerType: project_module.APIOwnerTypeIndividual,
+		projectID: project.ID,
+	}, "Test Column")
+
+	// create repo, issue, pull request
+	repo := forgery.CreateRepository(t, user, nil)
+	issue := forgery.CreateIssue(t, user, repo, "Test Issue", "Test Content")
+	pull := forgery.CreatePullRequest(t, user, repo, "Test PR", "Test Content")
+
+	// create other user, other repo, other issue
+	otherUser := forgery.CreateUser(t, nil)
+	otherRepo := forgery.CreateRepository(t, otherUser, nil)
+	otherIssue := forgery.CreateIssue(t, otherUser, otherRepo, "Other Issue", "Other Content")
+
+	// run tests
+	for _, tt := range []struct {
+		name      string
+		projectID int64
+		columnID  int64
+		issueID   int64
+		status    int
+		message   string
+	}{
+		{"Project ID 0", 0, column.ID, issue.ID, http.StatusUnprocessableEntity, "Project ID must not be zero"},
+		{"Column ID 0", project.ID, 0, issue.ID, http.StatusUnprocessableEntity, "column ID must not be empty"},
+		{"Mismatching IDs", column.ProjectID + 1, column.ID, issue.ID, http.StatusNotFound, "did not belong to project"},
+		{"Not existing Column", project.ID, column.ID + 1, issue.ID, http.StatusNotFound, "project column does not exist"},
+		{"Pull Request", project.ID, column.ID, pull.ID, http.StatusUnprocessableEntity, "Issue was pull request"},
+		{"Issue ID 0", project.ID, column.ID, 0, http.StatusUnprocessableEntity, "Issue ID must not be zero"},
+		{"Not existing Issue", project.ID, column.ID, otherIssue.ID + 1, http.StatusNotFound, "issue does not exist"},
+		{"Not writable Issue", project.ID, column.ID, otherIssue.ID, http.StatusNotFound, ""},
+		{"OK", project.ID, column.ID, issue.ID, http.StatusCreated, fmt.Sprintf("%d", issue.ID)},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			endpoint := fmt.Sprintf("/api/v1/users/%s/projects/%d/columns/%d/issues",
+				user.Name, tt.projectID, tt.columnID)
+			resp := jsonRequestWithAuth(t, token, "POST", endpoint, tt.status,
+				&api.CreateProjectIssueOptions{
+					IssueID: tt.issueID,
+				},
+			)
+			assert.Contains(t, resp.Body.String(), tt.message)
+		})
+	}
+}
+
+// TestProjectAPIGetUpdateDeleteProjectColumnIssueErrors tests
+// GetProjectColumnIssue, UpdateProjectColumnIssue, DeleteProjectColumnIssue
+// with errors.
+func TestProjectAPIGetUpdateDeleteProjectColumnIssueErrors(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// user
+	user := forgery.CreateUser(t, nil)
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session,
+		auth_model.AccessTokenScopeWriteProject,
+	)
+
+	// project
+	project := forgery.CreateProject(t, user, nil)
+	column1 := createProjectColumn(t, &runOpts{
+		token:     token,
+		owner:     user.LowerName,
+		ownerType: project_module.APIOwnerTypeIndividual,
+		projectID: project.ID,
+	}, "Test Column 1")
+	column2 := createProjectColumn(t, &runOpts{
+		token:     token,
+		owner:     user.LowerName,
+		ownerType: project_module.APIOwnerTypeIndividual,
+		projectID: project.ID,
+	}, "Test Column 2")
+
+	// repo, issues
+	repo := forgery.CreateRepository(t, user, nil)
+	issue1 := forgery.CreateIssue(t, user, repo, "Test Issue 1", "Test Content")
+	issue2 := forgery.CreateIssue(t, user, repo, "Test Issue 2", "Test Content")
+
+	// project issues
+	createPI := func(token, userName string, projectID, columnID, issueID int64) *api.ProjectIssue {
+		endpoint := fmt.Sprintf("/api/v1/users/%s/projects/%d/columns/%d/issues",
+			userName, projectID, columnID)
+		resp := jsonRequestWithAuth(t, token, "POST", endpoint, http.StatusCreated,
+			&api.CreateProjectIssueOptions{
+				IssueID: issueID,
+			},
+		)
+		var projIssue api.ProjectIssue
+		DecodeJSON(t, resp, &projIssue)
+		return &projIssue
+	}
+	projectIssue1 := createPI(token, user.Name, project.ID, column1.ID, issue1.ID)
+	projectIssue2 := createPI(token, user.Name, project.ID, column2.ID, issue2.ID)
+
+	// other user
+	otherUser := forgery.CreateUser(t, nil)
+	otherSession := loginUser(t, otherUser.Name)
+	otherToken := getTokenForLoggedInUser(t, otherSession,
+		auth_model.AccessTokenScopeWriteProject,
+	)
+	otherProject := forgery.CreateProject(t, otherUser, nil)
+	otherColumn := createProjectColumn(t, &runOpts{
+		token:     otherToken,
+		owner:     otherUser.LowerName,
+		ownerType: project_module.APIOwnerTypeIndividual,
+		projectID: otherProject.ID,
+	}, "Test Column 2")
+	otherRepo := forgery.CreateRepository(t, otherUser, nil)
+	otherIssue := forgery.CreateIssue(t, otherUser, otherRepo, "Test Issue 1", "Test Content")
+	otherProjectIssue := createPI(otherToken, otherUser.Name, otherProject.ID, otherColumn.ID, otherIssue.ID)
+
+	// run tests
+	for _, tt := range []struct {
+		name           string
+		projectID      int64
+		columnID       int64
+		projectIssueID int64
+		statusGet      int
+		statusUD       int
+		message        string
+	}{
+		{"Project ID 0", 0, column1.ID, projectIssue1.ID, http.StatusUnprocessableEntity, http.StatusUnprocessableEntity, "Project ID must not be zero"},
+		{"Column ID 0", project.ID, 0, projectIssue1.ID, http.StatusUnprocessableEntity, http.StatusUnprocessableEntity, "column ID must not be empty"},
+		{"Project Issue ID 0", project.ID, column1.ID, 0, http.StatusUnprocessableEntity, http.StatusUnprocessableEntity, "issueID must not be empty"},
+		{"Mismatching IDs", column1.ProjectID + 1, column1.ID, projectIssue1.ID, http.StatusNotFound, http.StatusNotFound, "did not belong to project"},
+		{"Project Issue ID in other Project", project.ID, column1.ID, otherProjectIssue.ID, http.StatusNotFound, http.StatusNotFound, "mismatched with"},
+		{"Project Issue ID in other Column", project.ID, column1.ID, projectIssue2.ID, http.StatusNotFound, http.StatusNotFound, "mismatched with"},
+		{"Not existing Column", project.ID, otherColumn.ID + 1, projectIssue1.ID, http.StatusNotFound, http.StatusNotFound, "project column does not exis"},
+		{"Not existing Project Issue", project.ID, column1.ID, otherProjectIssue.ID + 1, http.StatusNotFound, http.StatusNotFound, "project issue does not exist"},
+		{"OK", project.ID, column1.ID, projectIssue1.ID, http.StatusOK, http.StatusNoContent, fmt.Sprintf("%d", projectIssue1.ID)},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			endpoint := fmt.Sprintf("/api/v1/users/%s/projects/%d/columns/%d/issues/%d",
+				user.Name, tt.projectID, tt.columnID, tt.projectIssueID)
+
+			// get
+			resp := requestWithAuth(t, token, "GET", endpoint, tt.statusGet)
+			assert.Contains(t, resp.Body.String(), tt.message)
+
+			// update
+			resp = jsonRequestWithAuth(t, token, "PATCH", endpoint, tt.statusUD,
+				&api.UpdateProjectIssueOptions{
+					ProjectColumnID: tt.columnID,
+					Sorting:         1,
+				},
+			)
+			if tt.statusUD != http.StatusNoContent {
+				assert.Contains(t, resp.Body.String(), tt.message)
+			}
+
+			// delete
+			if tt.statusUD != http.StatusNoContent {
+				resp = requestWithAuth(t, token, "DELETE", endpoint, tt.statusUD)
+				assert.Contains(t, resp.Body.String(), tt.message)
+			}
+		})
+	}
 }
 
 // Test the use cases
@@ -249,6 +763,68 @@ func TestProjectAPICRUD(t *testing.T) {
 			assert.Equal(t, project.TemplateType, projResp.TemplateType)
 			assert.Equal(t, project.CardType, projResp.CardType)
 
+			// First column is always default column
+			projectColumn1 := createProjectColumn(t, &runOpts{
+				token:     writeToken,
+				owner:     tt.owner,
+				repo:      tt.repo,
+				ownerType: tt.ownerType,
+				projectID: project.ID,
+			}, "Col1")
+
+			// Color can be nil
+			assert.NotZero(t, projectColumn1.ID)
+			assert.Equal(t, "Col1", projectColumn1.Title)
+			assert.Equal(t, project.ID, projectColumn1.ProjectID)
+			assert.True(t, projectColumn1.Default)
+			assert.NotNil(t, projectColumn1.Sorting) // Sorting is zero by default, but "NOT NULL" according to DB model
+
+			projectColumn2 := createProjectColumn(t, &runOpts{
+				token:     writeToken,
+				owner:     tt.owner,
+				repo:      tt.repo,
+				ownerType: tt.ownerType,
+				projectID: project.ID,
+			}, "Col2")
+
+			assert.NotZero(t, projectColumn2.ID)
+			assert.NotEqual(t, projectColumn1.ID, projectColumn2.ID)
+			assert.Equal(t, "Col2", projectColumn2.Title)
+			assert.Equal(t, project.ID, projectColumn2.ProjectID)
+			assert.False(t, projectColumn2.Default)
+			assert.NotEqual(t, projectColumn1.Sorting, projectColumn2.Sorting)
+
+			// Add issue to a project, to the default column
+			projectIssue1 := createProjectIssue(t,
+				&runOpts{
+					token:     writeToken,
+					owner:     tt.owner,
+					repo:      tt.repo,
+					projectID: project.ID,
+					ownerType: tt.ownerType,
+				}, 0, "TestIssue")
+
+			assert.NotZero(t, projectIssue1.ID)
+			assert.Equal(t, project.ID, projectIssue1.ProjectID)
+			assert.Equal(t, projectColumn1.ID, projectIssue1.ProjectColumnID)
+			assert.NotNil(t, projectIssue1.Sorting) // Sorting is zero by default, but "NOT NULL" according to DB model
+
+			// Add issue directly to a column of a project
+			projectIssue2 := createProjectIssue(t,
+				&runOpts{
+					token:     writeToken,
+					owner:     tt.owner,
+					repo:      tt.repo,
+					projectID: project.ID,
+					ownerType: tt.ownerType,
+				}, projectColumn1.ID, "TestIssue2")
+
+			assert.NotZero(t, projectIssue2.ID)
+			assert.NotEqual(t, projectIssue1.ID, projectIssue2.ID)
+			assert.Equal(t, project.ID, projectIssue2.ProjectID)
+			assert.Equal(t, projectColumn1.ID, projectIssue2.ProjectColumnID)
+			assert.NotEqual(t, projectIssue1.Sorting, projectIssue2.Sorting)
+
 			// Update properties of a project
 			t.Run("Update properties of project", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
@@ -299,6 +875,195 @@ func TestProjectAPICRUD(t *testing.T) {
 				assert.Equal(t, isClosed(projOpts.Status), p.IsClosed)
 			})
 
+			// Update properties of a column
+			t.Run("Update properties of column", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				colOpts := api.CreateOrUpdateProjectColumnOptions{
+					Color:   "#00aabb",
+					Title:   "Backlog",
+					Default: projectColumn1.Default,
+					Sorting: projectColumn1.Sorting,
+				}
+				endpoint := fmt.Sprintf("%s/projects/%d/columns/%d",
+					tt.baseURL, project.ID, projectColumn1.ID)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, colOpts)
+
+				c := unittest.AssertExistsAndLoadBean(t, &project_model.Column{
+					ID: projectColumn1.ID, ProjectID: project.ID,
+				})
+
+				assert.Equal(t, colOpts.Color, c.Color)
+				assert.Equal(t, colOpts.Title, c.Title)
+			})
+
+			// Set default column of a project
+			t.Run("Set default column of project", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// set second column as default
+				colOpts := api.CreateOrUpdateProjectColumnOptions{
+					Default: true,
+					Sorting: projectColumn2.Sorting,
+					Title:   projectColumn2.Title,
+					Color:   projectColumn2.Color,
+				}
+				endpoint := fmt.Sprintf("%s/projects/%d/columns/%d",
+					tt.baseURL, project.ID, projectColumn2.ID)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, colOpts)
+				c1 := unittest.AssertExistsAndLoadBean(t, &project_model.Column{
+					ID: projectColumn1.ID, ProjectID: project.ID,
+				})
+				c2 := unittest.AssertExistsAndLoadBean(t, &project_model.Column{
+					ID: projectColumn2.ID, ProjectID: project.ID,
+				})
+
+				assert.False(t, c1.Default)
+				assert.True(t, c2.Default)
+
+				// set first column as default again
+				colOpts = api.CreateOrUpdateProjectColumnOptions{
+					Default: true,
+					Sorting: projectColumn1.Sorting,
+					Title:   projectColumn1.Title,
+					Color:   projectColumn1.Color,
+				}
+				endpoint = fmt.Sprintf("%s/projects/%d/columns/%d",
+					tt.baseURL, project.ID, projectColumn1.ID)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, colOpts)
+				c1 = unittest.AssertExistsAndLoadBean(t, &project_model.Column{
+					ID: projectColumn1.ID, ProjectID: project.ID,
+				})
+				c2 = unittest.AssertExistsAndLoadBean(t, &project_model.Column{
+					ID: projectColumn2.ID, ProjectID: project.ID,
+				})
+
+				assert.True(t, c1.Default)
+				assert.False(t, c2.Default)
+			})
+
+			// Reorder column in a project
+			t.Run("Reorder column in project", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// move second column to first column's position
+				colOpts := api.CreateOrUpdateProjectColumnOptions{
+					Sorting: projectColumn1.Sorting,
+					Default: projectColumn2.Default,
+					Title:   projectColumn2.Title,
+					Color:   projectColumn2.Color,
+				}
+				endpoint := fmt.Sprintf("%s/projects/%d/columns/%d",
+					tt.baseURL, project.ID, projectColumn2.ID)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, colOpts)
+
+				// query new values explicitly
+				c1 := unittest.AssertExistsAndLoadBean(t, &project_model.Column{
+					ID: projectColumn1.ID, ProjectID: project.ID,
+				})
+				c2 := unittest.AssertExistsAndLoadBean(t, &project_model.Column{
+					ID: projectColumn2.ID, ProjectID: project.ID,
+				})
+
+				assert.Less(t, c2.Sorting, c1.Sorting)
+
+				// move first column back to first position
+				colOpts = api.CreateOrUpdateProjectColumnOptions{
+					Sorting: projectColumn1.Sorting,
+					Default: projectColumn1.Default,
+					Title:   projectColumn1.Title,
+					Color:   projectColumn1.Color,
+				}
+				endpoint = fmt.Sprintf("%s/projects/%d/columns/%d",
+					tt.baseURL, project.ID, projectColumn1.ID)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, colOpts)
+
+				c1 = unittest.AssertExistsAndLoadBean(t, &project_model.Column{
+					ID: projectColumn1.ID, ProjectID: project.ID,
+				})
+				c2 = unittest.AssertExistsAndLoadBean(t, &project_model.Column{
+					ID: projectColumn2.ID, ProjectID: project.ID,
+				})
+
+				assert.Less(t, c1.Sorting, c2.Sorting)
+			})
+
+			// Reorder issue in a column of a project
+			t.Run("Reorder issue in column of project", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				assert.Equal(t, projectIssue1.ProjectColumnID, projectIssue2.ProjectColumnID)
+
+				// move second issue to first issue's position
+				updatePIOpts := api.UpdateProjectIssueOptions{
+					ProjectColumnID: projectIssue2.ProjectColumnID,
+					Sorting:         projectIssue1.Sorting,
+				}
+				endpoint := fmt.Sprintf("%s/projects/%d/columns/%d/issues/%d",
+					tt.baseURL, project.ID, projectIssue2.ProjectColumnID, projectIssue2.ID)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, updatePIOpts)
+
+				i1 := unittest.AssertExistsAndLoadBean(t, &project_model.ProjectIssue{
+					ID: projectIssue1.ID, ProjectID: project.ID,
+				})
+				i2 := unittest.AssertExistsAndLoadBean(t, &project_model.ProjectIssue{
+					ID: projectIssue2.ID, ProjectID: project.ID,
+				})
+
+				assert.Less(t, i2.Sorting, i1.Sorting)
+
+				// move first issue back to first position
+				updatePIOpts = api.UpdateProjectIssueOptions{
+					ProjectColumnID: projectColumn1.ID,
+					Sorting:         projectIssue1.Sorting,
+				}
+				endpoint = fmt.Sprintf("%s/projects/%d/columns/%d/issues/%d",
+					tt.baseURL, project.ID, projectIssue1.ProjectColumnID, projectIssue1.ID)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, updatePIOpts)
+
+				i1 = unittest.AssertExistsAndLoadBean(t, &project_model.ProjectIssue{
+					ID: projectIssue1.ID, ProjectID: project.ID,
+				})
+				i2 = unittest.AssertExistsAndLoadBean(t, &project_model.ProjectIssue{
+					ID: projectIssue2.ID, ProjectID: project.ID,
+				})
+
+				assert.Less(t, i1.Sorting, i2.Sorting)
+			})
+
+			// Move issue from one column to a different column of the same project
+			t.Run("Move issue to other column of project", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				// move second issue to second column
+				updatePIOpts := api.UpdateProjectIssueOptions{
+					ProjectColumnID: projectColumn2.ID,
+				}
+				endpoint := fmt.Sprintf("%s/projects/%d/columns/%d/issues/%d",
+					tt.baseURL, project.ID, projectColumn1.ID, projectIssue2.ID)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, updatePIOpts)
+
+				i2 := unittest.AssertExistsAndLoadBean(t, &project_model.ProjectIssue{
+					ID: projectIssue2.ID, ProjectID: project.ID,
+				})
+
+				assert.Equal(t, updatePIOpts.ProjectColumnID, i2.ProjectColumnID)
+
+				// move second issue back to first column
+				updatePIOpts = api.UpdateProjectIssueOptions{
+					ProjectColumnID: projectColumn1.ID,
+				}
+				endpoint = fmt.Sprintf("%s/projects/%d/columns/%d/issues/%d",
+					tt.baseURL, project.ID, projectColumn2.ID, projectIssue2.ID)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, updatePIOpts)
+
+				i2 = unittest.AssertExistsAndLoadBean(t, &project_model.ProjectIssue{
+					ID: projectIssue2.ID, ProjectID: project.ID,
+				})
+
+				assert.Equal(t, updatePIOpts.ProjectColumnID, i2.ProjectColumnID)
+			})
+
 			// List projects
 			t.Run("List projects", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
@@ -316,6 +1081,106 @@ func TestProjectAPICRUD(t *testing.T) {
 				}
 			})
 
+			t.Run("Get project column", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				var colResp *api.ProjectColumn
+				endpoint := fmt.Sprintf("%s/projects/%d/columns/%d",
+					tt.baseURL, project.ID, projectColumn1.ID)
+				resp := requestWithAuth(t, readToken, "GET", endpoint, http.StatusOK)
+				DecodeJSON(t, resp, &colResp)
+				assert.Equal(t, projectColumn1.ID, colResp.ID)
+			})
+
+			// List colums of a project
+			t.Run("List columns of a project", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				var colResp []api.ProjectColumn
+				endpoint := fmt.Sprintf("%s/projects/%d/columns",
+					tt.baseURL, project.ID)
+				resp := requestWithAuth(t, readToken, "GET", endpoint, http.StatusOK)
+				DecodeJSON(t, resp, &colResp)
+
+				// We make sure the order is fixed
+				assert.Equal(t, projectColumn1.ID, colResp[0].ID)
+				assert.Equal(t, projectColumn2.ID, colResp[1].ID)
+			})
+
+			t.Run("Get issue from project column", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				var issueResp *api.ProjectIssue
+				endpoint := fmt.Sprintf("%s/projects/%d/columns/%d/issues/%d",
+					tt.baseURL, project.ID, projectColumn1.ID, projectIssue1.ID)
+				resp := requestWithAuth(t, readToken, "GET", endpoint, http.StatusOK)
+				DecodeJSON(t, resp, &issueResp)
+				assert.Equal(t, projectIssue1.ID, issueResp.ID)
+			})
+
+			// List issues in a column of a project
+			t.Run("List issues in a column of a project", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				var issueResp []*api.ProjectIssue
+				endpoint := fmt.Sprintf("%s/projects/%d/columns/%d/issues",
+					tt.baseURL, project.ID, projectColumn1.ID)
+				resp := requestWithAuth(t, readToken, "GET", endpoint, http.StatusOK)
+				DecodeJSON(t, resp, &issueResp)
+
+				if !slices.ContainsFunc(issueResp, func(p *api.ProjectIssue) bool {
+					return p.ID == projectIssue1.ID
+				}) {
+					t.Error("project issue not in project issue list")
+				}
+			})
+
+			// List issues in a project
+			t.Run("List issues in a a project", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				var issueResp []*api.ProjectIssue
+				endpoint := fmt.Sprintf("%s/projects/%d/issues",
+					tt.baseURL, project.ID)
+				resp := requestWithAuth(t, readToken, "GET", endpoint, http.StatusOK)
+				DecodeJSON(t, resp, &issueResp)
+
+				if !slices.ContainsFunc(issueResp, func(p *api.ProjectIssue) bool {
+					return p.ID == projectIssue1.ID
+				}) {
+					t.Error("project issue not in project issue list")
+				}
+			})
+
+			// Remove issue from (a column of) a project
+			t.Run("Remove issue from a column of a project", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				endpoint := fmt.Sprintf("%s/projects/%d/columns/%d/issues/%d",
+					tt.baseURL, project.ID, projectColumn1.ID, projectIssue1.ID)
+				requestWithAuth(t, writeToken, "DELETE", endpoint, http.StatusNoContent)
+
+				unittest.AssertNotExistsBean(t, &project_model.ProjectIssue{
+					ID:        projectIssue1.ID,
+					IssueID:   projectIssue1.IssueID,
+					ProjectID: projectIssue1.ProjectID,
+				})
+			})
+
+			// Remove column from a project
+			t.Run("Remove column from a project", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+				// cannot delete default column -> delete column 2
+				endpoint := fmt.Sprintf("%s/projects/%d/columns/%d",
+					tt.baseURL, project.ID, projectColumn2.ID)
+				requestWithAuth(t, writeToken, "DELETE", endpoint, http.StatusNoContent)
+
+				unittest.AssertNotExistsBean(t, &project_model.Column{
+					ID:        projectColumn2.ID,
+					ProjectID: projectColumn2.ProjectID,
+				})
+			})
+
 			// Remove project
 			t.Run("Remove project", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
@@ -330,4 +1195,246 @@ func TestProjectAPICRUD(t *testing.T) {
 			})
 		})
 	}
+}
+
+func runProjectWriteActions(t *testing.T, runOpts *runOpts, projectOpts *api.CreateOrUpdateProjectOptions) {
+	projectAPIBaseString := getProjectAPIBaseString(runOpts)
+	endpoint := projectAPIBaseString + "/projects"
+	resp := jsonRequestWithAuth(t, runOpts.token, "POST", endpoint, NoExpectedStatus, projectOpts)
+	var proj *api.Project
+	if runOpts.shouldSucceed {
+		require.Equal(t, http.StatusCreated, resp.Code)
+		DecodeJSON(t, resp, &proj)
+		assert.Equal(t, projectOpts.Title, proj.Title)
+		deleteProject(t, runOpts.token, projectAPIBaseString, proj.ID, http.StatusNoContent)
+	} else {
+		assert.NotEqual(t, http.StatusCreated, resp.Code)
+	}
+}
+
+func runProjectReadActions(t *testing.T, opts *runOpts) {
+	projectAPIBaseString := getProjectAPIBaseString(opts)
+	resp := getProject(t, opts.token, projectAPIBaseString, opts.projectID, NoExpectedStatus)
+	if opts.shouldSucceed {
+		var proj *api.Project
+		assert.Equal(t, http.StatusOK, resp.Code)
+		DecodeJSON(t, resp, &proj)
+		assert.Equal(t, opts.projectID, proj.ID)
+	} else {
+		assert.NotEqual(t, http.StatusOK, resp.Code)
+	}
+}
+
+func TestProjectAPIPermissionHandling(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	err := unittest.PrepareTestDatabase()
+	require.NoError(t, err)
+
+	// users and tokens
+	user1 := forgery.CreateUser(t, nil)
+	user2 := forgery.CreateUser(t, nil)
+
+	user2Session := loginUser(t, user2.Name)
+	user2WriteToken := getTokenForLoggedInUser(t,
+		user2Session,
+		auth_model.AccessTokenScopeWriteProject,
+		auth_model.AccessTokenScopeWriteOrganization,
+		auth_model.AccessTokenScopeWriteRepository,
+		auth_model.AccessTokenScopeWriteUser,
+		auth_model.AccessTokenScopeWriteIssue,
+	)
+	user2ReadToken := getTokenForLoggedInUser(t,
+		user2Session,
+		auth_model.AccessTokenScopeReadProject,
+		auth_model.AccessTokenScopeReadOrganization,
+		auth_model.AccessTokenScopeReadRepository,
+		auth_model.AccessTokenScopeReadUser,
+		auth_model.AccessTokenScopeReadIssue,
+	)
+
+	projectOpts := &api.CreateOrUpdateProjectOptions{
+		Title:        "Test Project",
+		Description:  "Test Project",
+		TemplateType: "none",
+		CardType:     "text_only",
+		Status:       "open",
+	}
+
+	t.Run("Private Org where User2 is owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		privUser2Org := forgery.CreateOrganisationWithOptions(t, user2,
+			&forgery.CreateOrganisationOptions{
+				Visibility: api.VisibleTypePrivate,
+			})
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         privUser2Org.Name,
+			shouldSucceed: true,
+			ownerType:     project_module.APIOwnerTypeOrganization,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Repo where User2 is owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user2Repo := forgery.CreateRepository(t, user2, nil)
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         user2.Name,
+			repo:          user2Repo.Name,
+			shouldSucceed: true,
+			ownerType:     project_module.APIOwnerTypeRepository,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Project where User2 is owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         user2.Name,
+			shouldSucceed: true,
+			ownerType:     project_module.APIOwnerTypeIndividual,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Private Org where User2 team member with write access", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// private user1 org with user2 write access
+		privUser1Org := forgery.CreateOrganisationWithOptions(t, user1,
+			&forgery.CreateOrganisationOptions{
+				Visibility: api.VisibleTypePrivate,
+			})
+
+		privOrgTeamOpts := &forgery.CreateTeamOptions{
+			Name: "CanWriteProjects",
+			Mode: perm.AccessModeWrite,
+			Units: []*organization.TeamUnit{
+				{
+					OrgID:      privUser1Org.ID,
+					Type:       unit.TypeProjects,
+					AccessMode: perm.AccessModeWrite,
+				},
+			},
+			Members: []*user_model.User{user2},
+		}
+		forgery.CreateTeam(t, privUser1Org, privOrgTeamOpts)
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         privUser1Org.Name,
+			shouldSucceed: true,
+			ownerType:     project_module.APIOwnerTypeOrganization,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Repo where User2 is collaborator with read/write access", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user1Repo := forgery.CreateRepository(t, user1, &forgery.CreateRepositoryOptions{
+			Collaborators: map[*user_model.User]perm.AccessMode{
+				user2: perm.AccessModeWrite,
+			},
+		})
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         user1.Name,
+			repo:          user1Repo.Name,
+			shouldSucceed: true,
+			ownerType:     project_module.APIOwnerTypeRepository,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Repo where User2 is not owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user1Repo := forgery.CreateRepository(t, user1, nil)
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         user1.Name,
+			repo:          user1Repo.Name,
+			shouldSucceed: false,
+			ownerType:     project_module.APIOwnerTypeRepository,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Repo where User2 is collaborator with read access", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user1Repo := forgery.CreateRepository(t, user1, &forgery.CreateRepositoryOptions{
+			Collaborators: map[*user_model.User]perm.AccessMode{
+				user2: perm.AccessModeRead,
+			},
+		})
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         user1.Name,
+			repo:          user1Repo.Name,
+			shouldSucceed: false,
+			ownerType:     project_module.APIOwnerTypeRepository,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+
+		user1Project := forgery.CreateProject(t, user1Repo, nil)
+		runOpts.projectID = user1Project.ID
+		runOpts.token = user2ReadToken
+		runOpts.shouldSucceed = true
+		runProjectReadActions(t, runOpts)
+	})
+
+	t.Run("Private Org where User2 is not member", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		privUser1Org := forgery.CreateOrganisationWithOptions(t, user1,
+			&forgery.CreateOrganisationOptions{
+				Visibility: api.VisibleTypePrivate,
+			})
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         privUser1Org.Name,
+			shouldSucceed: false,
+			ownerType:     project_module.APIOwnerTypeOrganization,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+		user1Project := forgery.CreateProject(t, privUser1Org, nil)
+		runOpts.token = user2ReadToken
+		runOpts.projectID = user1Project.ID
+		runProjectReadActions(t, runOpts)
+	})
+
+	t.Run("Project where User2 is not owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		privUser1Org := forgery.CreateOrganisationWithOptions(t, user1,
+			&forgery.CreateOrganisationOptions{
+				Visibility: api.VisibleTypePrivate,
+			})
+		delProj := forgery.CreateProject(t, privUser1Org, nil)
+		runOpts := &runOpts{
+			token:         user2ReadToken,
+			owner:         privUser1Org.Name,
+			shouldSucceed: false,
+			ownerType:     project_module.APIOwnerTypeOrganization,
+		}
+		baseString := getProjectAPIBaseString(runOpts)
+		deleteProject(t, user2WriteToken, baseString, delProj.ID, http.StatusForbidden)
+	})
 }

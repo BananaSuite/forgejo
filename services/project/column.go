@@ -7,10 +7,22 @@ import (
 	"context"
 	"fmt"
 
+	"forgejo.org/models/db"
 	project_model "forgejo.org/models/project"
 	project_module "forgejo.org/modules/project"
+	project_structs "forgejo.org/modules/structs"
 	"forgejo.org/modules/validation"
 )
+
+func NewColumn(form *project_structs.CreateOrUpdateProjectColumnOptions, projectID int64) *project_model.Column {
+	return &project_model.Column{
+		Title:     form.Title,
+		Default:   form.Default,
+		Sorting:   form.Sorting,
+		Color:     form.Color,
+		ProjectID: projectID,
+	}
+}
 
 func getColumnByID(ctx context.Context, columnID int64) (*project_model.Column, error) {
 	column, err := project_model.GetColumn(ctx, columnID)
@@ -20,7 +32,7 @@ func getColumnByID(ctx context.Context, columnID int64) (*project_model.Column, 
 	return column, nil
 }
 
-// GetValidProjectColumnByID Get a Column by its ID, validate ID != 0 and check if projectIDs match
+// GetValidProjectColumnByID gets a Column by its ID, validate ID != 0 and check if projectIDs match
 func GetValidProjectColumnByID(ctx context.Context, projectID, columnID int64) (*project_model.Column, error) {
 	if columnID == int64(0) {
 		return nil, validation.ErrNotValid{
@@ -39,7 +51,7 @@ func GetValidProjectColumnByID(ctx context.Context, projectID, columnID int64) (
 	return c, nil
 }
 
-// CreateColumnInProject Create a ProjectColumn in a Project
+// CreateColumnInProject creates a ProjectColumn in a Project
 func CreateColumnInProject(ctx context.Context, col *project_model.Column) error {
 	err := project_model.CreateColumn(ctx, col)
 	if err != nil {
@@ -48,7 +60,7 @@ func CreateColumnInProject(ctx context.Context, col *project_model.Column) error
 	return nil
 }
 
-// EditColumnInProject Update the title or color of a ProjectColumn
+// EditColumnInProject updates the title or color of a ProjectColumn
 func EditColumnInProject(ctx context.Context, col *project_model.Column) error {
 	err := project_model.UpdateColumn(ctx, col)
 	if err != nil {
@@ -57,12 +69,65 @@ func EditColumnInProject(ctx context.Context, col *project_model.Column) error {
 	return nil
 }
 
-// SetDefaultColumn Set the default Column of a Project, other Columns will then be set non default
+// UpdateColumnInProject allows full updates of the column, including default and sorting
+func UpdateColumnInProject(ctx context.Context, col *project_model.Column, form *project_structs.CreateOrUpdateProjectColumnOptions, projectID, columnID int64) error {
+	changed := false
+	if form.Title != "" && form.Title != col.Title {
+		col.Title = form.Title
+		changed = true
+	}
+	if form.Color != "" && form.Color != col.Color {
+		col.Color = form.Color
+		changed = true
+	}
+	if form.Default && !col.Default {
+		if err := SetDefaultColumn(ctx, projectID, columnID); err != nil {
+			return err
+		}
+	}
+	if form.Sorting != col.Sorting {
+		changed = true
+		cols, err := db.Find[project_model.Column](ctx, project_model.FindColumnOptions{
+			ListOptions: db.ListOptionsAll, ProjectID: projectID,
+		})
+		if err != nil {
+			return err
+		}
+		sorting := make(map[int64]int64, 0)
+		for _, subCol := range cols {
+			if subCol.ID == col.ID {
+				// move column to new sorting position
+				sorting[int64(form.Sorting)] = subCol.ID
+				continue
+			}
+			if subCol.Sorting >= form.Sorting {
+				// move following columns to their new sorting positions
+				sorting[int64(subCol.Sorting)+1] = subCol.ID
+			}
+		}
+		err = project_model.MoveColumnsOnProject(ctx, projectID, sorting)
+		if err != nil {
+			return err
+		}
+		col.Sorting = form.Sorting // UpdateColumn below sets Sorting again, make sure it's up to date
+	}
+	if !changed {
+		// no further changes necessary
+		return nil
+	}
+	err := project_model.UpdateColumn(ctx, col)
+	if err != nil {
+		return fmt.Errorf("could not edit column for project %d: %w", col.ProjectID, err)
+	}
+	return nil
+}
+
+// SetDefaultColumn sets the default Column of a Project, other Columns will then be set non default
 func SetDefaultColumn(ctx context.Context, projectID, columnID int64) error {
 	return project_model.SetDefaultColumn(ctx, projectID, columnID)
 }
 
-// DeleteColumnInProject Delete a Column from a Project
+// DeleteColumnInProject deletes a Column from a Project
 func DeleteColumnInProject(ctx context.Context, columnID int64) error {
 	err := project_model.DeleteColumnByID(ctx, columnID)
 	if err != nil {

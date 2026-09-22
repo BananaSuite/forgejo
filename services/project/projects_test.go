@@ -653,18 +653,34 @@ func TestCUDProject(t *testing.T) {
 		assert.Equal(t, wantCol2.Title, columnTitle2)
 		assert.False(t, wantCol2.Default)
 
+		// update column
+		updateOpts := project_structs.CreateOrUpdateProjectColumnOptions{
+			Title:   "New Other Title",
+			Default: true,
+			Sorting: 1,
+		}
+		err = UpdateColumnInProject(t.Context(), wantCol2, &updateOpts, project.ID, wantCol2.ID)
+		require.NoError(t, err)
+
+		updatedCol := unittest.AssertExistsAndLoadBean(t, &project_model.Column{ID: column2.ID})
+		assert.Equal(t, wantCol2.Title, updatedCol.Title)
+		assert.True(t, updatedCol.Default)
+		assert.Equal(t, wantCol2.Sorting, updatedCol.Sorting)
+		assert.Equal(t, columnColor, updatedCol.Color)
+
 		// try deleting default column
-		err = DeleteColumnInProject(t.Context(), column1.ID)
+		err = DeleteColumnInProject(t.Context(), column2.ID)
 		require.Error(t, err) // Can not delete default col
 		require.ErrorContains(t, err, "cannot delete default column")
 
 		// delete other column
-		err = DeleteColumnInProject(t.Context(), column2.ID)
+		err = DeleteColumnInProject(t.Context(), column1.ID)
 		require.NoError(t, err)
-		unittest.AssertNotExistsBean(t, &project_model.Column{ID: column2.ID})
+		unittest.AssertNotExistsBean(t, &project_model.Column{ID: column1.ID})
 	})
 
 	t.Run("TestCRUDProjectIssues", func(t *testing.T) {
+		// TODO: improve the tests
 		// The yml's in models/fixtures provide information about the test DB
 		require.NoError(t, unittest.PrepareTestDatabase())
 		column1 := unittest.AssertExistsAndLoadBean(t, &project_model.Column{ID: 1})
@@ -709,6 +725,60 @@ func TestCUDProject(t *testing.T) {
 
 		assert.Contains(t, defaultIssues, pI1)
 		assert.Contains(t, defaultIssues, pI2)
+
+		// Remove an issue
+		issuesBefore, err := db.Find[project_model.ProjectIssue](t.Context(), project_model.FindProjectIssueOptions{
+			ListOptions: db.ListOptionsAll,
+			ProjectID:   project.ID,
+		})
+		require.NoError(t, err)
+
+		issue1 := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1})
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		err = RemoveIssueFromProject(t.Context(), issue1, user, column1.ID)
+		require.NoError(t, err)
+
+		issuesAfter, err := db.Find[project_model.ProjectIssue](t.Context(), project_model.FindProjectIssueOptions{
+			ListOptions: db.ListOptionsAll,
+			ProjectID:   project.ID,
+		})
+		require.NoError(t, err)
+
+		assert.Less(t, len(issuesAfter), len(issuesBefore))
+
+		// Create an issue
+		_, err = CreateIssueInProject(t.Context(), issue1, user, project.ID, column1.ID)
+		require.NoError(t, err)
+
+		issuesAfter, err = db.Find[project_model.ProjectIssue](t.Context(), project_model.FindProjectIssueOptions{
+			ListOptions: db.ListOptionsAll,
+			ProjectID:   project.ID,
+		})
+		require.NoError(t, err)
+
+		assert.Len(t, issuesAfter, len(issuesBefore))
+
+		_, err = CreateIssueInProject(t.Context(), issue1, user, project.ID, 0)
+		require.NoError(t, err)
+
+		// Remove issues
+		for _, projectIssue := range issuesAfter {
+			issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: projectIssue.ID})
+			err = RemoveIssueFromProject(t.Context(), issue, user, column1.ID)
+			require.NoError(t, err)
+		}
+
+		defaultCol, err = project.GetDefaultColumn(t.Context())
+		require.NoError(t, err)
+
+		defaultIssues, err = db.Find[project_model.ProjectIssue](t.Context(), project_model.FindProjectIssueOptions{
+			ListOptions:     db.ListOptionsAll,
+			ProjectID:       defaultCol.ProjectID,
+			ProjectColumnID: defaultCol.ID,
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, issue1.ID, defaultIssues[0].IssueID)
 	})
 
 	// delete project

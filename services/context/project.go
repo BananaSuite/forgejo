@@ -30,6 +30,30 @@ type ProjectAPI interface {
 	UpdateProject(ctx *APIContext)
 	// DeleteProject deletes a project by ID
 	DeleteProject(ctx *APIContext)
+	// ListProjectIssues lists project issues
+	ListProjectIssues(ctx *APIContext)
+	// CreateProjectIssue creates an issue in the default column of the project
+	CreateProjectIssue(ctx *APIContext)
+	// ListProjectColumns lists columns of the project
+	ListProjectColumns(ctx *APIContext)
+	// CreateProjectColumn creates a column in the project
+	CreateProjectColumn(ctx *APIContext)
+	// GetProjectColumn gets a column from the project
+	GetProjectColumn(ctx *APIContext)
+	// UpdateProjectColumn updates a column in the project
+	UpdateProjectColumn(ctx *APIContext)
+	// DeleteProjectColumn deletes a column in the project
+	DeleteProjectColumn(ctx *APIContext)
+	// ListProjectColumnIssues lists the issues in a column of a project.
+	ListProjectColumnIssues(ctx *APIContext)
+	// CreateProjectColumnIssue creates an issue in a column of a project.
+	CreateProjectColumnIssue(ctx *APIContext)
+	// GetProjectColumnIssue gets an issue in a column in a project.
+	GetProjectColumnIssue(ctx *APIContext)
+	// UpdateProjectColumnIssue updates an issue in a column in a project.
+	UpdateProjectColumnIssue(ctx *APIContext)
+	// DeleteProjectColumnIssue deletes an issue in a column in a project.
+	DeleteProjectColumnIssue(ctx *APIContext)
 }
 
 type Project struct {

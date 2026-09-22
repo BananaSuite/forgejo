@@ -147,3 +147,9 @@ func TestMoveIssuesToAnotherColumnErrorPaths(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestGetProjectIssue(t *testing.T) {
+	issue, err := GetProjectIssue(t.Context(), int64(1))
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), issue.ProjectID)
+}
