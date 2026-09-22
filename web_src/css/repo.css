@@ -2506,6 +2506,10 @@ details.commit-body-toggle > summary.ellipsis-button {
   height: 100%;
 }
 
+.diff .load-branches-and-tags {
+  user-select: none;
+}
+
 .ui.form .right .ui.button {
   margin-inline: 0.25em 0;
 }
