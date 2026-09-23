@@ -16,6 +16,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/container"
 	"forgejo.org/modules/optional"
+	"forgejo.org/modules/setting"
 
 	"code.forgejo.org/xorm/xorm"
 	"xorm.io/builder"
@@ -232,6 +233,15 @@ func applyRepoConditions(sess *xorm.Session, opts *IssuesOptions) {
 }
 
 func applyConditions(sess *xorm.Session, opts *IssuesOptions) {
+	if setting.Database.Type.IsMySQL() {
+		// Using the repo index on MariaDB improves the worst-case performence when
+		// searching for issues. If there are multiple older issues stored, MariaDB
+		// can take a long time to linearly scan them. Using the repo index,
+		// MariaDB can use it to gather all potentially relevant issues first and
+		// sort them after.
+		sess.IndexHint("USE", "", "UQE_issue_repo_index")
+	}
+
 	if len(opts.IssueIDs) > 0 {
 		sess.In("issue.id", opts.IssueIDs)
 	}
