@@ -20,7 +20,9 @@ import (
 	"forgejo.org/modules/git/internal" //nolint:depguard // only this file can use the internal type CmdArg, other files and packages should use AddXxx functions
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/process"
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/util"
+	cgroup_service "forgejo.org/services/cgroup"
 )
 
 // TrustedCmdArgs returns the trusted arguments for git command.
@@ -327,7 +329,10 @@ func (c *Command) Run(opts *RunOpts) error {
 	trace.Log(ctx, "command", desc)
 	startTime := time.Now()
 
-	cmd := exec.CommandContext(ctx, c.prog, c.args...)
+	prog := c.prog
+	args := c.args
+
+	cmd := exec.CommandContext(ctx, prog, args...)
 	if opts.Env == nil {
 		cmd.Env = os.Environ()
 	} else {
@@ -340,7 +345,16 @@ func (c *Command) Run(opts *RunOpts) error {
 	cmd.Stdout = opts.Stdout
 	cmd.Stderr = opts.Stderr
 	cmd.Stdin = opts.Stdin
-	if err := cmd.Start(); err != nil {
+
+	var err error
+	if setting.Cgroup.Enabled {
+		m := cgroup_service.GitProcManager.Load()
+		err = m.StartAndMove(cmd)
+	} else {
+		err = cmd.Start()
+	}
+
+	if err != nil {
 		return err
 	}
 
@@ -353,7 +367,7 @@ func (c *Command) Run(opts *RunOpts) error {
 		}
 	}
 
-	err := cmd.Wait()
+	err = cmd.Wait()
 	elapsed := time.Since(startTime)
 	if elapsed > time.Second {
 		log.Debug("slow git.Command.Run: %s (%s)", c, elapsed)

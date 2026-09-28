@@ -280,6 +280,7 @@ func LoadSettings() {
 	loadProjectFrom(CfgProvider)
 	loadMimeTypeMapFrom(CfgProvider)
 	loadAuthorizedIntegrationFrom(CfgProvider)
+	loadCgroupFrom(CfgProvider)
 }
 
 // LoadSettingsForInstall initializes the settings for install

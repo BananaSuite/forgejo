@@ -36,6 +36,7 @@ import (
 	auth_method "forgejo.org/services/auth/method"
 	"forgejo.org/services/auth/source/oauth2"
 	"forgejo.org/services/automerge"
+	cgroup_service "forgejo.org/services/cgroup"
 	"forgejo.org/services/cron"
 	federation_service "forgejo.org/services/federation"
 	feed_service "forgejo.org/services/feed"
@@ -105,13 +106,14 @@ func InitWebInstallPage(ctx context.Context) {
 
 // InitWebInstalled is for global installed configuration.
 func InitWebInstalled(ctx context.Context) {
+	setting.LoadSettings()
+	mustInit(cgroup_service.Init)
 	mustInitCtx(ctx, git.InitFull)
 	log.Info("Git version: %s (home: %s)", git.VersionInfo(), git.HomeDir())
 
 	// Setup i18n
 	translation.InitLocales(ctx)
 
-	setting.LoadSettings()
 	mustInit(storage.Init)
 
 	mailer.NewContext(ctx)

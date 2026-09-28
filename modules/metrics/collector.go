@@ -46,6 +46,8 @@ type Collector struct {
 	Users              *prometheus.Desc
 	Watches            *prometheus.Desc
 	Webhooks           *prometheus.Desc
+	CgroupPeakPids     *prometheus.Desc
+	CgroupCurrentPids  *prometheus.Desc
 }
 
 // NewCollector returns a new Collector with all prometheus.Desc initialized
@@ -196,6 +198,16 @@ func NewCollector() Collector {
 			"Number of Webhooks",
 			nil, nil,
 		),
+		CgroupPeakPids: prometheus.NewDesc(
+			namespace+"cgroup_pid_peak",
+			"Maximum PIDs that have been seen in the cgroup",
+			[]string{"cgroup"}, nil,
+		),
+		CgroupCurrentPids: prometheus.NewDesc(
+			namespace+"cgroup_pid_current",
+			"Current PIDs in the cgroup",
+			[]string{"cgroup"}, nil,
+		),
 	}
 }
 
@@ -229,6 +241,8 @@ func (c Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.Users
 	ch <- c.Watches
 	ch <- c.Webhooks
+	ch <- c.CgroupPeakPids
+	ch <- c.CgroupCurrentPids
 }
 
 // Collect returns the metrics with values
@@ -385,4 +399,18 @@ func (c Collector) Collect(ch chan<- prometheus.Metric) {
 		prometheus.GaugeValue,
 		float64(stats.Counter.Webhook),
 	)
+	for _, cg := range stats.Counter.Cgroups {
+		ch <- prometheus.MustNewConstMetric(
+			c.CgroupPeakPids,
+			prometheus.CounterValue,
+			float64(cg.PeakPids),
+			cg.Name,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			c.CgroupCurrentPids,
+			prometheus.GaugeValue,
+			float64(cg.CurrentPids),
+			cg.Name,
+		)
+	}
 }

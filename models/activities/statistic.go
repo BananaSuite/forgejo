@@ -18,6 +18,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/models/webhook"
 	"forgejo.org/modules/setting"
+	"forgejo.org/services/cgroup"
 )
 
 // Statistic contains the database statistics
@@ -34,6 +35,7 @@ type Statistic struct {
 		Branches, Tags, CommitStatus int64
 		IssueByLabel      []IssueByLabelCount
 		IssueByRepository []IssueByRepositoryCount
+		Cgroups           []Cgroup
 	}
 }
 
@@ -48,6 +50,12 @@ type IssueByRepositoryCount struct {
 	Count      int64
 	OwnerName  string
 	Repository string
+}
+
+type Cgroup struct {
+	Name        string
+	PeakPids    uint64
+	CurrentPids uint64
 }
 
 // GetStatistic returns the database statistics
@@ -98,6 +106,22 @@ func GetStatistic(ctx context.Context) (stats Statistic) {
 		} else {
 			stats.Counter.IssueOpen = c.Count
 		}
+	}
+
+	if setting.Cgroup.Enabled {
+		gitCgroup := Cgroup{Name: "git"}
+		gitCgManager := cgroup.GitProcManager.Load()
+		curr, err := gitCgManager.PidGetCurrent()
+		if err == nil {
+			gitCgroup.CurrentPids = curr
+		}
+
+		peak, err := gitCgManager.PidGetPeak()
+		if err == nil {
+			gitCgroup.PeakPids = peak
+		}
+
+		stats.Counter.Cgroups = []Cgroup{gitCgroup}
 	}
 
 	stats.Counter.Issue = stats.Counter.IssueClosed + stats.Counter.IssueOpen
