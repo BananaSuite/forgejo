@@ -210,7 +210,6 @@
   --color-markup-table-row: #e8e8ff0f;
   --color-markup-code-block: #e8e8ff12;
   --color-markup-code-inline: #e8e8ff28;
-  --color-button: #151a1e;
   --color-code-bg: #14171a;
   --color-shadow: #00001758;
   --color-secondary-bg: #2f3138;
@@ -253,6 +252,8 @@
   --color-page-nav-border: var(--color-secondary);
   --color-page-nav-background: #181c20;
   --color-page-background: #1c1f25;
+  --color-button-border: var(--color-light-border);
+  --color-button-background: #151a1e;
   --color-heatmap-background-1: var(--color-secondary-alpha-60);
   --color-heatmap-background-2: var(--color-secondary-alpha-60);
   --color-heatmap-background-3: var(--color-primary-light-4);

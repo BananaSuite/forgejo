@@ -246,7 +246,6 @@
   --color-markup-table-row: #ffffff06;
   --color-markup-code-block: var(--zinc-150);
   --color-markup-code-inline: var(--zinc-200);
-  --color-button: var(--zinc-150);
   --color-code-bg: var(--zinc-50);
   --color-shadow: #00000060;
   --color-secondary-bg: var(--zinc-100);
@@ -293,6 +292,8 @@
   --color-page-nav-border: var(--color-secondary);
   --color-page-nav-background: #fff;
   --color-page-background: #fff;
+  --color-button-border: var(--color-light-border);
+  --color-button-background: var(--zinc-150);
   --color-heatmap-background-1: var(--color-secondary-alpha-60);
   --color-heatmap-background-2: var(--color-secondary-alpha-60);
   --color-heatmap-background-3: var(--color-primary-light-4);

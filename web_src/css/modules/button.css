@@ -68,8 +68,8 @@
 }
 
 .button.secondary {
-  --button-background: var(--color-button);
-  --button-border-color: var(--color-light-border);
+  --button-background: var(--color-button-background);
+  --button-border-color: var(--color-button-border);
   --button-color: var(--color-text-light);
   --button-outline-color: oklch(from var(--button-border-color) l c h / 0.1);
 

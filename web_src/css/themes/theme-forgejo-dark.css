@@ -239,7 +239,6 @@
   --color-markup-table-row: #ffffff06;
   --color-markup-code-block: var(--steel-800);
   --color-markup-code-inline: var(--steel-850);
-  --color-button: var(--steel-600);
   --color-code-bg: var(--steel-750);
   --color-shadow: #00000060;
   --color-secondary-bg: var(--steel-700);
@@ -286,6 +285,8 @@
   --color-page-nav-border: var(--color-secondary);
   --color-page-nav-background: var(--steel-800);
   --color-page-background: var(--steel-800);
+  --color-button-border: var(--color-light-border);
+  --color-button-background: var(--steel-600);
   --color-heatmap-background-1: var(--color-secondary-alpha-60);
   --color-heatmap-background-2: var(--color-secondary-alpha-60);
   --color-heatmap-background-3: var(--color-primary-light-4);
