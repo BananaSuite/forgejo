@@ -1,0 +1,14 @@
+.filter-bar {
+  display: flex;
+  flex-direction: row;
+  background-color: var(--color-secondary);
+}
+
+.filter-bar .filler {
+  flex-grow: 1;
+}
+
+#lfs-files-associate-button {
+  /* Because it is inside of a form, it doesn't fill the height, being 38px instead of 40px; 100% fixes that */
+  height: 100%;
+}
