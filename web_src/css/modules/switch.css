@@ -69,5 +69,5 @@ so when it is hovered, there are no ugly unpainted v/^ shapes between them */
 
 /* Make counters embedded into items more visible on brighter backgrounds */
 .switch > .item:is(.active, :hover) > .ui.label {
-  background: var(--color-label-bg-alt, var(--color-label-bg));
+  background: var(--color-label-bubble-background, var(--color-label-background));
 }

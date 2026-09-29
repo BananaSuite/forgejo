@@ -200,7 +200,6 @@
   --color-input-border-hover: var(--color-secondary-dark-1);
   --color-light: #00001728;
   --color-light-mimic-enabled: rgba(0, 0, 0, calc(40 / 255 * 222 / 255 / var(--opacity-disabled)));
-  --color-light-border: #e8e8ff28;
   --color-hover: #e8e8ff19;
   --color-active: #393b43;
   --color-menu: #151a1e;
@@ -224,10 +223,6 @@
   --color-tooltip-text: #fafafb;
   --color-tooltip-bg: #000017f0;
   --color-nav-hover-bg: var(--color-secondary-light-1);
-  --color-label-text: var(--color-text);
-  --color-label-bg: #73828e4b;
-  --color-label-hover-bg: #73828ea0;
-  --color-label-active-bg: #73828eff;
   --color-accent: var(--color-primary-light-1);
   --color-small-accent: var(--color-primary-light-5);
   --color-highlight-fg: #87651e;
@@ -252,8 +247,13 @@
   --color-page-nav-border: var(--color-secondary);
   --color-page-nav-background: #181c20;
   --color-page-background: #1c1f25;
-  --color-button-border: var(--color-light-border);
+  --color-button-border: #e8e8ff28;
   --color-button-background: #151a1e;
+  --color-label-border: #e8e8ff28;
+  --color-label-foreground: var(--color-text);
+  --color-label-background: #73828e4b;
+  --color-label-hover-background: #73828ea0;
+  --color-label-active-background: #73828eff;
   --color-heatmap-background-1: var(--color-secondary-alpha-60);
   --color-heatmap-background-2: var(--color-secondary-alpha-60);
   --color-heatmap-background-3: var(--color-primary-light-4);

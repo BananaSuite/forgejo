@@ -236,7 +236,6 @@
   --color-header-wrapper-transparent: #d2e0f000;
   --color-light: #ffffffcc;
   --color-light-mimic-enabled: rgba(0, 0, 0, calc(6 / 255 * 222 / 255 / var(--opacity-disabled)));
-  --color-light-border: #0000001d;
   --color-hover: #e4e4e4aa;
   --color-active: #e2e2e5;
   --color-menu: var(--zinc-100);
@@ -263,11 +262,6 @@
   --color-tooltip-text: #ffffff;
   --color-tooltip-bg: #000000f0;
   --color-nav-hover-bg: var(--zinc-300);
-  --color-label-text: var(--color-text);
-  --color-label-bg: #cacaca7b;
-  --color-label-hover-bg: #cacacaa0;
-  --color-label-active-bg: #cacacaff;
-  --color-label-bg-alt: #cacacaff;
   --color-accent: var(--color-primary-light-1);
   --color-small-accent: var(--color-primary-light-5);
   --color-highlight-fg: var(--color-primary-light-4);
@@ -292,8 +286,14 @@
   --color-page-nav-border: var(--color-secondary);
   --color-page-nav-background: #fff;
   --color-page-background: #fff;
-  --color-button-border: var(--color-light-border);
+  --color-button-border: #0000001d;
   --color-button-background: var(--zinc-150);
+  --color-label-border: #0000001d;
+  --color-label-foreground: var(--color-text);
+  --color-label-background: #cacaca7b;
+  --color-label-hover-background: #cacacaa0;
+  --color-label-active-background: #cacacaff;
+  --color-label-bubble-background: #cacacaff;
   --color-heatmap-background-1: var(--color-secondary-alpha-60);
   --color-heatmap-background-2: var(--color-secondary-alpha-60);
   --color-heatmap-background-3: var(--color-primary-light-4);
@@ -323,7 +323,7 @@
   background-color: var(--color-shadow) !important;
 }
 #review-box .review-comments-counter {
-  background-color: var(--color-label-bg) !important;
+  background-color: var(--color-label-background) !important;
   margin-inline-start: 0.5em;
 }
 .ui.basic.labels .primary.label,

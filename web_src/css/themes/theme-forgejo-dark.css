@@ -229,7 +229,6 @@
   --color-header-wrapper-transparent: #242d3800;
   --color-light: #00000028;
   --color-light-mimic-enabled: rgba(0, 0, 0, calc(40 / 255 * 222 / 255 / var(--opacity-disabled)));
-  --color-light-border: #ffffff28;
   --color-hover: var(--steel-600);
   --color-active: var(--steel-650);
   --color-menu: var(--steel-700);
@@ -256,11 +255,6 @@
   --color-tooltip-text: #ffffff;
   --color-tooltip-bg: #000000f0;
   --color-nav-hover-bg: var(--steel-600);
-  --color-label-text: #fff;
-  --color-label-bg: var(--steel-600);
-  --color-label-hover-bg: var(--steel-550);
-  --color-label-active-bg: var(--steel-500);
-  --color-label-bg-alt: var(--steel-550);
   --color-accent: var(--color-primary-light-1);
   --color-small-accent: var(--color-primary-light-5);
   --color-highlight-fg: var(--color-primary-light-4);
@@ -285,8 +279,14 @@
   --color-page-nav-border: var(--color-secondary);
   --color-page-nav-background: var(--steel-800);
   --color-page-background: var(--steel-800);
-  --color-button-border: var(--color-light-border);
+  --color-button-border: #ffffff28;
   --color-button-background: var(--steel-600);
+  --color-label-border: #ffffff28;
+  --color-label-foreground: #fff;
+  --color-label-background: var(--steel-600);
+  --color-label-hover-background: var(--steel-550);
+  --color-label-active-background: var(--steel-500);
+  --color-label-bubble-background: var(--steel-550);
   --color-heatmap-background-1: var(--color-secondary-alpha-60);
   --color-heatmap-background-2: var(--color-secondary-alpha-60);
   --color-heatmap-background-3: var(--color-primary-light-4);

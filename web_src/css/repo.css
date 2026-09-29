@@ -919,7 +919,7 @@ citation-information .tab:not(.active) {
 
 .repository.view.issue .comment-list .timeline-item .compare.label {
   font-size: 1rem;
-  border: 1px solid var(--color-light-border);
+  border: 1px solid var(--color-label-border);
   height: fit-content;
 }
 
@@ -991,7 +991,7 @@ citation-information .tab:not(.active) {
 }
 
 .merge-section-info code {
-  border: 1px solid var(--color-light-border);
+  border: 1px solid var(--color-label-border);
   border-radius: var(--border-radius);
   padding: 2px 4px;
   background: var(--color-light);

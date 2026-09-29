@@ -8,8 +8,8 @@
   min-width: 0;
   vertical-align: middle;
   line-height: 1;
-  background: var(--color-label-bg);
-  color: var(--color-label-text);
+  background: var(--color-label-background);
+  color: var(--color-label-foreground);
   padding: 0.3em 0.5em;
   font-size: 0.85714286rem;
   font-weight: var(--font-weight-medium);
@@ -89,9 +89,9 @@ a.ui.label {
 }
 
 a.ui.label:hover {
-  background: var(--color-label-hover-bg);
-  border-color: var(--color-label-hover-bg);
-  color: var(--color-label-text);
+  background: var(--color-label-hover-background);
+  border-color: var(--color-label-hover-background);
+  color: var(--color-label-foreground);
 }
 
 .ui.label.visible:not(.dropdown) {
@@ -108,15 +108,15 @@ a.ui.label:hover {
 }
 
 .ui.basic.label {
-  background: var(--color-button);
-  border: 1px solid var(--color-light-border);
+  background: var(--color-label-background);
+  border: 1px solid var(--color-label-border);
   color: var(--color-text-light);
   padding: calc(0.5833em - 1px) calc(0.833em - 1px);
 }
 a.ui.basic.label:hover {
   text-decoration: none;
   color: var(--color-text);
-  border-color: var(--color-light-border);
+  border-color: var(--color-label-border);
   background: var(--color-hover);
 }
 
@@ -247,24 +247,24 @@ a.ui.ui.ui.basic.purple.label:hover {
 }
 
 .ui.ui.ui.grey.label {
-  background: var(--color-label-bg);
-  border-color: var(--color-label-bg);
-  color: var(--color-label-text);
+  background: var(--color-label-background);
+  border-color: var(--color-label-background);
+  color: var(--color-label-foreground);
 }
 a.ui.ui.ui.grey.label:hover {
-  background: var(--color-label-hover-bg);
-  border-color: var(--color-label-hover-bg);
+  background: var(--color-label-hover-background);
+  border-color: var(--color-label-hover-background);
   color: var(--color-white);
 }
 .ui.ui.ui.basic.grey.label {
   background: transparent;
-  border-color: var(--color-label-bg);
-  color: var(--color-label-text);
+  border-color: var(--color-label-background);
+  color: var(--color-label-foreground);
 }
 a.ui.ui.ui.basic.grey.label:hover {
   background: transparent;
-  border-color: var(--color-label-hover-bg);
-  color: var(--color-label-hover-bg);
+  border-color: var(--color-label-hover-background);
+  color: var(--color-label-hover-background);
 }
 
 .ui.horizontal.label {

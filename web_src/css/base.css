@@ -378,7 +378,7 @@ a.label,
 .inline-code-block {
   padding: 2px 4px;
   border-radius: .24em;
-  background-color: var(--color-label-bg);
+  background-color: var(--color-label-background);
 }
 
 .ui.menu {
@@ -1005,13 +1005,13 @@ overflow-menu .ui.label {
 }
 
 .ui.menu .item > .label {
-  background: var(--color-label-bg);
-  color: var(--color-label-text);
+  background: var(--color-label-background);
+  color: var(--color-label-foreground);
 }
 
 .ui.menu .active.item > .label,
 .ui.menu.tabs-with-labels .item:hover > .label {
-  background: var(--color-label-bg-alt, var(--color-label-bg));
+  background: var(--color-label-bubble-background, var(--color-label-background));
 }
 
 .lines-blame-btn {
@@ -1181,7 +1181,7 @@ table th[data-sortt-desc] .svg {
 }
 
 .ui.multiple.dropdown > .label {
-  box-shadow: 0 0 0 1px var(--color-secondary) inset;
+  box-shadow: 0 0 0 1px var(--color-label-border) inset;
 }
 
 .emoji,

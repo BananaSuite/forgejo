@@ -41,8 +41,8 @@
 }
 
 .ts-wrapper .ts-control > .item {
-  background: var(--color-label-bg);
-  border: 1px solid var(--color-secondary);
+  background: var(--color-label-background);
+  border: 1px solid var(--color-label-border);
   border-radius: var(--border-radius);
   padding: 2px 8px;
   margin: 0;
