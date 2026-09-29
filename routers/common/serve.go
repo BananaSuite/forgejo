@@ -41,6 +41,14 @@ func ServeBlob(ctx *context.Base, repo *context.Repository, blob *git.Blob, last
 		return err
 	}
 
+	// There are multiple steps involved in resolving an LFS file, namely
+	// parsing the blob to check whether it contains a Git LFS pointer, and if so,
+	// try to read the file from the LFS content store and serve that. If either
+	// the parsing or the reading does not succeed, then the blob must represent
+	// a "normal" file; so we check the cache for the given blob and, if nothing
+	// is cached, we deallocate the buffer that is in-use for the blob and only
+	// then do we "serve the blob" as-is.
+
 	pointer, err := lfs.ReadPointer(dataRc)
 
 	if err2 := dataRc.Close(); err2 != nil {
