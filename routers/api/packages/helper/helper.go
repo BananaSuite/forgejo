@@ -48,9 +48,8 @@ func ServePackageFile(ctx *context.Context, s packages_service.ReadSeekCloseSize
 		opts = forceOpts[0]
 	} else {
 		opts = &context.ServeHeaderOptions{
-			Filename:      pf.Name,
-			LastModified:  pf.CreatedUnix.AsLocalTime(),
-			ContentLength: new(s.Size()),
+			Filename:     pf.Name,
+			LastModified: pf.CreatedUnix.AsLocalTime(),
 		}
 	}
 
@@ -61,5 +60,8 @@ func ServePackageFile(ctx *context.Context, s packages_service.ReadSeekCloseSize
 
 	defer s.Close()
 
+	if opts.ContentLength == nil {
+		opts.ContentLength = new(s.Size())
+	}
 	ctx.ServeContent(s, opts)
 }
