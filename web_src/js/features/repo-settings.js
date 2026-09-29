@@ -4,7 +4,7 @@ import {onInputDebounce, toggleElem} from '../utils/dom.ts';
 import {POST} from '../modules/fetch.ts';
 import {createCodemirror} from './codemirror.ts';
 
-const {appSubUrl, i18n} = window.config;
+const {appSubUrl, i18n, pageData} = window.config;
 
 export function initRepoSettingsCollaboration() {
   // Change collaborator access mode
@@ -110,6 +110,40 @@ export function initRepoSettingBranches() {
 export function initRepoSettingLfsPointers() {
   const lfsFilesTable = document.getElementById('lfs-files-table');
   if (!lfsFilesTable) return;
+
+  const searchForm = pageData.repoLfsPointersSearchForm;
+  if (!searchForm) return;
+
+  const form = document.getElementById('lfs-pointers-search-form');
+  if (!form) return;
+
+  if (searchForm.PointerFilterMap) {
+    for (const [k, v] of Object.entries(searchForm.PointerFilterMap)) {
+      if (!v) continue;
+      for (const input of form.querySelectorAll(`input[name="pointer_filter[${k}]"][value="${v}"]`)) {
+        input.checked = true;
+      }
+    }
+  }
+
+  for (const radio of form.querySelectorAll('input[type=radio]')) {
+    radio.addEventListener('click', () => {
+      form.submit();
+    });
+  }
+
+  const resetButtons = form.querySelectorAll('.j-reset-pointer-filter');
+  for (const button of resetButtons) {
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      for (const input of form.querySelectorAll('input[type=radio]')) {
+        if (input.name.startsWith('pointer_filter[')) {
+          input.checked = false;
+        }
+      }
+      form.submit();
+    });
+  }
 
   const deleteButton = document.getElementById('lfs-files-delete-button');
 

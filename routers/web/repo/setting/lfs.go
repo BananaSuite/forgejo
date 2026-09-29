@@ -23,12 +23,14 @@ import (
 	"forgejo.org/modules/git/pipeline"
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
 	"forgejo.org/modules/typesniffer"
 	"forgejo.org/modules/util"
 	"forgejo.org/services/context"
+	lfs_service "forgejo.org/services/lfs"
 )
 
 const (
@@ -368,8 +370,7 @@ func LFSDelete(ctx *context.Context) {
 	oids := ctx.FormStrings("oid")
 
 	// For backwards compatibility, also support receiving one oid via path (/delete/oid-here)
-	pathOid := ctx.Params("oid")
-	if pathOid != "" {
+	if pathOid := ctx.Params("oid"); pathOid != "" {
 		oids = append(oids, pathOid)
 	}
 
@@ -386,6 +387,7 @@ func LFSDelete(ctx *context.Context) {
 	for _, oid := range oids {
 		count, err := git_model.RemoveLFSMetaObjectByOid(ctx, ctx.Repo.Repository.ID, oid)
 		if err != nil {
+			log.Error("Repo[%-v]: Error removing LFS OID %-v: %v", ctx.Repo.Repository.ID, oid, err)
 			ctx.ServerError("LFSDelete", err)
 			return
 		}
@@ -451,8 +453,19 @@ func LFSPointerFiles(ctx *context.Context) {
 	ctx.Data["PageIsSettingsLFS"] = true
 	ctx.Data["LFSFilesLink"] = ctx.Repo.RepoLink + "/settings/lfs"
 
-	var err error
-	err = func() error {
+	pointerFilterKeys := []string{"in_repo", "exists", "accessible"}
+	pointerFilterMap := map[string]string{}
+	for _, filterKey := range pointerFilterKeys {
+		paramKey := "pointer_filter[" + filterKey + "]"
+		paramVal := ctx.FormString(paramKey)
+		pointerFilterMap[filterKey] = paramVal
+	}
+
+	ctx.PageData["repoLfsPointersSearchForm"] = map[string]any{
+		"PointerFilterMap": pointerFilterMap,
+	}
+
+	err := func() error {
 		pointerChan := make(chan lfs.PointerBlob)
 		errChan := make(chan error, 1)
 		go lfs.SearchPointerBlobs(ctx, ctx.Repo.GitRepo, pointerChan, errChan)
@@ -460,75 +473,34 @@ func LFSPointerFiles(ctx *context.Context) {
 		numPointers := 0
 		var numAssociated, numNoExist, numAssociatable int
 
-		type pointerResult struct {
-			SHA          string
-			Oid          string
-			Size         int64
-			InRepo       bool
-			Exists       bool
-			Accessible   bool
-			Associatable bool
-		}
-
-		results := []pointerResult{}
+		results := []lfs_service.PointerInformation{}
 
 		contentStore := lfs.NewContentStore()
-		repo := ctx.Repo.Repository
 
 		for pointerBlob := range pointerChan {
-			numPointers++
-
-			result := pointerResult{
-				SHA:  pointerBlob.Hash,
-				Oid:  pointerBlob.Oid,
-				Size: pointerBlob.Size,
-			}
-
-			if _, err := git_model.GetLFSMetaObjectByOid(ctx, repo.ID, pointerBlob.Oid); err != nil {
-				if !(err == git_model.ErrLFSObjectNotExist || err == lfs.ErrInvalidOIDFormat) {
-					return err
-				}
-			} else {
-				result.InRepo = true
-			}
-
-			result.Exists, err = contentStore.Exists(pointerBlob.Pointer)
+			result, err := lfs_service.FetchPointerInformation(*ctx, pointerBlob, *contentStore)
 			if err != nil {
 				return err
 			}
 
-			if result.Exists {
-				if !result.InRepo {
-					// Can we fix?
-					// OK well that's "simple"
-					// - we need to check whether current user has access to a repo that has access to the file
-					result.Associatable, err = git_model.LFSObjectAccessible(ctx, ctx.Doer, pointerBlob.Oid)
-					if err != nil {
-						return err
-					}
-					if !result.Associatable {
-						associated, err := git_model.ExistsLFSObject(ctx, pointerBlob.Oid)
-						if err != nil {
-							return err
-						}
-						result.Associatable = !associated
-					}
+			inRepoHas, inRepoValue := optional.ParseBool(pointerFilterMap["in_repo"]).Get()
+			existsHas, existsValue := optional.ParseBool(pointerFilterMap["exists"]).Get()
+			accessibleHas, accessibleValue := optional.ParseBool(pointerFilterMap["accessible"]).Get()
+			if (!inRepoHas || (inRepoValue == result.InRepo)) &&
+				(!existsHas || (existsValue == result.Exists)) &&
+				(!accessibleHas || (accessibleValue == result.Accessible)) {
+				numPointers++
+				if result.InRepo {
+					numAssociated++
 				}
+				if !result.Exists {
+					numNoExist++
+				}
+				if result.Associatable {
+					numAssociatable++
+				}
+				results = append(results, result)
 			}
-
-			result.Accessible = result.InRepo || result.Associatable
-
-			if result.InRepo {
-				numAssociated++
-			}
-			if !result.Exists {
-				numNoExist++
-			}
-			if result.Associatable {
-				numAssociatable++
-			}
-
-			results = append(results, result)
 		}
 
 		err, has := <-errChan

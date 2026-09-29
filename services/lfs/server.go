@@ -575,3 +575,47 @@ func requireAuth(ctx *context.Context) {
 	ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=gitea-lfs")
 	writeStatus(ctx, http.StatusUnauthorized)
 }
+
+type PointerInformation struct {
+	Blob         lfs_module.PointerBlob
+	InRepo       bool
+	Exists       bool
+	Accessible   bool
+	Associatable bool
+}
+
+func FetchPointerInformation(ctx context.Context, blob lfs_module.PointerBlob, contentStore lfs_module.ContentStore) (PointerInformation, error) {
+	var err error
+	r := PointerInformation{Blob: blob}
+
+	if _, err := git_model.GetLFSMetaObjectByOid(ctx, ctx.Repo.Repository.ID, blob.Oid); err != nil {
+		if err != git_model.ErrLFSObjectNotExist {
+			return r, err
+		}
+	} else {
+		r.InRepo = true
+	}
+
+	r.Exists, err = contentStore.Exists(blob.Pointer)
+	if err != nil {
+		return r, err
+	}
+
+	if r.Exists && !r.InRepo {
+		r.Associatable, err = git_model.LFSObjectAccessible(ctx, ctx.Doer, blob.Oid)
+		if err != nil {
+			return r, err
+		}
+		if !r.Associatable {
+			associated, err := git_model.ExistsLFSObject(ctx, blob.Oid)
+			if err != nil {
+				return r, err
+			}
+			r.Associatable = !associated
+		}
+	}
+
+	r.Accessible = r.InRepo || r.Associatable
+
+	return r, nil
+}

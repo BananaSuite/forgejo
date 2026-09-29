@@ -210,6 +210,85 @@ test.describe('repo lfs settings', () => {
 
     await screenshot(page);
   });
+
+  test('pointer settings - reset filters', async ({page}) => {
+    // Integration tests already cover the checking of the table contents
+    // depending on the filter combination chosen.
+    const response = await page.goto('/user2/lfs/settings/lfs/pointers?pointer_filter[in_repo]=0');
+    expect(response?.status()).toBe(200);
+    await screenshot(page);
+
+    // Check reset status button, click on filter submenu
+    const filter = page.locator('.filter > div.dropdown');
+    const resetPointerFilterButton = filter.locator('.j-reset-pointer-filter');
+
+    // eslint-disable-next-line no-useless-escape
+    const inRepoRadioInput = page.locator('input[type="radio"][name="pointer_filter\[in_repo\]"][value="1"]');
+    // eslint-disable-next-line no-useless-escape
+    const notInRepoRadioInput = page.locator('input[type="radio"][name="pointer_filter\[in_repo\]"][value="0"]');
+
+    // eslint-disable-next-line no-useless-escape
+    const existsRadioInput = page.locator('input[type="radio"][name="pointer_filter\[exists\]"][value="1"]');
+    // eslint-disable-next-line no-useless-escape
+    const notExistsRadioInput = page.locator('input[type="radio"][name="pointer_filter\[exists\]"][value="0"]');
+
+    // eslint-disable-next-line no-useless-escape
+    const accessibleRadioInput = page.locator('input[type="radio"][name="pointer_filter\[accessible\]"][value="1"]');
+    // eslint-disable-next-line no-useless-escape
+    const notAccessibleRadioInput = page.locator('input[type="radio"][name="pointer_filter\[accessible\]"][value="0"]');
+
+    // Check that all of the filter menu's elements are hidden...
+    await expect(resetPointerFilterButton).toBeHidden();
+    await expect(inRepoRadioInput).toBeHidden();
+    await expect(notInRepoRadioInput).toBeHidden();
+    await expect(existsRadioInput).toBeHidden();
+    await expect(notExistsRadioInput).toBeHidden();
+    await expect(accessibleRadioInput).toBeHidden();
+    await expect(notAccessibleRadioInput).toBeHidden();
+
+    // eslint-disable-next-line playwright/no-force-option
+    await filter.click({scroll: 'auto', force: true});
+    await resetPointerFilterButton.waitFor();
+    await screenshot(page);
+
+    await expect(inRepoRadioInput).toBeVisible();
+    await expect(notInRepoRadioInput).toBeVisible();
+    await expect(existsRadioInput).toBeVisible();
+    await expect(notExistsRadioInput).toBeVisible();
+    await expect(accessibleRadioInput).toBeVisible();
+    await expect(notAccessibleRadioInput).toBeVisible();
+
+    // and that the input radios look as we expect them for the URL we visited
+    await expect(inRepoRadioInput).toBeChecked({checked: false});
+    await expect(notInRepoRadioInput).toBeChecked({checked: true});
+    await expect(existsRadioInput).toBeChecked({checked: false});
+    await expect(notExistsRadioInput).toBeChecked({checked: false});
+    await expect(accessibleRadioInput).toBeChecked({checked: false});
+    await expect(notAccessibleRadioInput).toBeChecked({checked: false});
+
+    // then, we click on reset and check whether everything is invisible and unchecked.
+    // eslint-disable-next-line playwright/no-force-option
+    await resetPointerFilterButton.click({scroll: 'auto', force: true});
+    await screenshot(page);
+
+    await expect(resetPointerFilterButton).toBeHidden();
+    await expect(inRepoRadioInput).toBeHidden();
+    await expect(notInRepoRadioInput).toBeHidden();
+    await expect(existsRadioInput).toBeHidden();
+    await expect(notExistsRadioInput).toBeHidden();
+    await expect(accessibleRadioInput).toBeHidden();
+    await expect(notAccessibleRadioInput).toBeHidden();
+
+    await filter.click({scroll: 'auto'});
+    await screenshot(page);
+
+    await expect(inRepoRadioInput).toBeChecked({checked: false});
+    await expect(notInRepoRadioInput).toBeChecked({checked: false});
+    await expect(existsRadioInput).toBeChecked({checked: false});
+    await expect(notExistsRadioInput).toBeChecked({checked: false});
+    await expect(accessibleRadioInput).toBeChecked({checked: false});
+    await expect(notAccessibleRadioInput).toBeChecked({checked: false});
+  });
 });
 
 test.describe('repo collaboration settings', () => {

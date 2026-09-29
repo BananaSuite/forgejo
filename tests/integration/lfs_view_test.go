@@ -693,11 +693,11 @@ func TestLFSPointerViewSimple(t *testing.T) {
 				oidHeader := tableHead.Find("th:nth-child(3)").Text()
 				assert.Equal(t, locale.TrString("repo.settings.lfs_pointers.oid"), oidHeader)
 				inRepoHeader := tableHead.Find("th:nth-child(4)").Text()
-				assert.Equal(t, locale.TrString("repo.settings.lfs_pointers.inRepo"), inRepoHeader)
+				assert.Equal(t, locale.TrString("repo.settings.lfs.pointers.inRepo"), inRepoHeader)
 				inStoreHeader := tableHead.Find("th:nth-child(5)").Text()
-				assert.Equal(t, locale.TrString("repo.settings.lfs_pointers.exists"), inStoreHeader)
+				assert.Equal(t, locale.TrString("repo.settings.lfs.pointers.exists"), inStoreHeader)
 				accessibleHeader := tableHead.Find("th:nth-child(6)").Text()
-				assert.Equal(t, locale.TrString("repo.settings.lfs_pointers.accessible"), accessibleHeader)
+				assert.Equal(t, locale.TrString("repo.settings.lfs.pointers.accessible"), accessibleHeader)
 				findCommitHeader := tableHead.Find("th:nth-child(7)").Text()
 				assert.Empty(t, findCommitHeader)
 			})
@@ -746,13 +746,81 @@ func TestLFSPointerViewSimple(t *testing.T) {
 					},
 				}
 
-				tableRows := doc.Find("table#lfs-files-table > tbody > tr")
-				assert.Equal(t, 5, tableRows.Length())
-				tableRowsIter := tableRows.EachIter()
+				t.Run("Default", func(t *testing.T) {
+					defer tests.PrintCurrentTest(t)()
 
-				for rowNumber, rowSelection := range tableRowsIter {
-					iterateAndComparePointerTableCells(t, rowNumber, rowSelection, lfsRepoTestcases)
-				}
+					tableRows := doc.Find("table#lfs-files-table > tbody > tr")
+					assert.Equal(t, 5, tableRows.Length())
+					tableRowsIter := tableRows.EachIter()
+
+					for rowNumber, rowSelection := range tableRowsIter {
+						iterateAndComparePointerTableCells(t, rowNumber, rowSelection, lfsRepoTestcases)
+					}
+				})
+
+				t.Run("Filter", func(t *testing.T) {
+					defer tests.PrintCurrentTest(t)()
+
+					trueVal := true
+					falseVal := false
+					values := []*bool{&trueVal, &falseVal, nil} // nil = dont care
+
+					boolPointerToInt := func(b *bool) int {
+						t.Helper()
+						switch *b {
+						case true:
+							return 1
+						case false:
+							return 0
+						}
+						return -1
+					}
+
+					// The author of this nested loop is probably going to hell for this,
+					// so that you don't have to. You're welcome.
+					for _, inRepo := range values {
+						for _, inStore := range values {
+							for _, accessible := range values {
+								tmp := []LFSPointerTestcase{}
+								for _, item := range lfsRepoTestcases {
+									if (inRepo == nil || (item.inRepo == *inRepo)) &&
+										(inStore == nil || (item.inStore == *inStore)) &&
+										(accessible == nil || (item.accessible == *accessible)) {
+										tmp = append(tmp, item)
+									}
+								}
+
+								pointersURL := "/user2/lfs/settings/lfs/pointers?"
+								if inRepo != nil {
+									pointersURL += fmt.Sprintf("pointer_filter[in_repo]=%d&", boolPointerToInt(inRepo))
+								}
+								if inStore != nil {
+									pointersURL += fmt.Sprintf("pointer_filter[exists]=%d&", boolPointerToInt(inStore))
+								}
+								if accessible != nil {
+									pointersURL += fmt.Sprintf("pointer_filter[accessible]=%d&", boolPointerToInt(accessible))
+								}
+
+								req := NewRequest(t, "GET", pointersURL)
+								resp := session.MakeRequest(t, req, http.StatusOK)
+
+								filesTable := NewHTMLParser(t, resp.Body).doc.Find("#lfs-files-table")
+
+								if len(tmp) != 0 {
+									tableRows := filesTable.Find("table#lfs-files-table > tbody > tr")
+									assert.Equal(t, len(tmp), tableRows.Length())
+									tableRowsIter := tableRows.EachIter()
+
+									for rowNumber, rowSelection := range tableRowsIter {
+										iterateAndComparePointerTableCells(t, rowNumber, rowSelection, tmp)
+									}
+								} else {
+									assert.Contains(t, filesTable.Text(), locale.TrString("repo.settings.lfs.no_pointers"))
+								}
+							}
+						}
+					}
+				})
 			})
 		})
 
