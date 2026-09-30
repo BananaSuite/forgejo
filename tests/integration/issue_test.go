@@ -106,18 +106,19 @@ func TestViewIssuesType(t *testing.T) {
 func TestViewIssuesAssigneeDropdown(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	// user46, user47 and user48 have access to repo_org42 but user48
-	// has private membership with org42, so we get user46 and user47 in dropdown.
+	// user46, user47 and user48 have access to repo_org49 but user48
+	// has private membership with org49, so we get user46 and user47 in dropdown.
 	user46 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 46})
 	user47 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 47})
 	user48 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 48})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 67})
 
 	// confirm that users are members of the team with access to the repo.
-	var orgID int64 = 45
+	var orgID int64 = 49
+	var teamID int64 = 27
 	userIDs := []int64{user46.ID, user47.ID, user48.ID}
 	for _, userID := range userIDs {
-		isTeamMember, err := org_model.IsTeamMember(db.DefaultContext, orgID, 27, userID)
+		isTeamMember, err := org_model.IsTeamMember(db.DefaultContext, orgID, teamID, userID)
 		require.NoError(t, err)
 		assert.True(t, isTeamMember)
 	}
