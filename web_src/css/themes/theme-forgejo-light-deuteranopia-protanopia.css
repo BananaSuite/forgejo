@@ -8,7 +8,18 @@
   --color-diff-added-row-border: #b8c0ff;
   --color-diff-added-row-background: #e0e0ff;
   --color-code-bg: #ffffff;
-  --color-diff-changed-foreground: var(--color-text);
-  --color-diff-additions-foreground: var(--color-blue);
-  --color-diff-deletions-foreground: var(--color-yellow);
+  --color-diff-changed-foreground: var(--color-thin-orange);
+  --color-diff-additions-foreground: var(--color-thin-blue);
+  --color-diff-deletions-foreground: var(--color-thin-yellow);
+}
+
+.diff {
+  .diff-stats-bar { --color-red: var(--color-thin-yellow) }
+  .diff-stats-add-bar { --color-green: var(--color-thin-blue) }
+  .text.green { color: var(--color-thin-blue) !important }
+}
+
+.flex-list {
+  svg.text.red { color: var(--color-thin-yellow) !important }
+  svg.text.green { color: var(--color-thin-blue) !important }
 }

@@ -197,6 +197,7 @@
   --hue-violet: 293deg;
   --hue-orange: 41deg;
   --hue-blue: 260deg;
+  --hue-yellow: 100deg;
 
   /* target-based colors */
   --color-box-header: var(--zinc-100);

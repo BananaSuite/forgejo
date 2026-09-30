@@ -6,7 +6,18 @@
   --color-diff-added-row-border: #214d88;
   --color-diff-added-row-background: #18184f;
   --color-code-bg: #0d1117;
-  --color-diff-changed-foreground: var(--color-text);
-  --color-diff-additions-foreground: var(--color-blue);
-  --color-diff-deletions-foreground: var(--color-red);
+  --color-diff-changed-foreground: var(--color-thin-yellow);
+  --color-diff-additions-foreground: var(--color-thin-blue);
+  --color-diff-deletions-foreground: var(--color-thin-red);
+}
+
+.diff {
+  .diff-stats-bar { --color-red: var(--color-thin-red) }
+  .diff-stats-add-bar { --color-green: var(--color-thin-blue) }
+  .text.green { color: var(--color-thin-blue) !important }
+}
+
+.flex-list {
+  svg.text.red { color: var(--color-thin-red) !important }
+  svg.text.green { color: var(--color-thin-blue) !important }
 }

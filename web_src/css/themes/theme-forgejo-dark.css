@@ -181,6 +181,7 @@
   --hue-violet: 293deg;
   --hue-orange: 41deg;
   --hue-blue: 260deg;
+  --hue-yellow: 100deg;
 
   /* Ditto but when additional highlight is needed, e.g. on user interaction */
   --thin-lightness-highlight: 0.75;
