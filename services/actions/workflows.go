@@ -210,15 +210,15 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 }
 
 func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Workflow, error) {
-	expandedRef, err := gitRepo.ExpandRef(ref)
+	ref, err := gitRepo.ExpandRef(ref)
 	if err != nil {
-		return nil, util.NewInvalidArgumentErrorf("could not expand reference '%s'", ref)
+		return nil, err
 	}
 
-	commit, err := gitRepo.GetCommit(expandedRef)
+	commit, err := gitRepo.GetCommit(ref)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
-			return nil, util.NewInvalidArgumentErrorf("reference '%s' does not exist", expandedRef)
+			return nil, util.NewInvalidArgumentErrorf("reference '%s' does not exist", ref)
 		}
 		return nil, err
 	}
@@ -242,7 +242,7 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 	return &Workflow{
 		WorkflowDirectory: workflowDirectory,
 		WorkflowID:        workflowID,
-		Ref:               expandedRef,
+		Ref:               ref,
 		Commit:            commit,
 		GitEntry:          workflowEntry,
 	}, nil
