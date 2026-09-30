@@ -36,8 +36,8 @@ func GetServiceMessage(ctx *context.Context) {
 			return
 		}
 	}
-	ctx.Data["ServiceMessageTitle"] = sm.Title
-	ctx.Data["ServiceMessageText"] = sm.Text
+	ctx.Data["ModalServiceMessageTitle"] = sm.Title
+	ctx.Data["ModalServiceMessageText"] = sm.Text
 	ctx.Data["RenderedContent"] = templates.RenderMarkdownToHtml(ctx, sm.Text)
 	ctx.HTML(http.StatusOK, tplServiceMessage)
 }
@@ -90,8 +90,8 @@ func PreviewServiceMessage(ctx *context.Context) {
 		return
 	}
 	form := web.GetForm(ctx).(*forms.ServiceMessageForm)
-	smType := strings.TrimSpace(ctx.FormString("sm_type"))
 	status := strings.TrimSpace(ctx.FormString("status"))
+	smType := strings.TrimSpace(ctx.FormString("sm_type"))
 	smOpts := service_message_module.ServiceMessageOptions{
 		Title: form.Title,
 		Text:  form.Text,
@@ -102,17 +102,15 @@ func PreviewServiceMessage(ctx *context.Context) {
 		ctx.RenderWithErr(ctx.Tr("admin.service_message.invalid_input"), tplServiceMessage, form)
 		return
 	}
+	ctx.Data["ModalServiceMessageText"] = sm.Text
+	ctx.Data["ModalServiceMessageTitle"] = sm.Title
 	if status == "show" {
 		ctx.Data["IsAdminPreview"] = true
-		ctx.Data["ServiceMessageTitle"] = sm.Title
-		ctx.Data["ServiceMessageText"] = sm.Text
 		ctx.Data["RenderedContent"] = templates.RenderMarkdownToHtml(ctx, sm.Text)
 	}
 	if status == "closed" {
-		ctx.Data["IsAdminPreview"] = false
-		delete(ctx.Data, "ServiceMessageTitle")
-		delete(ctx.Data, "ServiceMessageText")
 		delete(ctx.Data, "RenderedContent")
+		delete(ctx.Data, "IsAdminPreview")
 	}
-	ctx.Redirect(setting.AppSubURL + "/admin/service_message")
+	ctx.HTML(http.StatusOK, tplServiceMessage)
 }

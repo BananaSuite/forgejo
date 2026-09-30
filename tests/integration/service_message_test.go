@@ -14,6 +14,7 @@ import (
 	service_message_module "forgejo.org/modules/service_message"
 	"forgejo.org/modules/test"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -21,7 +22,7 @@ import (
 func TestServiceMessage(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	user := forgery.CreateUser(t, &forgery.CreateUserOptions{IsAdmin: true})
 	session := loginUser(t, user.Name)
 
 	smOpts := service_message_module.ServiceMessageOptions{
@@ -40,7 +41,9 @@ func TestServiceMessage(t *testing.T) {
 	t.Run("Preview", func(t *testing.T) {
 		// Admin clicks on preview
 		req := NewRequestWithJSON(t, "POST", "/admin/service_message/preview?sm_type=modal&status=show", &smOpts)
-		session.MakeRequest(t, req, http.StatusSeeOther)
+		resp := session.MakeRequest(t, req, http.StatusSeeOther)
+		assert.Equal(t, http.StatusSeeOther, resp.Code)
+		assert.Contains(t, resp.Body.String(), smOpts.Text)
 	})
 
 	t.Run("TestMustShow", func(t *testing.T) {

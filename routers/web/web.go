@@ -254,6 +254,7 @@ func smMiddleware(ctx *context.Context) {
 			log.Debug("Got Service Message of type %s", sm.Type)
 			if sm.Text != "" && ctx.Doer.MustShowServiceMessage(sm.Type, sm.UpdatedUnix) {
 				log.Debug("Setting service message %s in context", sm.Type)
+				ctx.Data["ShowModalServiceMessage"] = true
 				ctx.Data["ModalServiceMessageTitle"] = sm.Title
 				ctx.Data["RenderedContent"] = templates.RenderMarkdownToHtml(ctx, sm.Text)
 			}
