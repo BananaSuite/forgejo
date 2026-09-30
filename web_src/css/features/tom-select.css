@@ -71,7 +71,7 @@
 }
 
 .ts-wrapper .ts-control input[type="text"] {
-  color: var(--color-input-text);
+  color: var(--color-input-foreground);
   flex: 1;
   min-width: 100px;
   border: none;

@@ -172,7 +172,7 @@ input[type="radio"] {
 }
 .ui.toggle.checkbox input:focus ~ label::before,
 .ui.toggle.checkbox label::before {
-  background: var(--color-input-toggle-background);
+  background: var(--color-input-toggle-background, var(--color-input-background));
 }
 .ui.toggle.checkbox label,
 .ui.toggle.checkbox input:checked ~ label,

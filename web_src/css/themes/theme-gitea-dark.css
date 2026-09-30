@@ -193,11 +193,6 @@
   --color-text-light-2: #929ba2;
   --color-text-light-3: #7c8790;
   --color-timeline: #353c42;
-  --color-input-text: var(--color-text-dark);
-  --color-input-background: #151a1e;
-  --color-input-toggle-background: #2e353b;
-  --color-input-border: var(--color-secondary);
-  --color-input-border-hover: var(--color-secondary-dark-1);
   --color-light: #00001728;
   --color-light-mimic-enabled: rgba(0, 0, 0, calc(40 / 255 * 222 / 255 / var(--opacity-disabled)));
   --color-hover: #e8e8ff19;
@@ -254,6 +249,11 @@
   --color-label-background: #73828e4b;
   --color-label-hover-background: #73828ea0;
   --color-label-active-background: #73828eff;
+  --color-input-border: var(--color-secondary);
+  --color-input-border-hover: var(--color-secondary-dark-1);
+  --color-input-foreground: var(--color-text-dark);
+  --color-input-background: #151a1e;
+  --color-input-toggle-background: #2e353b;
   --color-heatmap-background-1: var(--color-secondary-alpha-60);
   --color-heatmap-background-2: var(--color-secondary-alpha-60);
   --color-heatmap-background-3: var(--color-primary-light-4);
