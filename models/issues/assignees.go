@@ -8,6 +8,8 @@ import (
 	"fmt"
 
 	"forgejo.org/models/db"
+	org_model "forgejo.org/models/organization"
+	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/util"
 
@@ -48,6 +50,37 @@ func (issue *Issue) LoadAssignees(ctx context.Context) (err error) {
 		issue.Assignee = issue.Assignees[0]
 	}
 	return nil
+}
+
+// isOrgPublicAssignees returns true if assignee is a public member of the
+// organization of the specified repository.
+func isOrgPublicAssignee(
+	ctx context.Context, assignee *user_model.User, repo *repo_model.Repository,
+) bool {
+	// Direct collaborators of repo are public assignees.
+	if !repo.Owner.IsOrganization() {
+		return true
+	}
+
+	isPublicMember, err := org_model.IsPublicMembership(ctx, repo.Owner.ID, assignee.ID)
+	if err != nil {
+		return false
+	}
+	return isPublicMember
+}
+
+// GetOrgPublicAssignees returns a list of assignees which public membership to
+// the organization to which specified repository belongs.
+func GetOrgPublicAssignees(
+	ctx context.Context, assignees []*user_model.User, repo *repo_model.Repository,
+) []*user_model.User {
+	orgPublicAssignees := []*user_model.User{}
+	for _, assignee := range assignees {
+		if isOrgPublicAssignee(ctx, assignee, repo) {
+			orgPublicAssignees = append(orgPublicAssignees, assignee)
+		}
+	}
+	return orgPublicAssignees
 }
 
 // GetAssigneeIDsByIssue returns the IDs of users assigned to an issue

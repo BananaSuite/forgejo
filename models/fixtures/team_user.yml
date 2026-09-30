@@ -147,3 +147,21 @@
   org_id: 41
   team_id: 22
   uid: 39
+
+-
+  id: 26
+  org_id: 45
+  team_id: 27
+  uid: 46
+
+-
+  id: 27
+  org_id: 45
+  team_id: 27
+  uid: 47
+
+-
+  id: 28
+  org_id: 45
+  team_id: 27
+  uid: 48

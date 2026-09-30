@@ -103,6 +103,47 @@ func TestViewIssuesType(t *testing.T) {
 	assert.Equal(t, "All issues", issuesType.Text())
 }
 
+func TestViewIssuesAssigneeDropdown(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// user46, user47 and user48 have access to repo_org42 but user48
+	// has private membership with org42, so we get user46 and user47 in dropdown.
+	user46 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 46})
+	user47 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 47})
+	user48 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 48})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 67})
+
+	// confirm that users are members of the team with access to the repo.
+	var orgID int64 = 45
+	userIDs := []int64{user46.ID, user47.ID, user48.ID}
+	for _, userID := range userIDs {
+		isTeamMember, err := org_model.IsTeamMember(db.DefaultContext, orgID, 27, userID)
+		require.NoError(t, err)
+		assert.True(t, isTeamMember)
+	}
+
+	session := loginUser(t, user46.Name)
+	req := NewRequest(t, "GET", repo.Link()+"/issues")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	assigneeItems := htmlDoc.doc.Find(".list-header-assignee > .menu > .item")
+
+	assert.Equal(t, 4, assigneeItems.Length())
+
+	allAssigneesItem := assigneeItems.Eq(0)
+	assert.Equal(t, "All assignees", allAssigneesItem.Text())
+
+	noAssigneesItem := assigneeItems.Eq(1)
+	assert.Equal(t, "No assignee", noAssigneesItem.Text())
+
+	assignee1 := assigneeItems.Eq(2).Find(".gt-ellipsis")
+	assert.Equal(t, user46.LoginName, assignee1.Text())
+
+	assignee2 := assigneeItems.Eq(3).Find(".gt-ellipsis")
+	assert.Equal(t, user47.LoginName, assignee2.Text())
+}
+
 func TestViewIssuesSortByType(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 

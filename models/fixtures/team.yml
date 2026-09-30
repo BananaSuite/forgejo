@@ -251,3 +251,14 @@
   num_members: 0
   includes_all_repositories: false
   can_create_org_repo: false
+
+-
+  id: 27
+  org_id: 45
+  lower_name: owners
+  name: Owners
+  authorize: 4 # owner
+  num_repos: 1
+  num_members: 3
+  includes_all_repositories: true
+  can_create_org_repo: true

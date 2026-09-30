@@ -859,3 +859,38 @@
   repo_id: 54
   type: 5
   created_unix: 946684814
+
+-
+  id: 125
+  repo_id: 67
+  type: 1
+  config: "{}"
+  created_unix: 946684810
+
+-
+  id: 126
+  repo_id: 67
+  type: 2
+  config: "{\"EnableTimetracker\":true,\"AllowOnlyContributorsToTrackTime\":true}"
+  created_unix: 946684810
+
+-
+  id: 127
+  repo_id: 67
+  type: 3
+  config: "{\"IgnoreWhitespaceConflicts\":false,\"AllowMerge\":true,\"AllowRebase\":true,\"AllowRebaseMerge\":true,\"AllowSquash\":true}"
+  created_unix: 946684810
+
+-
+  id: 128
+  repo_id: 67
+  type: 4
+  config: "{}"
+  created_unix: 946684810
+
+-
+  id: 129
+  repo_id: 67
+  type: 5
+  config: "{}"
+  created_unix: 946684810

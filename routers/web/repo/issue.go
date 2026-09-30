@@ -365,7 +365,9 @@ func issues(ctx *context.Context, milestoneID, projectID int64, isPullOption opt
 		ctx.ServerError("GetRepoAssignees", err)
 		return
 	}
-	ctx.Data["Assignees"] = MakeSelfOnTop(ctx.Doer, assigneeUsers)
+	assigneeUsers = MakeSelfOnTop(ctx.Doer, assigneeUsers)
+	ctx.Data["Assignees"] = assigneeUsers
+	ctx.Data["OrgPublicAssignees"] = issues_model.GetOrgPublicAssignees(ctx, assigneeUsers, repo)
 
 	handleTeamMentions(ctx)
 	if ctx.Written() {
