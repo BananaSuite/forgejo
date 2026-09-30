@@ -170,15 +170,6 @@
   /* other colors */
   --color-gold: #b1983b;
   --color-white: #ffffff;
-  --color-diff-removed-word-bg: #fca5a5;
-  --color-diff-added-word-bg: #86efac;
-  --color-diff-removed-row-bg: #fee2e2;
-  --color-diff-moved-row-bg: #fef9c3;
-  --color-diff-added-row-bg: #dcfce7;
-  --color-diff-removed-row-border: #fca5a5;
-  --color-diff-moved-row-border: #fde047;
-  --color-diff-added-row-border: #86efac;
-  --color-diff-inactive: var(--zinc-100);
   --color-error-border: #fecaca;
   --color-error-bg: #fee2e2;
   --color-error-bg-active: #fca5a5;
@@ -293,6 +284,18 @@
   --color-input-border-hover: var(--zinc-400);
   --color-input-foreground: var(--zinc-800);
   --color-input-background: #fff;
+  --color-diff-added-word-background: #86efac;
+  --color-diff-removed-word-background: #fca5a5;
+  --color-diff-added-row-background: #dcfce7;
+  --color-diff-removed-row-background: #fee2e2;
+  --color-diff-moved-row-background: #fef9c3;
+  --color-diff-added-row-border: #86efac;
+  --color-diff-removed-row-border: #fca5a5;
+  --color-diff-moved-row-border: #fde047;
+  --color-diff-inactive-background: var(--zinc-100);
+  --color-diff-changed-foreground: var(--color-yellow);
+  --color-diff-additions-foreground: var(--color-green);
+  --color-diff-deletions-foreground: var(--color-red);
   --color-heatmap-background-1: var(--color-secondary-alpha-60);
   --color-heatmap-background-2: var(--color-secondary-alpha-60);
   --color-heatmap-background-3: var(--color-primary-light-4);

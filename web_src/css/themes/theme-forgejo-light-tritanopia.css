@@ -1,11 +1,14 @@
 @import "./theme-forgejo-light.css";
 
 :root {
-  --color-diff-removed-word-bg: #ffb8c0;
+  --color-diff-removed-word-background: #ffb8c0;
   --color-diff-removed-row-border: #ffb8c0;
-  --color-diff-removed-row-bg: #ffd8d8;
-  --color-diff-added-word-bg: #b8c0ff;
+  --color-diff-removed-row-background: #ffd8d8;
+  --color-diff-added-word-background: #b8c0ff;
   --color-diff-added-row-border: #b8c0ff;
-  --color-diff-added-row-bg: #c0e8ff;
+  --color-diff-added-row-background: #c0e8ff;
   --color-code-bg: #ffffff;
+  --color-diff-changed-foreground: var(--color-text);
+  --color-diff-additions-foreground: var(--color-blue);
+  --color-diff-deletions-foreground: var(--color-red);
 }
