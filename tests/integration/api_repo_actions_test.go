@@ -255,20 +255,25 @@ jobs:
 		})
 
 		for _, testCase := range []struct {
-			name         string
-			workflowName string
-			ref          string
-			status       int
+			name            string
+			workflowName    string
+			ref             string
+			status          int
+			expectedMessage string
 		}{
-			{name: "missing workflow", workflowName: "missing.yml", ref: repo.DefaultBranch, status: http.StatusNotFound},
-			{name: "missing ref", workflowName: "dispatch.yml", ref: "missing-ref", status: http.StatusBadRequest},
+			{name: "missing workflow", workflowName: "missing.yml", ref: repo.DefaultBranch, status: http.StatusNotFound, expectedMessage: "workflow not found"},
+			{name: "missing ref", workflowName: "dispatch.yml", ref: "missing-ref", status: http.StatusBadRequest, expectedMessage: "could not expand reference 'missing-ref'"},
 		} {
 			t.Run(testCase.name, func(t *testing.T) {
 				req := NewRequestWithJSON(t, http.MethodPost,
 					fmt.Sprintf("/api/v1/repos/%s/%s/actions/workflows/%s/dispatches", repo.OwnerName, repo.Name, testCase.workflowName),
 					&api.DispatchWorkflowOption{Ref: testCase.ref},
 				).AddTokenAuth(token)
-				MakeRequest(t, req, testCase.status)
+				resp := MakeRequest(t, req, testCase.status)
+
+				var apiError api.APIError
+				DecodeJSON(t, resp, &apiError)
+				assert.Equal(t, testCase.expectedMessage, apiError.Message)
 			})
 		}
 	})
