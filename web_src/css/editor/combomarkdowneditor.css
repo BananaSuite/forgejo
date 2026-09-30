@@ -106,7 +106,7 @@ text-expander .suggestions li {
 }
 
 text-expander .suggestions li + li {
-  border-top: 1px solid var(--color-secondary-alpha-40);
+  border-top: 1px solid var(--color-separator);
 }
 
 text-expander .suggestions li:first-child {

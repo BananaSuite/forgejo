@@ -26,7 +26,7 @@ function resolveColors(obj) {
 
 export const chartJsColors = resolveColors({
   text: '--color-text',
-  border: '--color-secondary-alpha-60',
+  border: '--color-secondary',
   commits: '--color-primary-alpha-60',
   additions: '--color-green',
   deletions: '--color-red',

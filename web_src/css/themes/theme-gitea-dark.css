@@ -46,15 +46,6 @@
   --color-secondary-light-2: #2b353e;
   --color-secondary-light-3: #1c2227;
   --color-secondary-light-4: #161b1f;
-  --color-secondary-alpha-10: #3b444a19;
-  --color-secondary-alpha-20: #3b444a33;
-  --color-secondary-alpha-30: #3b444a4b;
-  --color-secondary-alpha-40: #3b444a66;
-  --color-secondary-alpha-50: #3b444a80;
-  --color-secondary-alpha-60: #3b444a99;
-  --color-secondary-alpha-70: #3b444ab3;
-  --color-secondary-alpha-80: #3b444acc;
-  --color-secondary-alpha-90: #3b444ae1;
   --color-secondary-hover: var(--color-secondary-dark-3);
   --color-secondary-active: var(--color-secondary-dark-2);
   /* console colors - used for actions console and console files */
@@ -245,6 +236,7 @@
   --color-input-foreground: var(--color-text-dark);
   --color-input-background: #151a1e;
   --color-input-toggle-background: #2e353b;
+  --color-separator: #3b444a80;
   --color-diff-added-row-border: #314a37;
   --color-diff-added-row-background: #283e2d;
   --color-diff-removed-row-border: #634343;
@@ -257,13 +249,12 @@
   --color-diff-changed-foreground: var(--color-yellow);
   --color-diff-additions-foreground: var(--color-green);
   --color-diff-deletions-foreground: var(--color-red);
-  --color-heatmap-background-1: var(--color-secondary-alpha-60);
-  --color-heatmap-background-2: var(--color-secondary-alpha-60);
-  --color-heatmap-background-3: var(--color-primary-light-4);
-  --color-heatmap-background-4: var(--color-primary-light-2);
-  --color-heatmap-background-5: var(--color-primary);
-  --color-heatmap-background-6: var(--color-primary-dark-2);
-  --color-heatmap-background-7: var(--color-primary-dark-4);
+  --color-heatmap-background-1: #3b444a99;
+  --color-heatmap-background-2: var(--color-primary-light-4);
+  --color-heatmap-background-3: var(--color-primary-light-2);
+  --color-heatmap-background-4: var(--color-primary);
+  --color-heatmap-background-5: var(--color-primary-dark-2);
+  --color-heatmap-background-6: var(--color-primary-dark-4);
   --color-footer-border: var(--color-secondary);
   --color-footer-background: var(--color-navbar-background);
 }

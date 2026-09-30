@@ -74,7 +74,7 @@
 }
 
 #issue-list .issue-meta .branch {
-  background-color: var(--color-secondary-alpha-50);
+  background-color: var(--color-label-background);
   border-radius: var(--border-radius);
   padding: 0 4px;
 }

@@ -2320,7 +2320,7 @@ tbody.commit-list {
 }
 
 .blob-excerpt {
-  background-color: var(--color-secondary-alpha-30);
+  background-color: var(--color-diff-inactive-background);
 }
 
 .issue-keyword {

@@ -16,12 +16,12 @@ export default {
   data: () => ({
     colorRange: [
       'var(--color-heatmap-background-1)',
+      'var(--color-heatmap-background-1)',
       'var(--color-heatmap-background-2)',
       'var(--color-heatmap-background-3)',
       'var(--color-heatmap-background-4)',
       'var(--color-heatmap-background-5)',
       'var(--color-heatmap-background-6)',
-      'var(--color-heatmap-background-7)',
     ],
     endDate: new Date(),
   }),
