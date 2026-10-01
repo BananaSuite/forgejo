@@ -12,8 +12,11 @@
 	<div class="ui attached segment">
 		<form class="ui segment comment service-message form" method="post" action="{{AppSubUrl}}/admin/service_message?sm_type=modal" enctype="multipart/form-data">
 			<fieldset>
+				<label>
 					{{ctx.Locale.Tr "admin.service_message.title"}}
-					<input name="title" placeholder="Title" value="{{.ModalServiceMessageTitle}}" autofocus required maxlength="128">
+					<input name="title" placeholder={{ctx.Locale.Tr "admin.service_message.title_description"}} value="{{.ModalServiceMessageTitle}}" autofocus required maxlength="128">
+				</label>
+				<label>
 					{{ctx.Locale.Tr "admin.service_message.text"}}
 					{{/*Apparently the combomarkdowneditor will not work without being wrapped in a div of class comment ...*/}}
 					<div class="comment">
@@ -22,12 +25,13 @@
 						"MarkdownPreviewContext" .Link
 						"TextareaName" "text"
 						"TextareaContent" .ModalServiceMessageText
-						"TextareaPlaceholder"  "Add your message here"
+						"TextareaPlaceholder"  (ctx.Locale.Tr "admin.service_message.message_place_holder")
 						"DropzoneParentContainer" ""
 						"DisableTextExpander" "true"
 						"DisableAutosize" "true"
 					)}}
 					</div>
+				</label>
 			</fieldset>
 			<div class="field button-sequence">
 				<button name="save" class="ui primary button">{{ctx.Locale.Tr "save"}}</button>
