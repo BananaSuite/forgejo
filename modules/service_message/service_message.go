@@ -10,6 +10,7 @@ import (
 
 var (
 	ErrServiceMessageNotExist    = util.NewNotExistErrorf("service message does not exist")
+	ErrInputWasEmpty             = util.NewNotExistErrorf("input must not be empty")
 	ErrInvalidServiceMessageType = util.NewInvalidArgumentErrorf("service message type was invalid")
 )
 

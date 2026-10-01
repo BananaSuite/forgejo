@@ -52,7 +52,11 @@ func CreateOrUpdateServiceMessage(ctx *context.Context) {
 	}
 	serviceMessage, err := service_message_service.NewServiceMessage(&smOpts)
 	if err != nil {
-		ctx.RenderWithErr(ctx.Tr("admin.service_message.invalid_input"), tplServiceMessage, form)
+		if strings.Contains(err.Error(), "empty") {
+			ctx.RenderWithErr(ctx.Tr("admin.service_message.empty_input"), tplServiceMessage, form)
+		} else if strings.Contains(err.Error(), "invalid") {
+			ctx.RenderWithErr(ctx.Tr("admin.service_message.invalid_input"), tplServiceMessage, form)
+		}
 		return
 	}
 	err = service_message_service.CreateOrUpdateServiceMessage(ctx, serviceMessage)
@@ -99,7 +103,11 @@ func PreviewServiceMessage(ctx *context.Context) {
 	}
 	sm, err := service_message_service.NewServiceMessage(&smOpts)
 	if err != nil {
-		ctx.RenderWithErr(ctx.Tr("admin.service_message.invalid_input"), tplServiceMessage, form)
+		if strings.Contains(err.Error(), "empty") {
+			ctx.RenderWithErr(ctx.Tr("admin.service_message.empty_input"), tplServiceMessage, form)
+		} else if strings.Contains(err.Error(), "invalid") {
+			ctx.RenderWithErr(ctx.Tr("admin.service_message.invalid_input"), tplServiceMessage, form)
+		}
 		return
 	}
 	ctx.Data["ModalServiceMessageText"] = sm.Text

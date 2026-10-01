@@ -323,6 +323,7 @@
 	"admin.service_message.delete":"Löschen",
 	"admin.service_message.type_modal":"Dies ist der Bereich zum Erstellen der modalen Dienstnachricht. Wenn sie gespeichert wird, erscheint sie sofort für alle aktiven Benutzer*Innen. Sie gibt die Optionen zuzustimmen oder abzubrechen. Eine Zustimmung wird in der DB gespeichert. Eine Ablehnung führt zum log out.",
 	"admin.service_message.invalid_input":"Die Eingabe war anscheinend ungültig, bitte überprüfe sie noch einmal.",
+	"admin.service_message.empty_input":"Die Eingabe darf nicht leer sein.",
 	"admin.service_message.is_already_deleted":"Die Dienstnachricht wurde anscheinend schon gelöscht.",
 	"admin.service_message.message_place_holder": "Gib hier deine Nachricht ein.",
 	"admin.service_message.close_preview": "Preview schließen",

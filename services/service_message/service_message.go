@@ -9,19 +9,24 @@ import (
 
 	service_message_model "forgejo.org/models/service_message"
 	service_message_module "forgejo.org/modules/service_message"
-	"forgejo.org/modules/validation"
 )
 
 var SMTypeModal = "modal"
 
 func NewServiceMessage(opts *service_message_module.ServiceMessageOptions) (*service_message_model.ServiceMessage, error) {
+	if opts.Title == "" {
+		return nil, service_message_module.ErrInputWasEmpty
+	}
+	if opts.Text == "" {
+		return nil, service_message_module.ErrInputWasEmpty
+	}
+	if !service_message_module.SMType(opts.Type).Valid() {
+		return nil, service_message_module.ErrInvalidServiceMessageType
+	}
 	sm := &service_message_model.ServiceMessage{
 		Title: opts.Title,
 		Text:  opts.Text,
-		Type:  service_message_module.SMType("modal"),
-	}
-	if valid, err := validation.IsValid(sm); !valid {
-		return &service_message_model.ServiceMessage{}, err
+		Type:  service_message_module.SMType(opts.Type),
 	}
 	return sm, nil
 }

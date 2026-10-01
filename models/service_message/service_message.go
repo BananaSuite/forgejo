@@ -12,7 +12,6 @@ import (
 	service_message_types "forgejo.org/modules/service_message"
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
-	"forgejo.org/modules/validation"
 )
 
 func init() {
@@ -26,19 +25,6 @@ type ServiceMessage struct {
 	Type        service_message_types.SMType `xorm:"INDEX UNIQUE NOT NULL"`
 	CreatedUnix timeutil.TimeStamp           `xorm:"created"`
 	UpdatedUnix timeutil.TimeStamp           `xorm:"updated"`
-}
-
-func (ServiceMessage) TableName() string {
-	return "service_message"
-}
-
-func (sm ServiceMessage) Validate() []string {
-	var result []string
-	result = append(result, validation.ValidateNotEmpty(sm.Text, "Text")...)
-	if !sm.Type.Valid() {
-		result = append(result, service_message_types.ErrInvalidServiceMessageType.Error())
-	}
-	return result
 }
 
 // CreateOrUpdateServiceMessage creates record of a ServiceMessage, expects a valid ServiceMessage
