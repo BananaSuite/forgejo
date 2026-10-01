@@ -50,7 +50,7 @@ func TestCreateUpdateGetDeleteServiceMessage(t *testing.T) {
 	assert.Equal(t, sm2.Type, get.Type)
 
 	// Delete
-	err = DeleteServiceMessage(t.Context(), &sm2)
+	err = DeleteServiceMessageByType(t.Context(), &sm2.Type)
 	require.NoError(t, err)
 	unittest.AssertNotExistsBean(t, &ServiceMessage{Type: sm2.Type})
 }

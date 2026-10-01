@@ -38,6 +38,6 @@ func GetServiceMessage(ctx context.Context, smType string) (*service_message_mod
 	return service_message_model.GetServiceMessageByType(ctx, smt)
 }
 
-func DeleteServiceMessage(ctx context.Context, sm *service_message_model.ServiceMessage) error {
-	return service_message_model.DeleteServiceMessage(ctx, sm)
+func DeleteServiceMessageByType(ctx context.Context, smType *service_message_module.SMType) error {
+	return service_message_model.DeleteServiceMessageByType(ctx, smType)
 }

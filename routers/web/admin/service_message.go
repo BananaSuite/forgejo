@@ -76,7 +76,7 @@ func DeleteServiceMessage(ctx *context.Context) {
 		}
 		return
 	}
-	err = service_message_service.DeleteServiceMessage(ctx, sm)
+	err = service_message_service.DeleteServiceMessageByType(ctx, &sm.Type)
 	if err != nil {
 		ctx.ServerError("DeleteServiceMessage", err)
 		return
@@ -111,6 +111,7 @@ func PreviewServiceMessage(ctx *context.Context) {
 	if status == "closed" {
 		delete(ctx.Data, "RenderedContent")
 		delete(ctx.Data, "IsAdminPreview")
+		ctx.Redirect(setting.AppSubURL + "/admin/service_message")
 	}
 	ctx.HTML(http.StatusOK, tplServiceMessage)
 }

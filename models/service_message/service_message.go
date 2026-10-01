@@ -75,12 +75,12 @@ func GetServiceMessageByType(ctx context.Context, smType service_message_types.S
 	return sm, nil
 }
 
-// Delete a remote registry in the DB, expects a valid rr
-func DeleteServiceMessage(ctx context.Context, sm *ServiceMessage) error {
-	_, err := db.GetEngine(ctx).Where("type = ? or id = ?", sm.Type.Name(), sm.ID).Delete(sm)
+// Delete the service message by type, expecting there will ever only be a single message per type
+func DeleteServiceMessageByType(ctx context.Context, smType *service_message_types.SMType) error {
+	_, err := db.GetEngine(ctx).Where("type = ?", smType.Name()).Delete(ServiceMessage{Type: *smType})
 	if err != nil {
 		return err
 	}
-	log.Debug("Deleted service message %q", sm.Type.Name())
+	log.Debug("Deleted service message %q", smType.Name())
 	return nil
 }

@@ -41,8 +41,7 @@ func TestServiceMessage(t *testing.T) {
 	t.Run("Preview", func(t *testing.T) {
 		// Admin clicks on preview
 		req := NewRequestWithJSON(t, "POST", "/admin/service_message/preview?sm_type=modal&status=show", &smOpts)
-		resp := session.MakeRequest(t, req, http.StatusSeeOther)
-		assert.Equal(t, http.StatusSeeOther, resp.Code)
+		resp := session.MakeRequest(t, req, http.StatusOK)
 		assert.Contains(t, resp.Body.String(), smOpts.Text)
 	})
 
