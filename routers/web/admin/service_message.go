@@ -120,6 +120,7 @@ func PreviewServiceMessage(ctx *context.Context) {
 		delete(ctx.Data, "RenderedContent")
 		delete(ctx.Data, "IsAdminPreview")
 		ctx.Redirect(setting.AppSubURL + "/admin/service_message")
+		return
 	}
 	ctx.HTML(http.StatusOK, tplServiceMessage)
 }
