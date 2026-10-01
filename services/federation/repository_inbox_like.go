@@ -112,8 +112,8 @@ func SendLikeActivities(ctx context.Context, doer user.User, repoID int64) error
 		return err
 	}
 
-	likeActivityList := make([]fm.ForgeLike, 0)
-	var hosts []*url.URL
+	likeActivityList := make([]fm.ForgeLike, 0, len(followingRepos))
+	hosts := make([]*url.URL, 0, len(followingRepos))
 	for _, followingRepo := range followingRepos {
 		log.Trace("Found following repo: %#v", followingRepo)
 		target := followingRepo.URI

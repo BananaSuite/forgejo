@@ -74,8 +74,8 @@ func SendUndoLikeActivities(ctx context.Context, doer user.User, repoID int64) e
 		return err
 	}
 
-	undoLikeActivityList := make([]fm.ForgeUndoLike, 0)
-	var hosts []*url.URL
+	undoLikeActivityList := make([]fm.ForgeUndoLike, 0, len(followingRepos))
+	hosts := make([]*url.URL, 0, len(followingRepos))
 	for _, followingRepo := range followingRepos {
 		log.Trace("Found following repo: %#v", followingRepo)
 		target := followingRepo.URI
