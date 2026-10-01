@@ -24,7 +24,7 @@ func addServiceMessageTable(x *xorm.Engine) error {
 		Text        string                 `xorm:"LONGTEXT"`
 		Type        service_message.SMType `xorm:"INDEX UNIQUE NOT NULL"`
 		CreatedUnix timeutil.TimeStamp     `xorm:"created"`
-		Updated     timeutil.TimeStamp     `xorm:"updated"`
+		UpdatedUnix timeutil.TimeStamp     `xorm:"updated"`
 	}
 
 	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, &ServiceMessage{})
