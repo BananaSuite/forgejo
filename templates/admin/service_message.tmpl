@@ -36,7 +36,7 @@
 			<div class="field button-sequence">
 				<button name="save" class="ui primary button">{{ctx.Locale.Tr "save"}}</button>
 				<button name="preview" class="ui button" id="preview-service-message-button">{{ctx.Locale.Tr "preview"}}</button>
-				<button name="delete" class="ui button link-action" data-url="{{AppSubUrl}}/admin/service_message/delete?sm_type=modal">{{ctx.Locale.Tr "admin.service_message.delete"}}</button>
+				<button id="delete-sm-button" name="delete" class="ui button link-action {{if not .ModalServiceMessageTitle}}disabled{{end}}" data-url="{{AppSubUrl}}/admin/service_message/delete?sm_type=modal">{{ctx.Locale.Tr "admin.service_message.delete"}}</button>
 			</div>
 		</form>
 	</div>

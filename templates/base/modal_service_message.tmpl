@@ -10,7 +10,7 @@
                     <form class="ui form" method="post" action="{{AppSubUrl}}/admin/service_message/preview?sm_type=modal&status=closed">
                         <input type="hidden" name="title" value="{{.ModalServiceMessageTitle}}">
                         <input type="hidden" name="text" value="{{.ModalServiceMessageText}}">
-                        <button class="ui button">{{svg "octicon-x"}} {{ctx.Locale.Tr "cancel"}}</button>
+                        <button class="ui button" id="cancel-sm-preview-button">{{svg "octicon-x"}} {{ctx.Locale.Tr "cancel"}}</button>
                     </form>
                 {{else}}
                     <form class="ui form" method="post" action="{{AppSubUrl}}/user/confirm?sm_type=modal&redirect_to={{.CurrentURL}}">
