@@ -92,7 +92,7 @@ import {initColorPickers} from './features/colorpicker.js';
 import {initRepoMilestoneEditor} from './features/repo-milestone.js';
 import {initModalClose} from './modules/modal.ts';
 import {initAuthorizedIntegrationClaimRuleEditor} from './features/authorized-integration.js';
-import {initModalServiceMessage} from './features/preview-service-message.ts';
+import {initModalServiceMessageForm} from './features/preview-service-message.ts';
 import {initPreviewServiceMessageButton} from './features/preview-service-message.ts';
 import {initDeleteServiceMessageButton} from './features/preview-service-message.ts';
 
@@ -203,7 +203,7 @@ onDomReady(() => {
   initModalClose();
   initAuthorizedIntegrationClaimRuleEditor();
   initPreviewServiceMessageButton();
-  initModalServiceMessage();
+  initModalServiceMessageForm();
   initDeleteServiceMessageButton();
 
   // no-js helper class is currently unused by UI components in Forgejo, but it is left for compatibility

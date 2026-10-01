@@ -3,7 +3,7 @@
 
 // initModalServiceMessage tries to retrieve session storage and fills it in the input fields, 
 // on blur it will set the storage again
-export function initModalServiceMessage() {
+export function initModalServiceMessageForm() {
   const storage: Storage = sessionStorage
   const titleVal: string = storage.getItem('smTitle')
   const textVal: string = storage.getItem('smText')
@@ -34,9 +34,12 @@ export function initPreviewServiceMessageButton() {
       form.reportValidity();
       return false;
     }
+
     var action = form.action;
     var newAct = action.replace("/admin/service_message?sm_type=modal", "/admin/service_message/preview?sm_type=modal&status=show");
     form.action = newAct;
+
+    
   });
 }
 
