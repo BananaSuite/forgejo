@@ -5,7 +5,7 @@
 				{{svg "gitea-lock"}}
 				{{ctx.AvatarUtils.Avatar .verification.SigningUser 28}}
 			{{else}}
-				<span title="{{ctx.Locale.Tr "gpg.default_key"}}">{{svg "gitea-lock-cog"}}</span>
+				<span class="tw-flex" title="{{ctx.Locale.Tr "gpg.default_key"}}">{{svg "gitea-lock-cog"}}</span>
 				{{ctx.AvatarUtils.AvatarByEmail .verification.SigningEmail "" 28}}
 			{{end}}
 		</span>
