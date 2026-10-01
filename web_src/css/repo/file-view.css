@@ -14,7 +14,7 @@
 .file-view tr.active .lines-num,
 .file-view tr.active .lines-escape,
 .file-view tr.active .lines-code {
-  background: var(--color-highlight-bg) !important;
+  background: var(--color-highlight-background) !important;
 }
 
 .file-view tr.active:last-of-type .lines-code {
@@ -26,7 +26,7 @@
 }
 
 .file-view tr.active .interact-bg:hover {
-  background: var(--color-primary-alpha-50) !important;
+  background: var(--color-highlight-hover-background) !important;
 }
 
 .file-view tr.active .lines-num::before {
@@ -35,5 +35,5 @@
   inset-inline-start: 0;
   width: 2px;
   height: 100%;
-  background: var(--color-highlight-fg);
+  background: var(--color-highlight-foreground);
 }

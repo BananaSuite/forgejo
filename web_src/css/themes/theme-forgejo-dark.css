@@ -34,15 +34,6 @@
   --color-primary-light-5: #9a3412;
   --color-primary-light-6: #7c2d12;
   --color-primary-light-7: #7c2d12;
-  --color-primary-alpha-10: #ea580c19;
-  --color-primary-alpha-20: #ea580c33;
-  --color-primary-alpha-30: #ea580c4b;
-  --color-primary-alpha-40: #ea580c66;
-  --color-primary-alpha-50: #ea580c80;
-  --color-primary-alpha-60: #ea580c99;
-  --color-primary-alpha-70: #ea580cb3;
-  --color-primary-alpha-80: #ea580ccc;
-  --color-primary-alpha-90: #ea580ce1;
   --color-primary-hover: var(--color-primary-light-1);
   --color-primary-active: var(--color-primary-light-2);
   --color-secondary: var(--steel-700);
@@ -227,16 +218,11 @@
   --color-project-board-dark-label: var(--color-text-light-3);
   --color-caret: var(--color-text);
   /* should ideally be --color-text-dark, see #15651 */
-  --color-reaction-bg: #ffffff12;
-  --color-reaction-active-bg: var(--color-primary-alpha-30);
-  --color-reaction-hover-bg: var(--color-primary-alpha-40);
   --color-tooltip-text: #ffffff;
   --color-tooltip-bg: #000000f0;
   --color-nav-hover-bg: var(--steel-600);
   --color-accent: var(--color-primary-light-1);
   --color-small-accent: var(--color-primary-light-5);
-  --color-highlight-fg: var(--color-primary-light-4);
-  --color-highlight-bg: var(--color-primary-alpha-20);
   --color-overlay-backdrop: #080808c0;
   --color-selection-bg: var(--steel-100);
   --color-selection-fg: var(--color-pure-black);
@@ -282,6 +268,12 @@
   --color-diff-changed-foreground: var(--color-yellow);
   --color-diff-additions-foreground: var(--color-green);
   --color-diff-deletions-foreground: var(--color-red);
+  --color-highlight-border: #ea580ccc;
+  --color-highlight-foreground: var(--color-primary-light-4);
+  --color-highlight-background: #ea580c33;
+  --color-highlight-neutral-background: #ffffff12; /* Remove. */
+  --color-highlight-active-background: #ea580c4b;
+  --color-highlight-hover-background: #ea580c66;
   --color-heatmap-background-1: #2b364299;
   --color-heatmap-background-2: var(--color-primary-light-4);
   --color-heatmap-background-3: var(--color-primary-light-2);

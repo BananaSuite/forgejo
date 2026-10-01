@@ -1099,13 +1099,13 @@ citation-information .tab:not(.active) {
 }
 
 .repository.view.issue .comment-list .comment-code-cloud .segment.reactions .ui.label.basic.primary {
-  background-color: var(--color-reaction-active-bg) !important;
-  border-color: var(--color-primary-alpha-80) !important;
+  background-color: var(--color-highlight-active-background) !important;
+  border-color: var(--color-highlight-border) !important;
 }
 
 .repository.view.issue .comment-list .comment-code-cloud .segment.reactions .ui.label.basic.primary:hover {
-  background-color: var(--color-reaction-hover-bg) !important;
-  border-color: var(--color-primary-alpha-80) !important;
+  background-color: var(--color-highlight-hover-background) !important;
+  border-color: var(--color-highlight-border) !important;
 }
 
 .repository.view.issue .comment-list .comment-code-cloud button.comment-form-reply {
@@ -1630,7 +1630,7 @@ details.repo-search-result summary::marker {
 }
 
 .search-highlight {
-  background: var(--color-primary-alpha-40);
+  background: var(--color-highlight-hover-background);
 }
 
 .repository.quickstart .guide .item {
@@ -1809,7 +1809,7 @@ details.repo-search-result summary::marker {
   font-size: 12px;
   font-weight: var(--font-weight-normal);
   border-color: var(--color-secondary) !important;
-  background: var(--color-reaction-bg);
+  background: var(--color-highlight-neutral-background);
 }
 
 .repository .segment.reactions .ui.label:first-of-type {
@@ -1823,12 +1823,12 @@ details.repo-search-result summary::marker {
 
 .repository .segment.reactions .ui.label.basic.primary {
   color: var(--color-primary) !important;
-  background-color: var(--color-reaction-active-bg) !important;
+  background-color: var(--color-highlight-active-background) !important;
   border-color: var(--color-secondary-dark-1) !important;
 }
 
 .repository .segment.reactions .ui.label.basic:hover {
-  background-color: var(--color-reaction-hover-bg) !important;
+  background-color: var(--color-highlight-hover-background) !important;
 }
 
 .repository .segment.reactions .reaction-count {
@@ -1988,19 +1988,19 @@ details.repo-search-result summary::marker {
 
 .comment:target .comment-container {
   border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 3px var(--color-primary-alpha-30) !important;
+  box-shadow: 0 0 0 3px var(--color-highlight-active-background) !important;
 }
 
 .comment:target .header::before {
   border-inline-end-color: var(--color-primary) !important;
-  filter: drop-shadow(-3px 0 0 var(--color-primary-alpha-30)) !important;
+  filter: drop-shadow(-3px 0 0 var(--color-highlight-active-background)) !important;
 }
 
 .code-comment:target,
 .diff-file-box:target {
   border-color: var(--color-primary) !important;
   border-radius: var(--border-radius) !important;
-  box-shadow: 0 0 0 3px var(--color-primary-alpha-30) !important;
+  box-shadow: 0 0 0 3px var(--color-highlight-active-background) !important;
 }
 
 .code-comment:target .content {

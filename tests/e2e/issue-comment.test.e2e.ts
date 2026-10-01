@@ -466,7 +466,7 @@ test.describe('Markdown rendered on preview', () => {
     await page.locator(previewButtonSelector).click();
 
     // check content
-    const colorHex = await getColorByPropertyName(page, '--color-primary-alpha-30');
+    const colorHex = await getColorByPropertyName(page, '--color-highlight-active-background');
     const colorRGBA = hexToRGBA(colorHex);
     const link = page.locator(linkSelector);
     await expect(link).toHaveCSS('background-color', colorRGBA);
