@@ -57,7 +57,7 @@ details.stats {
 
   &:hover,
   &[open] {
-    background-color: var(--color-box-body-highlight);
+    background-color: var(--color-box-highlight-background);
     stats-bar {
       background-color: var(--color-secondary-dark-3);
     }
@@ -65,7 +65,7 @@ details.stats {
 
   &[open] {
     gap: 0.25rem;
-    background-color: var(--color-box-body-highlight);
+    background-color: var(--color-box-highlight-background);
   }
 
   summary {

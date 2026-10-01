@@ -198,7 +198,7 @@
 }
 
 .org-team-navbar .active.item {
-  background: var(--color-box-body) !important;
+  background: var(--color-box-background) !important;
 }
 
 #add-member-modal .team-list {

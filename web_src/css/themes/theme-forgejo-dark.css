@@ -184,9 +184,6 @@
   --color-danger-bg: oklch(var(--bg-lightness) var(--bg-chroma) 27deg);
 
   /* target-based colors */
-  --color-box-header: var(--steel-700);
-  --color-box-body: var(--steel-750);
-  --color-box-body-highlight: var(--steel-650);
   --color-text-dark: #fff;
   --color-text: var(--steel-100);
   --color-text-light: var(--steel-150);
@@ -268,12 +265,15 @@
   --color-highlight-border: #ea580ccc;
   --color-highlight-foreground: var(--color-primary-light-4);
   --color-highlight-background: #ea580c33;
-  --color-highlight-neutral-background: #ffffff12; /* Remove. */
   --color-highlight-active-background: #ea580c4b;
   --color-highlight-hover-background: #ea580c66;
   --color-card-border: var(--steel-600);
   --color-card-background: var(--steel-700);
   --color-card-highlight-background: var(--steel-650);
+  --color-box-background: var(--steel-750);
+  --color-box-header-background: var(--steel-700);
+  --color-box-highlight-background: var(--steel-650);
+  --color-box-overlay-background: #ffffff12;
   --color-heatmap-background-1: #2b364299;
   --color-heatmap-background-2: var(--color-primary-light-4);
   --color-heatmap-background-3: var(--color-primary-light-2);

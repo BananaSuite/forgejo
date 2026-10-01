@@ -279,7 +279,7 @@
 .comment-content .markup video,
 .wiki .markup img,
 .wiki .markup video {
-  background: var(--color-box-body);
+  background: var(--color-box-background);
 }
 
 .markup img[align="right"],

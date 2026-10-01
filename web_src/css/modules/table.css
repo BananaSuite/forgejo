@@ -10,7 +10,7 @@
   border-collapse: separate;
   border-spacing: 0;
   color: var(--color-text);
-  background: var(--color-box-body);
+  background: var(--color-box-background);
   border-color: var(--color-secondary);
   text-align: start;
 }
@@ -28,7 +28,7 @@
 }
 
 .ui.table > thead > tr > th {
-  background: var(--color-box-header);
+  background: var(--color-box-header-background);
   text-align: inherit;
   color: var(--color-text);
   padding: 6px 5px;
@@ -53,7 +53,7 @@
 .ui.table > tfoot > tr > th,
 .ui.table > tfoot > tr > td {
   border-top: 1px solid var(--color-secondary);
-  background: var(--color-box-body);
+  background: var(--color-box-background);
   text-align: inherit;
   color: var(--color-text);
   padding: 0.78571429em;

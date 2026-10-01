@@ -112,7 +112,7 @@
 }
 
 #git-graph-container #rev-list li.highlight.hover {
-  background-color: var(--color-box-body-highlight);
+  background-color: var(--color-box-highlight-background);
 }
 
 #git-graph-container #rev-list .commit-refs .button {

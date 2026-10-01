@@ -157,9 +157,6 @@
   --hue-yellow: 100deg;
 
   /* target-based colors */
-  --color-box-header: #f1f3f5;
-  --color-box-body: #ffffff;
-  --color-box-body-highlight: #ecf5fd;
   --color-text-dark: #01050a;
   --color-text: #181c21;
   --color-text-light: #30363b;
@@ -236,12 +233,15 @@
   --color-highlight-border: #4183c4cc;
   --color-highlight-foreground: #eed200;
   --color-highlight-background: #fffbdd;
-  --color-highlight-neutral-background: #0000170a; /* Remove. */
   --color-highlight-hover-background: var(--color-primary-light-5);
   --color-highlight-active-background: var(--color-primary-light-6);
   --color-card-border: #d0d7de;
   --color-card-background: #f8f9fb;
   --color-card-highlight-background: #ffffff;
+  --color-box-header-background: #f1f3f5;
+  --color-box-background: #ffffff;
+  --color-box-highlight-background: #ecf5fd;
+  --color-box-overlay-background: #0000170a;
   --color-heatmap-background-1: #d0d7de99;
   --color-heatmap-background-2: var(--color-primary-light-4);
   --color-heatmap-background-3: var(--color-primary-light-2);

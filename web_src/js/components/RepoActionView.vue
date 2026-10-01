@@ -851,7 +851,7 @@ export default {
   padding: 16px;
   border: 1px solid var(--color-console-border);
   border-radius: var(--border-radius);
-  background: var(--color-box-body);
+  background: var(--color-box-background);
   color: var(--color-text);
 }
 

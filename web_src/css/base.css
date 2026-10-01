@@ -1216,7 +1216,7 @@ table th[data-sortt-desc] .svg {
 
 .ui.segment .ui.tabular.menu .active.item,
 .ui.segment .ui.tabular.menu .active.item:hover {
-  background: var(--color-box-body);
+  background: var(--color-box-background);
 }
 
 .ui.secondary.pointing.menu {

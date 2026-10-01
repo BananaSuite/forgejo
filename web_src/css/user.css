@@ -99,19 +99,19 @@
 
 #readme_profile {
   padding: 1.5em;
-  background: var(--color-box-body);
+  background: var(--color-box-background);
   border: 1px solid var(--color-secondary);
   border-radius: var(--border-radius);
 }
 
 #profile-avatar-card {
-  background: var(--color-box-body);
+  background: var(--color-box-background);
   border: 1px solid var(--color-secondary);
   border-radius: var(--border-radius);
 }
 
 #notification_table {
-  background: var(--color-box-body);
+  background: var(--color-box-background);
   border: 1px solid var(--color-secondary);
   border-radius: var(--border-radius);
 }

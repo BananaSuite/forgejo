@@ -191,9 +191,6 @@
   --hue-yellow: 100deg;
 
   /* target-based colors */
-  --color-box-header: var(--zinc-100);
-  --color-box-body: var(--zinc-50);
-  --color-box-body-highlight: var(--zinc-200);
   --color-text-dark: #000;
   --color-text: var(--zinc-900);
   --color-text-light: var(--zinc-700);
@@ -275,12 +272,15 @@
   --color-highlight-border: #c2410ccc;
   --color-highlight-foreground: var(--color-primary-light-4);
   --color-highlight-background: var(--color-primary-light-6);
-  --color-highlight-neutral-background: #0000000a; /* Remove. */
   --color-highlight-active-background: #c2410c33;
   --color-highlight-hover-background: #c2410c4b;
   --color-card-border: var(--zinc-200);
   --color-card-background: var(--zinc-50);
   --color-card-highlight-background: var(--zinc-100);
+  --color-box-header-background: var(--zinc-100);
+  --color-box-background: var(--zinc-50);
+  --color-box-highlight-background: var(--zinc-200);
+  --color-box-overlay-background: #0000000a;
   --color-heatmap-background-1: #d4d4d899;
   --color-heatmap-background-2: var(--color-primary-light-4);
   --color-heatmap-background-3: var(--color-primary-light-2);
