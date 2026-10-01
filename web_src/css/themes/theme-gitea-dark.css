@@ -172,9 +172,6 @@
   --color-hover: #e8e8ff19;
   --color-active: #393b43;
   --color-menu: #151a1e;
-  --color-card: #151a1e;
-  --fancy-card-bg: #14171a;
-  --fancy-card-border: #3b444a;
   --color-markup-table-row: #e8e8ff0f;
   --color-markup-code-block: #e8e8ff12;
   --color-markup-code-inline: #e8e8ff28;
@@ -242,6 +239,9 @@
   --color-highlight-neutral-background: #e8e8ff12; /* Remove. */
   --color-highlight-hover-background: var(--color-primary-light-4);
   --color-highlight-active-background: var(--color-primary-light-5);
+  --color-card-border: #3b444a;
+  --color-card-background: #151a1e;
+  --color-card-highlight-background: #14171a;
   --color-heatmap-background-1: #3b444a99;
   --color-heatmap-background-2: var(--color-primary-light-4);
   --color-heatmap-background-3: var(--color-primary-light-2);

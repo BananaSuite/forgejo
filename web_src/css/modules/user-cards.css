@@ -25,8 +25,8 @@
   margin: 0;
   padding: 14px;
   border-radius: 0.28571429rem;
-  border: 1px solid var(--color-secondary);
-  background: var(--color-box-body);
+  border: 1px solid var(--color-card-border);
+  background: var(--color-card-background);
 }
 
 .user-cards .card,

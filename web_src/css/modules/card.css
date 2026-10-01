@@ -17,8 +17,8 @@
   width: 290px;
   min-height: 0;
   padding: 0;
-  background: var(--color-card);
-  border: 1px solid var(--color-secondary);
+  background: var(--color-card-background);
+  border: 1px solid var(--color-card-border);
   box-shadow: none;
   word-wrap: break-word;
 }
@@ -112,8 +112,8 @@
 
 .ui.cards a.card:hover,
 a.ui.card:hover {
-  border: 1px solid var(--color-secondary);
-  background: var(--color-card);
+  border: 1px solid var(--color-card-background);
+  background: var(--color-card-background);
 }
 
 .ui.cards > .card > .extra,

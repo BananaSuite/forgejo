@@ -201,9 +201,6 @@
   --color-hover: var(--steel-600);
   --color-active: var(--steel-650);
   --color-menu: var(--steel-700);
-  --color-card: var(--steel-700);
-  --fancy-card-bg: var(--steel-650);
-  --fancy-card-border: var(--steel-600);
   --color-markup-table-row: #ffffff06;
   --color-markup-code-block: var(--steel-800);
   --color-markup-code-inline: var(--steel-850);
@@ -274,6 +271,9 @@
   --color-highlight-neutral-background: #ffffff12; /* Remove. */
   --color-highlight-active-background: #ea580c4b;
   --color-highlight-hover-background: #ea580c66;
+  --color-card-border: var(--steel-600);
+  --color-card-background: var(--steel-700);
+  --color-card-highlight-background: var(--steel-650);
   --color-heatmap-background-1: #2b364299;
   --color-heatmap-background-2: var(--color-primary-light-4);
   --color-heatmap-background-3: var(--color-primary-light-2);
