@@ -1357,19 +1357,19 @@ citation-information .tab:not(.active) {
 .repository .data-table td.added,
 .repository .data-table th.added,
 .repository .data-table tr.added {
-  background-color: var(--color-diff-added-row-bg) !important;
+  background-color: var(--color-diff-added-row-background) !important;
 }
 
 .repository .data-table td.removed,
 .repository .data-table th.removed,
 .repository .data-table tr.removed {
-  background-color: var(--color-diff-removed-row-bg) !important;
+  background-color: var(--color-diff-removed-row-background) !important;
 }
 
 .repository .data-table td.moved,
 .repository .data-table th.moved,
 .repository .data-table tr.moved {
-  background-color: var(--color-diff-moved-row-bg) !important;
+  background-color: var(--color-diff-moved-row-background) !important;
 }
 
 .repository .data-table tbody.section {
