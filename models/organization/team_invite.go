@@ -6,10 +6,12 @@ package organization
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/container"
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/timeutil"
@@ -323,6 +325,28 @@ func (i *TeamInvite) LoadInviterUser(ctx context.Context) error {
 			return err
 		}
 		i.InviterUser = user
+	}
+	return nil
+}
+
+// LoadUsers in an array of team invites, performing less SQL queries than if loading them one by one
+func LoadUsers(ctx context.Context, invites []*TeamInvite) error {
+	invitedUserIDs := container.FilterSlice(invites, func(m *TeamInvite) (int64, bool) {
+		has, value := m.InvitedID.Get()
+		return value, has
+	})
+	inviterIDs := container.FilterSlice(invites, func(m *TeamInvite) (int64, bool) {
+		return m.InviterID, true
+	})
+	users, err := db.GetByIDs(ctx, "id", slices.Concat(invitedUserIDs, inviterIDs), &user_model.User{})
+	if err != nil {
+		return err
+	}
+	for _, invite := range invites {
+		if has, invitedID := invite.InvitedID.Get(); has {
+			invite.InvitedUser = users[invitedID]
+		}
+		invite.InviterUser = users[invite.InviterID]
 	}
 	return nil
 }

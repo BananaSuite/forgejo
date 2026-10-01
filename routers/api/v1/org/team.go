@@ -589,14 +589,14 @@ func listTeamInvitations(ctx *context.APIContext, options *organization.SearchIn
 		ctx.Error(http.StatusInternalServerError, "GetTeamInvites", err)
 		return
 	}
+	err = organization.LoadUsers(ctx, teamInvitations)
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "LoadUsers", err)
+		return
+	}
 
 	invitations := make([]*api.TeamInvite, len(teamInvitations))
 	for i, invitation := range teamInvitations {
-		err := invitation.LoadUsers(ctx)
-		if err != nil {
-			ctx.Error(http.StatusInternalServerError, "LoadUsers", err)
-			return
-		}
 		invitations[i] = convert.ToTeamInvite(ctx, invitation, ctx.Doer())
 	}
 
