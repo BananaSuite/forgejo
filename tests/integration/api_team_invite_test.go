@@ -90,8 +90,11 @@ func TestAPIMyTeamInvites(t *testing.T) {
 	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 1})
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+	user8 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 8})
 
 	invite, err := organization.CreateTeamInviteForUser(db.DefaultContext, user2, user5, team)
+	require.NoError(t, err)
+	invite8, err := organization.CreateTeamInviteForUser(db.DefaultContext, user2, user8, team)
 	require.NoError(t, err)
 
 	t.Run("Different user PoV", func(t *testing.T) {
@@ -104,7 +107,11 @@ func TestAPIMyTeamInvites(t *testing.T) {
 		MakeRequest(t, req, http.StatusNotFound)
 
 		token = getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
-		req = NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/user/team_invitations/%d", invite.ID), &api.AcceptTeamInviteOptions{}).
+		req = NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/user/team_invitations/%d/accept", invite.ID), &api.AcceptTeamInviteOptions{}).
+			AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
+
+		req = NewRequest(t, "POST", fmt.Sprintf("/api/v1/user/team_invitations/%d/decline", invite.ID)).
 			AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNotFound)
 	})
@@ -138,7 +145,7 @@ func TestAPIMyTeamInvites(t *testing.T) {
 		assert.Equal(t, invite.Token, apiTeamInvite.Token)
 
 		token = getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
-		req = NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/user/team_invitations/%d", invite.ID), &api.AcceptTeamInviteOptions{}).
+		req = NewRequestWithJSON(t, "POST", fmt.Sprintf("/api/v1/user/team_invitations/%d/accept", invite.ID), &api.AcceptTeamInviteOptions{}).
 			AddTokenAuth(token)
 		MakeRequest(t, req, http.StatusNoContent)
 
@@ -146,5 +153,20 @@ func TestAPIMyTeamInvites(t *testing.T) {
 		isMember, err := organization.IsTeamMember(db.DefaultContext, team.OrgID, team.ID, user5.ID)
 		require.NoError(t, err)
 		assert.True(t, isMember)
+	})
+
+	t.Run("Decline an invitation", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		session := loginUser(t, user8.Name)
+		token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
+		req := NewRequest(t, "POST", fmt.Sprintf("/api/v1/user/team_invitations/%d/decline", invite8.ID)).
+			AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNoContent)
+
+		unittest.AssertNotExistsBean(t, invite8)
+		isMember, err := organization.IsTeamMember(db.DefaultContext, team.OrgID, team.ID, user8.ID)
+		require.NoError(t, err)
+		assert.False(t, isMember)
 	})
 }

@@ -1375,7 +1375,8 @@ func Routes() *web.Route {
 			m.Get("", org.ListMyTeamInvitations)
 			m.Group("/{inviteid}", func() {
 				m.Get("", org.GetMyTeamInvitation)
-				m.Post("", bind(api.AcceptTeamInviteOptions{}), org.AcceptMyTeamInvitation)
+				m.Post("/accept", bind(api.AcceptTeamInviteOptions{}), org.AcceptMyTeamInvitation)
+				m.Post("/decline", org.DeclineMyTeamInvitation)
 			})
 		}, reqToken(), tokenRequiresScopes(auth_model.AccessTokenScopeCategoryUser))
 

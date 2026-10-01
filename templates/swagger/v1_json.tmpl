@@ -22508,7 +22508,9 @@
             "$ref": "#/responses/notFound"
           }
         }
-      },
+      }
+    },
+    "/user/team_invitations/{inviteid}/accept": {
       "post": {
         "consumes": [
           "application/json"
@@ -22536,6 +22538,45 @@
             "schema": {
               "$ref": "#/definitions/AcceptTeamInviteOptions"
             }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/TeamInvite"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/user/team_invitations/{inviteid}/decline": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Decline an invitation to a team for the current user",
+        "operationId": "orgDeclineMyTeamInvitation",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the invitation",
+            "name": "inviteid",
+            "in": "path",
+            "required": true
           }
         ],
         "responses": {

@@ -1072,7 +1072,7 @@ func getMyTeamInvitation(ctx *context.APIContext) *organization.TeamInvite {
 		}
 		return nil
 	}
-	// check  that it is not expired
+	// check that it is not expired
 	if invite.IsExpired() {
 		ctx.NotFound("getMyTeamInvite")
 		return nil
@@ -1115,7 +1115,7 @@ func GetMyTeamInvitation(ctx *context.APIContext) {
 
 // AcceptMyTeamInvitation API to accept an invitation addressed to the current user
 func AcceptMyTeamInvitation(ctx *context.APIContext) {
-	// swagger:operation POST /user/team_invitations/{inviteid} organization orgAcceptMyTeamInvitation
+	// swagger:operation POST /user/team_invitations/{inviteid}/accept organization orgAcceptMyTeamInvitation
 	// ---
 	// summary: Accept an invitation to a team for the current user
 	// consumes:
@@ -1164,6 +1164,54 @@ func AcceptMyTeamInvitation(ctx *context.APIContext) {
 			ctx.Error(http.StatusNotAcceptable, "AcceptInvite", err)
 		} else {
 			ctx.ServerError("AcceptInvite", err)
+		}
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, convert.ToTeamInvite(ctx, invite, ctx.Doer()))
+}
+
+// DeclineMyTeamInvitation API to decline an invitation addressed to the current user
+func DeclineMyTeamInvitation(ctx *context.APIContext) {
+	// swagger:operation POST /user/team_invitations/{inviteid}/decline organization orgDeclineMyTeamInvitation
+	// ---
+	// summary: Decline an invitation to a team for the current user
+	// consumes:
+	// - application/json
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: inviteid
+	//   in: path
+	//   description: id of the invitation
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "204":
+	//     "$ref": "#/responses/TeamInvite"
+	//   "401":
+	//     "$ref": "#/responses/unauthorized"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	//   "406":
+	//     "$ref": "#/responses/notAcceptable"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
+
+	invite := getMyTeamInvitation(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	err := org_service.DeclineInvite(ctx, invite)
+	if err != nil {
+		if organization.IsErrTeamInviteNotFound(err) {
+			ctx.NotFound("DeclineInvite")
+		} else if organization.IsErrTeamInviteExpired(err) {
+			ctx.Error(http.StatusNotAcceptable, "DeclineInvite", err)
+		} else {
+			ctx.ServerError("DeclineInvite", err)
 		}
 		return
 	}
