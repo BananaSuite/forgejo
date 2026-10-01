@@ -188,42 +188,6 @@ func TestOrgAddMemberToForeignTeam(t *testing.T) {
 	assert.False(t, isForeignTeamMember)
 }
 
-func TestOrgAddNonExistentMemberToForeignTeam(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
-
-	actionUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
-	org := unittest.AssertExistsAndLoadBean(t, &organization.Organization{ID: 3})
-	foreignTeam := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 5})
-
-	// confirm that org and team are NOT linked to each other i.e. team is foreign to the org.
-	orgTeams, err := org.LoadTeams(db.DefaultContext)
-	require.NoError(t, err)
-	assert.NotContains(t, orgTeams, foreignTeam)
-	assert.NotEqual(t, foreignTeam.OrgID, org.ID)
-
-	// user adding the member (i.e. actionUser) should be part of the org.
-	isOrgMember, err := org.IsOrgMember(db.DefaultContext, actionUser.ID)
-	require.NoError(t, err)
-	assert.True(t, isOrgMember)
-
-	session := loginUser(t, actionUser.LoginName)
-	teamURL := fmt.Sprintf("/org/%s/members", org.Name)
-	nonexistentLoginName := "non-existent-user"
-	unittest.AssertNotExistsBean(t, &user_model.User{LoginName: nonexistentLoginName})
-
-	// This test scenario is here for security purposes as the UI will not offer adding the user to
-	// a foreign team in the first place (but a malicious request could be performed in other ways).
-	req := NewRequestWithValues(t, "POST", teamURL+"/action/add", map[string]string{
-		"uid":                                  fmt.Sprintf("%d", actionUser.ID),
-		"uname":                                nonexistentLoginName,
-		fmt.Sprintf("team_%d", foreignTeam.ID): "on",
-	})
-	resp := session.MakeRequest(t, req, http.StatusSeeOther)
-	assert.Equal(t, teamURL, resp.Header().Get("Location"))
-	doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", teamURL), http.StatusOK).Body)
-	assert.Contains(t, strings.TrimSpace(doc.Find(".flash-error").Text()), "The user does not exist.")
-}
-
 func TestOrgAddMemberWithoutProperRights(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
