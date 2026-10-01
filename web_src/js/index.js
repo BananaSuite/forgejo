@@ -202,8 +202,8 @@ onDomReady(() => {
   initColorPickers();
   initModalClose();
   initAuthorizedIntegrationClaimRuleEditor();
-  initPreviewServiceMessageButton();
   initModalServiceMessageForm();
+  initPreviewServiceMessageButton();
   initDeleteServiceMessageButton();
 
   // no-js helper class is currently unused by UI components in Forgejo, but it is left for compatibility
