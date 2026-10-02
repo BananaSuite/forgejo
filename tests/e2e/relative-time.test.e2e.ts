@@ -15,6 +15,7 @@ test.use({user: 'user1'});
 // The <relative-time> tooltip shows the absolute datetime, formatted with the language
 // selected in Forgejo's settings (window.config.lang), not the browser's language.
 const browserLang = 'en-US';
+
 for (const lang of ['en-US', 'es-ES', 'de-DE']) {
   test(`Relative time tooltip is formatted in ${lang}`, async ({browser}) => {
     const context = await browser.newContext({locale: browserLang});
@@ -25,24 +26,33 @@ for (const lang of ['en-US', 'es-ES', 'de-DE']) {
       await page.goto('/user2/repo1');
 
       const relativeTime = page.locator('relative-time').first();
+      await expect(relativeTime).toBeVisible();
       await expect(relativeTime).toHaveAttribute('data-tooltip-content', /.+?/);
+
       const expected = await relativeTime.evaluate(
-        (el, lang) => new Intl.DateTimeFormat(lang, {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZoneName: 'short',
-        }).format(new Date(el.getAttribute('datetime'))),
+        (el: HTMLElement, l: string) =>
+          new Intl.DateTimeFormat(l, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZoneName: 'short',
+          }).format(new Date(el.getAttribute('datetime')!)),
         lang,
       );
 
       await expect(relativeTime).toHaveAttribute('data-tooltip-content', expected);
 
-      // tippy is created with `animation: false`, so `data-state` stays "hidden" only the `visibility` changes when shown
+      // tippy is created with `animation: false`, so `data-state` stays "hidden"
+      // only the `visibility` changes when shown
+      await relativeTime.scrollIntoViewIfNeeded();
       await relativeTime.hover();
-      const tippyContent = page.locator('.tippy-box[data-theme="tooltip"] .tippy-content');
+      await relativeTime.dispatchEvent('mouseenter');
+      const tippyContent = page.locator('.tippy-box .tippy-content').filter({
+        hasText: expected,
+      });
+
       await expect(tippyContent).toBeVisible();
       await expect(tippyContent).toHaveText(expected);
     } finally {
