@@ -450,7 +450,7 @@ func getAuthenticatedRepository(ctx *context.Context, rc *requestContext, requir
 	}
 
 	if !authenticate(ctx, repository, false, requireWrite) {
-		requireAuth(ctx)
+		writeStatus(ctx, http.StatusUnauthorized)
 		return nil
 	}
 
@@ -595,9 +595,4 @@ func authenticate(ctx *context.Context, repository *repo_model.Repository, requi
 	}
 
 	return false
-}
-
-func requireAuth(ctx *context.Context) {
-	ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=gitea-lfs")
-	writeStatus(ctx, http.StatusUnauthorized)
 }
