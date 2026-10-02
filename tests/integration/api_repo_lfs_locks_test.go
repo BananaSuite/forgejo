@@ -15,6 +15,7 @@ import (
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -22,7 +23,9 @@ import (
 
 func TestAPILFSLocksNotStarted(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	setting.LFS.StartServer = false
+
+	defer test.MockVariableValue(&setting.LFS.StartServer, false)()
+
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 
@@ -38,7 +41,9 @@ func TestAPILFSLocksNotStarted(t *testing.T) {
 
 func TestAPILFSLocksNotLogin(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	setting.LFS.StartServer = true
+
+	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
+
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 
@@ -52,7 +57,9 @@ func TestAPILFSLocksNotLogin(t *testing.T) {
 
 func TestAPILFSLocksLogged(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
-	setting.LFS.StartServer = true
+
+	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
+
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2}) // in org 3
 	user4 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 4}) // in org 3
 

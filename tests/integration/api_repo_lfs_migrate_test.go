@@ -14,6 +14,7 @@ import (
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
 	migrations_allowlist "forgejo.org/services/migrations/allowlist"
 	"forgejo.org/tests"
 
@@ -23,6 +24,8 @@ import (
 
 func TestAPIRepoLFSMigrateLocal(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
+
+	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
 
 	oldImportLocalPaths := setting.ImportLocalPaths
 	oldAllowLocalNetworks := setting.Migrations.AllowLocalNetworks

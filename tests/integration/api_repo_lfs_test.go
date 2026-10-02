@@ -32,7 +32,7 @@ import (
 func TestAPILFSNotStarted(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	setting.LFS.StartServer = false
+	defer test.MockVariableValue(&setting.LFS.StartServer, false)()
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -52,7 +52,7 @@ func TestAPILFSNotStarted(t *testing.T) {
 func TestAPILFSMediaType(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	setting.LFS.StartServer = true
+	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
 
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
@@ -76,7 +76,7 @@ func createLFSTestRepository(t *testing.T, name string) *repo_model.Repository {
 func TestAPILFSBatch(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	setting.LFS.StartServer = true
+	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
 
 	repo := createLFSTestRepository(t, "batch")
 
@@ -360,7 +360,7 @@ func TestAPILFSBatch(t *testing.T) {
 func TestAPILFSUpload(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	setting.LFS.StartServer = true
+	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
 
 	repo := createLFSTestRepository(t, "upload")
 
@@ -496,7 +496,7 @@ func TestAPILFSUpload(t *testing.T) {
 func TestAPILFSVerify(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
-	setting.LFS.StartServer = true
+	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
 
 	repo := createLFSTestRepository(t, "verify")
 
