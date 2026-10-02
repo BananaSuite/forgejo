@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
+	"forgejo.org/modules/setting"
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
 
@@ -88,7 +89,8 @@ func TestHeadMentionJS(t *testing.T) {
 					if len(trimmed) == 0 {
 						continue
 					}
-					assert.Equal(t, `['`+user.Name+`', {key: '`+user.Name+` `+escapedFullName+`', value: '`+user.Name+`', name: '`+user.Name+`', fullname: '`+escapedFullName+escapedPronouns+`', avatar: 'http:\/\/localhost:3003\/avatars\/`+user.Avatar+`'}],`, trimmed)
+					escapedAppURL := strings.ReplaceAll(setting.AppURL, "/", `\/`)
+					assert.Equal(t, `['`+user.Name+`', {key: '`+user.Name+` `+escapedFullName+`', value: '`+user.Name+`', name: '`+user.Name+`', fullname: '`+escapedFullName+escapedPronouns+`', avatar: '`+escapedAppURL+`avatars\/`+user.Avatar+`'}],`, trimmed)
 				}
 			})
 		}
