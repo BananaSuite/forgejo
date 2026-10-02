@@ -39,7 +39,7 @@ func TestAPILFSLocksNotStarted(t *testing.T) {
 	MakeRequest(t, req, http.StatusNotFound)
 }
 
-func TestAPILFSLocksNotLogin(t *testing.T) {
+func TestAPILFSLocksNoAccess(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	defer test.MockVariableValue(&setting.LFS.StartServer, true)()
@@ -47,12 +47,115 @@ func TestAPILFSLocksNotLogin(t *testing.T) {
 	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 
-	req := NewRequestf(t, "GET", "/%s/%s.git/info/lfs/locks", user.Name, repo.Name)
-	req.Header.Set("Accept", lfs.MediaType)
-	resp := MakeRequest(t, req, http.StatusUnauthorized)
-	var lfsLockError api.LFSLockError
-	DecodeJSON(t, resp, &lfsLockError)
-	assert.Equal(t, "You must have pull access to list locks", lfsLockError.Message)
+	// Tries to create lock, but shall never succeed.
+	//
+	// noLoginCase: true -> no authentication, false -> it's the nonexistent repo case
+	createLockHelper := func(t *testing.T, noLoginCase bool) {
+		var repoName string
+		if noLoginCase {
+			repoName = repo.Name
+		} else {
+			repoName = "nonexistentrepo"
+		}
+		req := NewRequestf(t, "POST", "/%s/%s.git/info/lfs/locks", user.Name, repoName)
+		if !noLoginCase {
+			req.AddBasicAuth(user.Name)
+		}
+		req.Header.Set("Accept", lfs.AcceptHeader)
+		req.Header.Set("Content-Type", lfs.MediaType)
+		resp := MakeRequest(t, req, http.StatusForbidden)
+		var lfsLockError api.LFSLockError
+		DecodeJSON(t, resp, &lfsLockError)
+		assert.Equal(t, "Forbidden: Push access required for lock creation", lfsLockError.Message)
+		assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsLockError.DocumentationURL)
+	}
+
+	// Tries to list locks, but shall never succeed.
+	//
+	// noLoginCase: true -> no authentication, false -> it's the nonexistent repo case
+	listLocksHelper := func(t *testing.T, noLoginCase bool) {
+		var repoName string
+		if noLoginCase {
+			repoName = repo.Name
+		} else {
+			repoName = "nonexistentrepo"
+		}
+		req := NewRequestf(t, "GET", "/%s/%s.git/info/lfs/locks", user.Name, repoName)
+		if !noLoginCase {
+			req.AddBasicAuth(user.Name)
+		}
+		req.Header.Set("Accept", lfs.AcceptHeader)
+		resp := MakeRequest(t, req, http.StatusForbidden)
+		var lfsLockError lfs.ErrorResponse
+		DecodeJSON(t, resp, &lfsLockError)
+		assert.Equal(t, "Forbidden: Pull access required for listing locks", lfsLockError.Message)
+		assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsLockError.DocumentationURL)
+	}
+
+	// Tries to list locks, but shall never succeed.
+	//
+	// noLoginCase: true -> no authentication, false -> it's the nonexistent repo case
+	removeLockHelper := func(t *testing.T, noLoginCase bool) {
+		var repoName string
+		if noLoginCase {
+			repoName = repo.Name
+		} else {
+			repoName = "nonexistentrepo"
+		}
+		req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/%s/%s.git/info/lfs/locks/%s/unlock", user.Name, repoName, "0"), map[string]string{})
+		if !noLoginCase {
+			req.AddBasicAuth(user.Name)
+		}
+		req.Header.Set("Accept", lfs.AcceptHeader)
+		req.Header.Set("Content-Type", lfs.MediaType)
+		resp := MakeRequest(t, req, http.StatusForbidden)
+		var lfsUnlockError lfs.ErrorResponse
+		DecodeJSON(t, resp, &lfsUnlockError)
+		assert.Equal(t, "Forbidden: Push access required for lock deletion", lfsUnlockError.Message)
+		assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsUnlockError.DocumentationURL)
+	}
+
+	t.Run("CreateLock", func(t *testing.T) {
+		t.Run("NoLogin", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			createLockHelper(t, true)
+		})
+
+		t.Run("NonexistentRepo", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			createLockHelper(t, false)
+		})
+	})
+
+	t.Run("ListLocks", func(t *testing.T) {
+		t.Run("NoLogin", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			listLocksHelper(t, true)
+		})
+
+		t.Run("NonexistentRepo", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			listLocksHelper(t, false)
+		})
+	})
+
+	t.Run("RemoveLock", func(t *testing.T) {
+		t.Run("NoLogin", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			removeLockHelper(t, true)
+		})
+
+		t.Run("NonexistentRepo", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			removeLockHelper(t, false)
+		})
+	})
 }
 
 func TestAPILFSLocksLogged(t *testing.T) {
@@ -78,8 +181,8 @@ func TestAPILFSLocksLogged(t *testing.T) {
 		{user: user2, repo: repo1, path: "path/test", httpResult: http.StatusConflict},
 		{user: user2, repo: repo1, path: "Foo/BaR.zip", httpResult: http.StatusConflict},
 		{user: user2, repo: repo1, path: "Foo/Test/../subFOlder/../Relative/../BaR.zip", httpResult: http.StatusConflict},
-		{user: user4, repo: repo1, path: "FoO/BaR.zip", httpResult: http.StatusUnauthorized},
-		{user: user4, repo: repo1, path: "path/test-user4", httpResult: http.StatusUnauthorized},
+		{user: user4, repo: repo1, path: "FoO/BaR.zip", httpResult: http.StatusForbidden},
+		{user: user4, repo: repo1, path: "path/test-user4", httpResult: http.StatusForbidden},
 		{user: user2, repo: repo1, path: "patH/Test-user4", httpResult: http.StatusCreated, addTime: []int{0}},
 		{user: user2, repo: repo1, path: "some/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/long/path", httpResult: http.StatusCreated, addTime: []int{0}},
 
@@ -126,6 +229,11 @@ func TestAPILFSLocksLogged(t *testing.T) {
 					resultsTests[id].locksTimes = append(resultsTests[id].locksTimes, time.Now())
 				}
 			}
+			if test.httpResult == http.StatusForbidden || test.httpResult == http.StatusConflict {
+				var lfsLockError api.LFSLockError
+				DecodeJSON(t, resp, &lfsLockError)
+				assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsLockError.DocumentationURL)
+			}
 		}
 	})
 
@@ -169,31 +277,48 @@ func TestAPILFSLocksLogged(t *testing.T) {
 		}
 	})
 
-	// remove all locks
-	t.Run("RemoveAllLocks", func(t *testing.T) {
-		defer tests.PrintCurrentTest(t)()
+	t.Run("RemoveLocks", func(t *testing.T) {
+		t.Run("Normal", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
 
-		for _, test := range deleteTests {
-			req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/%s.git/info/lfs/locks/%s/unlock", test.repo.FullName(), test.lockID), map[string]string{})
-			req.AddBasicAuth(test.user.Name)
-			req.Header.Set("Accept", lfs.AcceptHeader)
-			req.Header.Set("Content-Type", lfs.MediaType)
-			resp := MakeRequest(t, req, http.StatusOK)
-			var lfsLockRep api.LFSLockResponse
-			DecodeJSON(t, resp, &lfsLockRep)
-			assert.Equal(t, test.lockID, lfsLockRep.Lock.ID)
-			assert.Equal(t, test.user.Name, lfsLockRep.Lock.Owner.Name)
-		}
+			for _, test := range deleteTests {
+				req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/%s.git/info/lfs/locks/%s/unlock", test.repo.FullName(), test.lockID), map[string]string{})
+				req.AddBasicAuth(test.user.Name)
+				req.Header.Set("Accept", lfs.AcceptHeader)
+				req.Header.Set("Content-Type", lfs.MediaType)
+				resp := MakeRequest(t, req, http.StatusOK)
+				var lfsLockRep api.LFSLockResponse
+				DecodeJSON(t, resp, &lfsLockRep)
+				assert.Equal(t, test.lockID, lfsLockRep.Lock.ID)
+				assert.Equal(t, test.user.Name, lfsLockRep.Lock.Owner.Name)
+			}
 
-		// check that we don't have any lock
-		for _, test := range resultsTests {
-			req := NewRequestf(t, "GET", "/%s.git/info/lfs/locks", test.repo.FullName())
-			req.AddBasicAuth(test.user.Name)
-			req.Header.Set("Accept", lfs.AcceptHeader)
-			resp := MakeRequest(t, req, http.StatusOK)
-			var lfsLocks api.LFSLockList
-			DecodeJSON(t, resp, &lfsLocks)
-			assert.Empty(t, lfsLocks.Locks)
-		}
+			// check that we don't have any lock
+			for _, test := range resultsTests {
+				req := NewRequestf(t, "GET", "/%s.git/info/lfs/locks", test.repo.FullName())
+				req.AddBasicAuth(test.user.Name)
+				req.Header.Set("Accept", lfs.AcceptHeader)
+				resp := MakeRequest(t, req, http.StatusOK)
+				var lfsLocks api.LFSLockList
+				DecodeJSON(t, resp, &lfsLocks)
+				assert.Empty(t, lfsLocks.Locks)
+			}
+		})
+
+		t.Run("TryRemovingAlreadyRemovedLocks", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			for _, test := range deleteTests {
+				req := NewRequestWithJSON(t, "POST", fmt.Sprintf("/%s.git/info/lfs/locks/%s/unlock", test.repo.FullName(), test.lockID), map[string]string{})
+				req.AddBasicAuth(test.user.Name)
+				req.Header.Set("Accept", lfs.AcceptHeader)
+				req.Header.Set("Content-Type", lfs.MediaType)
+				resp := MakeRequest(t, req, http.StatusInternalServerError)
+				var lfsUnlockError lfs.ErrorResponse
+				DecodeJSON(t, resp, &lfsUnlockError)
+				assert.Equal(t, "Internal Server Error: Could not delete lock", lfsUnlockError.Message)
+				assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsUnlockError.DocumentationURL)
+			}
+		})
 	})
 }
