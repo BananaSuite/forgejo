@@ -62,11 +62,8 @@
   --color-secondary-dark-6: var(--zinc-500);
   --color-secondary-dark-7: var(--zinc-500);
   --color-secondary-dark-8: var(--zinc-600);
-  --color-secondary-dark-9: var(--zinc-600);
   --color-secondary-dark-10: var(--zinc-700);
-  --color-secondary-dark-11: var(--zinc-700);
   --color-secondary-dark-12: var(--zinc-800);
-  --color-secondary-dark-13: var(--zinc-800);
   --color-secondary-light-1: var(--zinc-200);
   --color-secondary-light-2: var(--zinc-100);
   --color-secondary-light-3: var(--zinc-100);
@@ -198,8 +195,6 @@
   --color-text-light-2: var(--zinc-600);
   --color-text-light-3: var(--zinc-550);
   --color-timeline: var(--zinc-200);
-  --color-header-wrapper: var(--zinc-50);
-  --color-header-wrapper-transparent: #d2e0f000;
   --color-light: #ffffffcc;
   --color-light-mimic-enabled: rgba(0, 0, 0, calc(6 / 255 * 222 / 255 / var(--opacity-disabled)));
   --color-hover: #e4e4e4aa;
@@ -210,13 +205,9 @@
   --color-markup-code-inline: var(--zinc-200);
   --color-code-bg: var(--zinc-50);
   --color-shadow: #00000060;
-  --color-secondary-bg: var(--zinc-100);
-  --color-text-focus: #fff;
   --color-expand-button: var(--zinc-200);
   --color-placeholder-text: var(--color-text-light-3);
-  --color-editor-line-highlight: var(--zinc-100);
-  --color-project-board-bg: var(--color-secondary-light-2);
-  --color-project-board-dark-label: var(--color-text-light-3);
+  --color-project-column-bg: var(--color-secondary-light-2);
   --color-caret: var(--color-text);
   /* should ideally be --color-text-dark, see #15651 */
   --color-tooltip-text: #ffffff;
