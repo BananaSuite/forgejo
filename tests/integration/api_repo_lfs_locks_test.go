@@ -64,6 +64,7 @@ func TestAPILFSLocksNoAccess(t *testing.T) {
 		req.Header.Set("Accept", lfs.AcceptHeader)
 		req.Header.Set("Content-Type", lfs.MediaType)
 		resp := MakeRequest(t, req, http.StatusForbidden)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		var lfsLockError api.LFSLockError
 		DecodeJSON(t, resp, &lfsLockError)
 		assert.Equal(t, "Forbidden: Push access required for lock creation", lfsLockError.Message)
@@ -86,6 +87,7 @@ func TestAPILFSLocksNoAccess(t *testing.T) {
 		}
 		req.Header.Set("Accept", lfs.AcceptHeader)
 		resp := MakeRequest(t, req, http.StatusForbidden)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		var lfsLockError lfs.ErrorResponse
 		DecodeJSON(t, resp, &lfsLockError)
 		assert.Equal(t, "Forbidden: Pull access required for listing locks", lfsLockError.Message)
@@ -109,6 +111,7 @@ func TestAPILFSLocksNoAccess(t *testing.T) {
 		req.Header.Set("Accept", lfs.AcceptHeader)
 		req.Header.Set("Content-Type", lfs.MediaType)
 		resp := MakeRequest(t, req, http.StatusForbidden)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		var lfsUnlockError lfs.ErrorResponse
 		DecodeJSON(t, resp, &lfsUnlockError)
 		assert.Equal(t, "Forbidden: Push access required for lock deletion", lfsUnlockError.Message)
@@ -230,6 +233,7 @@ func TestAPILFSLocksLogged(t *testing.T) {
 				}
 			}
 			if test.httpResult == http.StatusForbidden || test.httpResult == http.StatusConflict {
+				assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 				var lfsLockError api.LFSLockError
 				DecodeJSON(t, resp, &lfsLockError)
 				assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsLockError.DocumentationURL)
@@ -259,6 +263,7 @@ func TestAPILFSLocksLogged(t *testing.T) {
 			req.Header.Set("Accept", lfs.AcceptHeader)
 			req.Header.Set("Content-Type", lfs.MediaType)
 			resp = MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			var lfsLocksVerify api.LFSLockListVerify
 			DecodeJSON(t, resp, &lfsLocksVerify)
 			assert.Len(t, lfsLocksVerify.Ours, test.oursCount)
@@ -287,6 +292,7 @@ func TestAPILFSLocksLogged(t *testing.T) {
 				req.Header.Set("Accept", lfs.AcceptHeader)
 				req.Header.Set("Content-Type", lfs.MediaType)
 				resp := MakeRequest(t, req, http.StatusOK)
+				assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 				var lfsLockRep api.LFSLockResponse
 				DecodeJSON(t, resp, &lfsLockRep)
 				assert.Equal(t, test.lockID, lfsLockRep.Lock.ID)
@@ -299,6 +305,7 @@ func TestAPILFSLocksLogged(t *testing.T) {
 				req.AddBasicAuth(test.user.Name)
 				req.Header.Set("Accept", lfs.AcceptHeader)
 				resp := MakeRequest(t, req, http.StatusOK)
+				assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 				var lfsLocks api.LFSLockList
 				DecodeJSON(t, resp, &lfsLocks)
 				assert.Empty(t, lfsLocks.Locks)
@@ -314,6 +321,7 @@ func TestAPILFSLocksLogged(t *testing.T) {
 				req.Header.Set("Accept", lfs.AcceptHeader)
 				req.Header.Set("Content-Type", lfs.MediaType)
 				resp := MakeRequest(t, req, http.StatusInternalServerError)
+				assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 				var lfsUnlockError lfs.ErrorResponse
 				DecodeJSON(t, resp, &lfsUnlockError)
 				assert.Equal(t, "Internal Server Error: Could not delete lock", lfsUnlockError.Message)

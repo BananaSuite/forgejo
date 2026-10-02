@@ -58,9 +58,11 @@ func TestAPILFSMediaType(t *testing.T) {
 	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
 
 	req := NewRequestf(t, "POST", "/%s/%s.git/info/lfs/objects/batch", user.Name, repo.Name)
-	MakeRequest(t, req, http.StatusUnsupportedMediaType)
+	resp := MakeRequest(t, req, http.StatusUnsupportedMediaType)
+	assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 	req = NewRequestf(t, "POST", "/%s/%s.git/info/lfs/verify", user.Name, repo.Name)
-	MakeRequest(t, req, http.StatusUnsupportedMediaType)
+	resp = MakeRequest(t, req, http.StatusUnsupportedMediaType)
+	assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 }
 
 func createLFSTestRepository(t *testing.T, name string) *repo_model.Repository {
@@ -102,7 +104,8 @@ func TestAPILFSBatch(t *testing.T) {
 		req := newRequest(t, nil)
 		req.AddBasicAuth("user2")
 
-		MakeRequest(t, req, http.StatusBadRequest)
+		resp := MakeRequest(t, req, http.StatusBadRequest)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 	})
 
 	t.Run("InvalidOperation", func(t *testing.T) {
@@ -113,7 +116,8 @@ func TestAPILFSBatch(t *testing.T) {
 		})
 		req.AddBasicAuth("user2")
 
-		MakeRequest(t, req, http.StatusBadRequest)
+		resp := MakeRequest(t, req, http.StatusBadRequest)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 	})
 
 	t.Run("InvalidPointer", func(t *testing.T) {
@@ -129,6 +133,7 @@ func TestAPILFSBatch(t *testing.T) {
 		req.AddBasicAuth("user2")
 
 		resp := MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		br := decodeResponse(t, resp.Body)
 		assert.Len(t, br.Objects, 2)
 		assert.Equal(t, "dummy", br.Objects[0].Oid)
@@ -155,6 +160,7 @@ func TestAPILFSBatch(t *testing.T) {
 		req.AddBasicAuth("user2")
 
 		resp := MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		br := decodeResponse(t, resp.Body)
 		assert.Len(t, br.Objects, 1)
 		assert.NotNil(t, br.Objects[0].Error)
@@ -177,6 +183,7 @@ func TestAPILFSBatch(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			br := decodeResponse(t, resp.Body)
 			assert.Len(t, br.Objects, 1)
 			assert.NotNil(t, br.Objects[0].Error)
@@ -202,6 +209,7 @@ func TestAPILFSBatch(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			br := decodeResponse(t, resp.Body)
 			assert.Len(t, br.Objects, 1)
 			assert.NotNil(t, br.Objects[0].Error)
@@ -218,7 +226,8 @@ func TestAPILFSBatch(t *testing.T) {
 				},
 			})
 
-			MakeRequest(t, req, http.StatusUnauthorized)
+			resp := MakeRequest(t, req, http.StatusUnauthorized)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		})
 
 		t.Run("Success", func(t *testing.T) {
@@ -233,6 +242,7 @@ func TestAPILFSBatch(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			br := decodeResponse(t, resp.Body)
 			assert.Len(t, br.Objects, 1)
 			assert.Nil(t, br.Objects[0].Error)
@@ -259,6 +269,7 @@ func TestAPILFSBatch(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			br := decodeResponse(t, resp.Body)
 			assert.Len(t, br.Objects, 1)
 			assert.NotNil(t, br.Objects[0].Error)
@@ -291,6 +302,7 @@ func TestAPILFSBatch(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			br := decodeResponse(t, resp.Body)
 			assert.Len(t, br.Objects, 1)
 			assert.Nil(t, br.Objects[0].Error)
@@ -317,6 +329,7 @@ func TestAPILFSBatch(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			br := decodeResponse(t, resp.Body)
 			assert.Len(t, br.Objects, 1)
 			assert.Nil(t, br.Objects[0].Error)
@@ -335,6 +348,7 @@ func TestAPILFSBatch(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			br := decodeResponse(t, resp.Body)
 			assert.Len(t, br.Objects, 1)
 			assert.Nil(t, br.Objects[0].Error)
@@ -361,6 +375,7 @@ func TestAPILFSBatch(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			br := decodeResponse(t, resp.Body)
 			assert.Len(t, br.Objects, 1)
 			assert.NotNil(t, br.Objects[0].Error)
@@ -395,6 +410,7 @@ func TestAPILFSUpload(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusUnprocessableEntity)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			expected, err := json.Marshal(lfs.ErrorResponse{
 				Message:          "Unprocessable Entity: Oid or size are invalid",
 				DocumentationURL: "https://codeberg.org/forgejo/forgejo/issues",
@@ -413,6 +429,7 @@ func TestAPILFSUpload(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusUnprocessableEntity)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			expected, err := json.Marshal(lfs.ErrorResponse{
 				Message:          "Unprocessable Entity: Oid or size are invalid",
 				DocumentationURL: "https://codeberg.org/forgejo/forgejo/issues",
@@ -443,6 +460,7 @@ func TestAPILFSUpload(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusUnprocessableEntity)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			DecodeJSON(t, resp, &lfsErrorResponse)
 			assert.Equal(t, "Unprocessable Entity: content size does not match", lfsErrorResponse.Message)
 			assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsErrorResponse.DocumentationURL)
@@ -452,7 +470,8 @@ func TestAPILFSUpload(t *testing.T) {
 			req := newRequest(t, p, "dummy5")
 			req.AddBasicAuth("user2")
 
-			MakeRequest(t, req, http.StatusOK)
+			resp := MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			meta, err = git_model.GetLFSMetaObjectByOid(db.DefaultContext, repo.ID, p.Oid)
 			require.NoError(t, err)
 			assert.NotNil(t, meta)
@@ -469,7 +488,8 @@ func TestAPILFSUpload(t *testing.T) {
 		req := newRequest(t, lfs.Pointer{Oid: oid, Size: 6}, "")
 		req.AddBasicAuth("user2")
 
-		MakeRequest(t, req, http.StatusOK)
+		resp := MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 	})
 
 	t.Run("HashMismatch", func(t *testing.T) {
@@ -479,6 +499,7 @@ func TestAPILFSUpload(t *testing.T) {
 		req.AddBasicAuth("user2")
 
 		resp := MakeRequest(t, req, http.StatusUnprocessableEntity)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		DecodeJSON(t, resp, &lfsErrorResponse)
 		assert.Equal(t, "Unprocessable Entity: content hash does not match OID", lfsErrorResponse.Message)
 		assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsErrorResponse.DocumentationURL)
@@ -491,6 +512,7 @@ func TestAPILFSUpload(t *testing.T) {
 		req.AddBasicAuth("user2")
 
 		resp := MakeRequest(t, req, http.StatusUnprocessableEntity)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		DecodeJSON(t, resp, &lfsErrorResponse)
 		assert.Equal(t, "Unprocessable Entity: content size does not match", lfsErrorResponse.Message)
 		assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsErrorResponse.DocumentationURL)
@@ -504,6 +526,7 @@ func TestAPILFSUpload(t *testing.T) {
 		req := newRequest(t, p, "gitea")
 
 		resp := MakeRequest(t, req, http.StatusUnauthorized)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		DecodeJSON(t, resp, &lfsErrorResponse)
 		assert.Equal(t, "Unauthorized", lfsErrorResponse.Message)
 		assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsErrorResponse.DocumentationURL)
@@ -517,7 +540,8 @@ func TestAPILFSUpload(t *testing.T) {
 		req := newRequest(t, p, "gitea")
 		req.AddBasicAuth("user2")
 
-		MakeRequest(t, req, http.StatusOK)
+		resp := MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 
 		contentStore := lfs.NewContentStore()
 		exist, err := contentStore.Exists(p)
@@ -557,6 +581,7 @@ func TestAPILFSVerify(t *testing.T) {
 		req.AddBasicAuth("user2")
 
 		resp := MakeRequest(t, req, http.StatusUnprocessableEntity)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		DecodeJSON(t, resp, &lfsErrorResponse)
 		assert.Equal(t, "Unprocessable Entity: OID has an invalid format", lfsErrorResponse.Message)
 		assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsErrorResponse.DocumentationURL)
@@ -570,6 +595,7 @@ func TestAPILFSVerify(t *testing.T) {
 			req.AddBasicAuth("user2")
 
 			resp := MakeRequest(t, req, http.StatusUnprocessableEntity)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			expected, err := json.Marshal(lfs.ErrorResponse{
 				Message:          "Unprocessable Entity: OID has an invalid format",
 				DocumentationURL: "https://codeberg.org/forgejo/forgejo/issues",
@@ -588,7 +614,8 @@ func TestAPILFSVerify(t *testing.T) {
 			})
 			req.AddBasicAuth("user2")
 
-			MakeRequest(t, req, http.StatusNotFound)
+			resp := MakeRequest(t, req, http.StatusNotFound)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		})
 	})
 
@@ -599,6 +626,7 @@ func TestAPILFSVerify(t *testing.T) {
 		req.AddBasicAuth("user2")
 
 		resp := MakeRequest(t, req, http.StatusNotFound)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		DecodeJSON(t, resp, &lfsErrorResponse)
 		assert.Equal(t, "Not Found", lfsErrorResponse.Message)
 		assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsErrorResponse.DocumentationURL)
@@ -610,6 +638,7 @@ func TestAPILFSVerify(t *testing.T) {
 		req := newRequest(t, &lfs.Pointer{Oid: oid, Size: 6})
 
 		resp := MakeRequest(t, req, http.StatusUnauthorized)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		DecodeJSON(t, resp, &lfsErrorResponse)
 		assert.Equal(t, "Unauthorized", lfsErrorResponse.Message)
 		assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsErrorResponse.DocumentationURL)
@@ -621,7 +650,8 @@ func TestAPILFSVerify(t *testing.T) {
 		req := newRequest(t, &lfs.Pointer{Oid: oid, Size: 6})
 		req.AddBasicAuth("user2")
 
-		MakeRequest(t, req, http.StatusOK)
+		resp := MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 	})
 }
 
