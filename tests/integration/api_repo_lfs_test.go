@@ -228,6 +228,7 @@ func TestAPILFSBatch(t *testing.T) {
 
 			resp := MakeRequest(t, req, http.StatusUnauthorized)
 			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
+			assert.Equal(t, "Basic realm=forgejo-lfs", resp.Header().Get("LFS-Authenticate"))
 		})
 
 		t.Run("Success", func(t *testing.T) {
@@ -527,6 +528,7 @@ func TestAPILFSUpload(t *testing.T) {
 
 		resp := MakeRequest(t, req, http.StatusUnauthorized)
 		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
+		assert.Equal(t, "Basic realm=forgejo-lfs", resp.Header().Get("LFS-Authenticate"))
 		DecodeJSON(t, resp, &lfsErrorResponse)
 		assert.Equal(t, "Unauthorized", lfsErrorResponse.Message)
 		assert.Equal(t, "https://codeberg.org/forgejo/forgejo/issues", lfsErrorResponse.DocumentationURL)
@@ -638,6 +640,7 @@ func TestAPILFSVerify(t *testing.T) {
 		req := newRequest(t, &lfs.Pointer{Oid: oid, Size: 6})
 
 		resp := MakeRequest(t, req, http.StatusUnauthorized)
+		assert.Equal(t, "Basic realm=forgejo-lfs", resp.Header().Get("LFS-Authenticate"))
 		assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 		DecodeJSON(t, resp, &lfsErrorResponse)
 		assert.Equal(t, "Unauthorized", lfsErrorResponse.Message)

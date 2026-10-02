@@ -224,6 +224,7 @@ func TestAPILFSLocksLogged(t *testing.T) {
 			req.Header.Set("Content-Type", lfs.MediaType)
 			resp := MakeRequest(t, req, test.httpResult)
 			if len(test.addTime) > 0 {
+				assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 				var lfsLock api.LFSLockResponse
 				DecodeJSON(t, resp, &lfsLock)
 				assert.Equal(t, test.user.Name, lfsLock.Lock.Owner.Name)
@@ -249,6 +250,7 @@ func TestAPILFSLocksLogged(t *testing.T) {
 			req.AddBasicAuth(test.user.Name)
 			req.Header.Set("Accept", lfs.AcceptHeader)
 			resp := MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, lfs.MediaType, resp.Header().Get("Content-Type"))
 			var lfsLocks api.LFSLockList
 			DecodeJSON(t, resp, &lfsLocks)
 			assert.Len(t, lfsLocks.Locks, test.totalCount)
