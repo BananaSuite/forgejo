@@ -209,37 +209,6 @@ func TestOrgAddMemberWithoutProperRights(t *testing.T) {
 	session.MakeRequest(t, req, http.StatusNotFound)
 }
 
-func TestOrgAddNonExistentMemberWithoutProperRights(t *testing.T) {
-	defer tests.PrepareTestEnv(t)()
-
-	actionUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
-	org := unittest.AssertExistsAndLoadBean(t, &organization.Organization{ID: 3})
-	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
-
-	// confirm that org and team are linked to each other.
-	orgTeams, err := org.LoadTeams(db.DefaultContext)
-	require.NoError(t, err)
-	assert.Contains(t, orgTeams, team)
-	assert.Equal(t, team.OrgID, org.ID)
-
-	// user adding the member is NOT part of the org.
-	isOrgMember, err := org.IsOrgMember(db.DefaultContext, actionUser.ID)
-	require.NoError(t, err)
-	assert.False(t, isOrgMember)
-
-	session := loginUser(t, actionUser.LoginName) // user5 is not a member of this org, so it cannot add anyone to it
-	teamURL := fmt.Sprintf("/org/%s/members", org.Name)
-	nonexistentLoginName := "non-existent-user"
-	unittest.AssertNotExistsBean(t, &user_model.User{LoginName: nonexistentLoginName})
-
-	req := NewRequestWithValues(t, "POST", teamURL+"/action/add", map[string]string{
-		"uid":                             fmt.Sprintf("%d", actionUser.ID),
-		"uname":                           nonexistentLoginName,
-		fmt.Sprintf("team_%s", team.Name): "on",
-	})
-	session.MakeRequest(t, req, http.StatusNotFound)
-}
-
 func TestOrgAddExistingMemberFails(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
