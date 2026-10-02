@@ -29,7 +29,7 @@ func TestHeadMentionCSS(t *testing.T) {
 }
 
 func TestHeadMentionJS(t *testing.T) {
-	// after template escaping, name and pronouns should not contain a single-quote (') character:
+	// after template escaping, name and pronouns must not contain a single-quote (') character, which would end the string and permit script injection!
 	fullNames := [][3]string{
 		{"normal display name", "nice user", `nice user`},
 		{"display name with HTML characters", "   < U<se>r Tw<o > ><  ", `   \u003c U\u003cse\u003er Tw\u003co \u003e \u003e\u003c  `},
