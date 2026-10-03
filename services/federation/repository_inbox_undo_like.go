@@ -32,7 +32,12 @@ func ProcessRepositoryInboxUndoLike(ctx context.Context, activity *ap.Activity, 
 		return ServiceResult{}, NewErrNotAcceptablef("FindOrCreateFederatedUser: %v", err)
 	}
 
-	objectID, err := fm.NewRepositoryID(undoLikeActivity.Object.GetID().String(), string(forgefed.ForgejoSourceType))
+	like, err := undoLikeActivity.Like()
+	if err != nil {
+		return ServiceResult{}, NewErrNotAcceptablef("Invalid objectId: %v", err)
+	}
+
+	objectID, err := fm.NewRepositoryID(like.Object.GetID().String(), string(forgefed.ForgejoSourceType))
 	if err != nil {
 		return ServiceResult{}, NewErrNotAcceptablef("Parsing repo objectID failed: %v", err)
 	}
