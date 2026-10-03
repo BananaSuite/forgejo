@@ -75,5 +75,5 @@
 }
 
 .dashboard .help {
-  color: var(--color-secondary-dark-8);
+  color: var(--color-hint-foreground);
 }

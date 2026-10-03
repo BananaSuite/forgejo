@@ -95,7 +95,7 @@ export async function createCodemirror(
       },
       '.cm-gutters': {
         backgroundColor: 'var(--color-code-bg)',
-        color: 'var(--color-secondary-dark-6)',
+        color: 'var(--color-hover-foreground)',
       },
       '.cm-line ::selection, .cm-line::selection': {
         color: 'inherit !important',

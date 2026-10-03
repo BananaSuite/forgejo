@@ -56,7 +56,7 @@
   position: absolute;
   inset-inline-end: 0;
   display: block;
-  border-inline-start: 2px solid var(--color-secondary-dark-8);
+  border-inline-start: 2px solid var(--color-active-foreground);
   height: 100%;
   overflow: hidden;
 }
@@ -74,7 +74,7 @@
 }
 
 .image-diff-container .diff-swipe .swipe-frame .swipe-bar .handle {
-  background: var(--color-secondary-dark-8);
+  background: var(--color-active-foreground);
   inset-inline-start: -5px;
   height: 12px;
   width: 12px;

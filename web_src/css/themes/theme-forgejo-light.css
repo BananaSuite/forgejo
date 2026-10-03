@@ -59,9 +59,8 @@
   --color-secondary-dark-3: var(--zinc-300);
   --color-secondary-dark-4: var(--zinc-400);
   --color-normal-foreground: var(--zinc-400);
-  --color-secondary-dark-6: var(--zinc-500);
   --color-hover-foreground: var(--zinc-500);
-  --color-secondary-dark-8: var(--zinc-600);
+  --color-hint-foreground: var(--zinc-600);
   --color-active-foreground: var(--zinc-700);
   --color-secondary-light-1: var(--zinc-200);
   --color-secondary-light-2: var(--zinc-100);

@@ -41,10 +41,9 @@
   --color-secondary-dark-2: var(--steel-500);
   --color-secondary-dark-3: var(--steel-450);
   --color-secondary-dark-4: var(--steel-400);
-  --color-secondary-dark-6: var(--steel-300);
-  --color-secondary-dark-8: var(--steel-200);
   --color-normal-foreground: var(--steel-350); /* Possibly reuse. */
   --color-hover-foreground: var(--steel-250);  /* Rename to muted? */
+  --color-hint-foreground: var(--steel-200);
   --color-active-foreground: var(--steel-100); /* Rename to intense? */
   --color-secondary-light-1: var(--steel-650);
   --color-secondary-light-2: var(--steel-700);

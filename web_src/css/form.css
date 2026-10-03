@@ -280,7 +280,7 @@ input:-webkit-autofill:active,
 }
 
 .form .help {
-  color: var(--color-secondary-dark-8);
+  color: var(--color-hint-foreground);
   padding-bottom: 0.6em;
   display: inline-block;
 }
