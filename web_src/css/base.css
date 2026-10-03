@@ -218,14 +218,14 @@ details summary > * {
 }
 
 progress {
-  background: var(--color-secondary-dark-1);
+  background: var(--color-input-hover-background);
   border-radius: var(--border-radius);
   border: none;
   overflow: hidden;
 }
 
 progress::-webkit-progress-bar {
-  background: var(--color-secondary-dark-1);
+  background: var(--color-input-hover-background);
 }
 
 progress::-webkit-progress-value {
@@ -979,10 +979,6 @@ overflow-menu .ui.label {
 .activity-bar-graph {
   background-color: var(--color-primary);
   color: var(--color-primary-contrast);
-}
-
-.archived-icon {
-  color: var(--color-secondary-dark-2) !important;
 }
 
 .oauth2-authorize-application-box {

@@ -98,7 +98,7 @@
 }
 
 .card-ghost {
-  border-color: var(--color-secondary-dark-4) !important;
+  border-color: var(--color-card-border) !important;
   border-style: dashed !important;
   background: none !important;
 }

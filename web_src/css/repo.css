@@ -1095,7 +1095,7 @@ citation-information .tab:not(.active) {
   border: 1px solid;
   padding: 5px 8px !important;
   border-radius: var(--border-radius);
-  border-color: var(--color-secondary-dark-1) !important;
+  border-color: var(--color-button-border) !important;
 }
 
 .repository.view.issue .comment-list .comment-code-cloud .segment.reactions .ui.label.basic.primary {
@@ -1258,7 +1258,7 @@ citation-information .tab:not(.active) {
 }
 
 .repository.branches .commit-divergence .bar-group:last-child {
-  border-inline-start: 1px solid var(--color-secondary-dark-2);
+  border-inline-start: 1px solid var(--color-hover-foreground);
 }
 
 .repository.branches .commit-divergence .count {
@@ -1276,7 +1276,7 @@ citation-information .tab:not(.active) {
 .repository.branches .commit-divergence .bar {
   height: 4px;
   position: absolute;
-  background-color: var(--color-secondary-dark-2);
+  background-color: var(--color-normal-foreground);
 }
 
 .repository.branches .commit-divergence .bar.bar-behind {
@@ -1824,7 +1824,7 @@ details.repo-search-result summary::marker {
 .repository .segment.reactions .ui.label.basic.primary {
   color: var(--color-primary) !important;
   background-color: var(--color-highlight-active-background) !important;
-  border-color: var(--color-secondary-dark-1) !important;
+  border-color: var(--color-secondary) !important;
 }
 
 .repository .segment.reactions .ui.label.basic:hover {

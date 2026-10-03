@@ -96,11 +96,11 @@
 }
 
 #issue-list .issue-meta .checklist progress::-webkit-progress-value {
-  background-color: var(--color-secondary-dark-4);
+  background-color: var(--color-normal-foreground);
 }
 
 #issue-list .issue-meta .checklist progress::-moz-progress-bar {
-  background-color: var(--color-secondary-dark-4);
+  background-color: var(--color-normal-foreground);
 }
 
 .archived-label-filter {
