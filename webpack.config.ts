@@ -88,6 +88,9 @@ const webComponents = new Set([
   'text-expander',
 ]);
 
+/** See <https://esbuild.github.io/content-types/#javascript> for what esbuild does here. */
+const esbuildJsTarget = 'es2020'; // TODO: es2025?
+
 export default {
   experiments: {
     css: true,
@@ -138,7 +141,7 @@ export default {
     minimize: isProduction,
     minimizer: [
       new EsbuildPlugin({
-        target: 'es2020',
+        target: esbuildJsTarget,
         minify: true,
         css: true,
         legalComments: 'none',
@@ -172,7 +175,7 @@ export default {
             loader: 'esbuild-loader',
             options: {
               loader: 'ts',
-              target: 'es2020', // TODO: es2025?
+              target: esbuildJsTarget,
             },
           },
         ],
