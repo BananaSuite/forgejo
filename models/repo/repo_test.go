@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"forgejo.org/models/db"
-	"forgejo.org/models/repo"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
@@ -222,12 +221,12 @@ func TestComposeSSHCloneURL(t *testing.T) {
 }
 
 func TestAPActorID(t *testing.T) {
-	r := repo_model.Repository{ID: 1}
+	repo := repo_model.Repository{ID: 1}
 	expected := "https://try.gitea.io/api/v1/activitypub/repository-id/1"
 
-	url := r.APActorID()
+	url := repo.APActorID()
 	assert.Equal(t, expected, url, "unexpected APActorID")
 
-	url = repo.APActorID(1)
+	url = repo_model.APActorID(1)
 	assert.Equal(t, expected, url, "unexpected APActorID")
 }
