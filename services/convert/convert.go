@@ -70,7 +70,7 @@ func ToBranch(ctx context.Context, repo *repo_model.Repository, branchName strin
 			if err != nil {
 				return nil, err
 			}
-			canPush = issues_model.CanMaintainerWriteToBranch(ctx, perms, branchName, user)
+			canPush = issues_model.CanMaintainerWriteToBranch(ctx, perms, branchName, user, access_model.GetUserRepoPermission)
 		}
 
 		return &api.Branch{
@@ -157,7 +157,7 @@ func ToBranchProtection(ctx context.Context, bp *git_model.ProtectedBranch, repo
 	}
 
 	return &api.BranchProtection{
-		BranchName:                    branchName,
+		BranchName:                    branchName, //nolint:staticcheck
 		RuleName:                      bp.RuleName,
 		EnablePush:                    bp.CanPush,
 		EnablePushWhitelist:           bp.EnableWhitelist,
@@ -348,6 +348,7 @@ func ToOrganization(ctx context.Context, org *organization.Organization) *api.Or
 		Location:                  org.Location,
 		Visibility:                org.Visibility.String(),
 		RepoAdminChangeTeamAccess: org.RepoAdminChangeTeamAccess,
+		Created:                   org.CreatedUnix.AsTime(),
 	}
 }
 
@@ -376,7 +377,7 @@ func ToTeams(ctx context.Context, teams []*organization.Team, loadOrgs bool) ([]
 			IncludesAllRepositories: t.IncludesAllRepositories,
 			CanCreateOrgRepo:        t.CanCreateOrgRepo,
 			Permission:              t.AccessMode.String(),
-			Units:                   t.GetUnitNames(),
+			Units:                   t.GetUnitNames(), //nolint:staticcheck
 			UnitsMap:                t.GetUnitsMap(),
 		}
 

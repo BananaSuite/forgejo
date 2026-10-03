@@ -188,6 +188,12 @@ func SignIn(ctx *context.Context) {
 		ctx.ServerError("UserSignIn", err)
 		return
 	}
+
+	if !setting.Service.EnableInternalSignIn && len(oauth2Providers) == 1 {
+		ctx.Redirect(setting.AppSubURL + "/user/oauth2/" + url.PathEscape(oauth2Providers[0].DisplayName()))
+		return
+	}
+
 	ctx.Data["OAuth2Providers"] = oauth2Providers
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 	ctx.Data["SignInLink"] = setting.AppSubURL + "/user/login"
@@ -246,11 +252,11 @@ func SignInPost(ctx *context.Context) {
 	u, source, err := auth_method.UserSignIn(ctx, form.UserName, form.Password)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) || errors.Is(err, util.ErrInvalidArgument) {
+			log.Warn("Failed authentication attempt for %s from %s: %v", form.UserName, ctx.RemoteAddr(), err)
 			ctx.RenderWithErr(ctx.Tr("form.username_password_incorrect"), tplSignIn, &form)
-			log.Warn("Failed authentication attempt for %s from %s: %v", form.UserName, ctx.RemoteAddr(), err)
 		} else if user_model.IsErrEmailAlreadyUsed(err) {
-			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), tplSignIn, &form)
 			log.Warn("Failed authentication attempt for %s from %s: %v", form.UserName, ctx.RemoteAddr(), err)
+			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), tplSignIn, &form)
 		} else if user_model.IsErrUserProhibitLogin(err) {
 			log.Warn("Failed authentication attempt for %s from %s: %v", form.UserName, ctx.RemoteAddr(), err)
 			ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
@@ -433,7 +439,7 @@ func SignOut(ctx *context.Context) {
 		})
 	}
 	HandleSignOut(ctx)
-	ctx.JSONRedirect(setting.AppSubURL + "/")
+	ctx.Redirect(setting.AppSubURL + "/")
 }
 
 // check if registration is allowed and set Data for template
@@ -462,6 +468,7 @@ func SignUp(ctx *context.Context) {
 	context.SetCaptchaData(ctx)
 
 	ctx.Data["PageIsSignUp"] = true
+	ctx.Data["UsernamePrefix"] = setting.Service.UsernamePrefix
 
 	registrationDisabled(ctx)
 
@@ -495,6 +502,7 @@ func SignUpPost(ctx *context.Context) {
 	context.SetCaptchaData(ctx)
 
 	ctx.Data["PageIsSignUp"] = true
+	ctx.Data["UsernamePrefix"] = setting.Service.UsernamePrefix
 
 	if ctx.HasError() {
 		ctx.HTML(http.StatusOK, tplSignUp)
@@ -673,11 +681,12 @@ func handleUserCreated(ctx *context.Context, u *user_model.User, gothUser *goth.
 		ctx.Data["IsSendRegisterMail"] = true
 		ctx.Data["Email"] = u.Email
 		ctx.Data["ActiveCodeLives"] = timeutil.MinutesToFriendly(setting.Service.ActiveCodeLives, ctx.Locale)
-		ctx.HTML(http.StatusOK, TplActivate)
 
 		if err := ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
 			log.Error("Set cache(MailResendLimit) fail: %v", err)
 		}
+
+		ctx.HTML(http.StatusOK, TplActivate)
 		return false
 	}
 

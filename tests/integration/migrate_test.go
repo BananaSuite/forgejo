@@ -24,7 +24,7 @@ import (
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
-	"forgejo.org/services/migrations"
+	migrations_allowlist "forgejo.org/services/migrations/allowlist"
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
 
@@ -46,14 +46,14 @@ func TestMigrateLocalPath(t *testing.T) {
 	err := os.Mkdir(lowercasePath, 0o700)
 	require.NoError(t, err)
 
-	err = migrations.IsMigrateURLAllowed(lowercasePath, adminUser)
+	err = migrations_allowlist.IsMigrateURLAllowed(lowercasePath, adminUser)
 	require.NoError(t, err, "case lowercase path")
 
 	mixedcasePath := filepath.Join(basePath, "mIxeDCaSe")
 	err = os.Mkdir(mixedcasePath, 0o700)
 	require.NoError(t, err)
 
-	err = migrations.IsMigrateURLAllowed(mixedcasePath, adminUser)
+	err = migrations_allowlist.IsMigrateURLAllowed(mixedcasePath, adminUser)
 	require.NoError(t, err, "case mixedcase path")
 
 	setting.ImportLocalPaths = old
@@ -62,8 +62,9 @@ func TestMigrateLocalPath(t *testing.T) {
 func TestMigrate(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+		defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 		defer test.MockVariableValue(&setting.AppVer, "1.16.0")()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		ownerName := "user2"
 		repoName := "repo1"
@@ -117,12 +118,13 @@ func TestMigrate(t *testing.T) {
 func TestMigrateWithIssueComments(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+		defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 		defer test.MockVariableValue(&setting.AppVer, "1.16.0")()
 		maxResponseItems := 10
 		numComments := 21
 		defer test.MockVariableValue(&setting.API.MaxResponseItems, maxResponseItems)()
 
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		ownerName := "user5"
 		repoName := "repo4"
@@ -193,8 +195,9 @@ func TestMigrateWithIssueComments(t *testing.T) {
 func TestMigrateWithWiki(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+		defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 		defer test.MockVariableValue(&setting.AppVer, "1.16.0")()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		repo := forgery.CreateRepository(t, nil, nil)
 		forgery.InitWiki(t, repo, "obscure-name")
@@ -249,8 +252,9 @@ func TestMigrateWithWiki(t *testing.T) {
 func TestMigrateWithReleases(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+		defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 		defer test.MockVariableValue(&setting.AppVer, "1.16.0")()
-		require.NoError(t, migrations.Init())
+		require.NoError(t, migrations_allowlist.Init())
 
 		ownerName := "user2"
 		repoName := "repo1"
@@ -306,4 +310,32 @@ func Test_UpdateCommentsMigrationsByType(t *testing.T) {
 
 	err := issues_model.UpdateCommentsMigrationsByType(db.DefaultContext, structs.GithubService, "1", 1)
 	require.NoError(t, err)
+}
+
+// TestMigrateBitbucketDataCenterForm renders the Bitbucket Data Center migration pages, to
+// catch template mistakes such as a missing localization key or a renamed form field.
+func TestMigrateBitbucketDataCenterForm(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	session := loginUser(t, "user2")
+
+	// The service is offered on the migration picker page.
+	req := NewRequest(t, "GET", "/repo/migrate/")
+	resp := session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	tile := htmlDoc.doc.Find(fmt.Sprintf(`a.migrate-entry[href*="service_type=%d"]`, structs.BitbucketDataCenterService))
+	assert.Equal(t, 1, tile.Length())
+
+	// The migration form renders with its dedicated fields.
+	req = NewRequestf(t, "GET", "/repo/migrate/?service_type=%d", structs.BitbucketDataCenterService)
+	resp = session.MakeRequest(t, req, http.StatusOK)
+	htmlDoc = NewHTMLParser(t, resp.Body)
+	form := htmlDoc.doc.Find(`form.ui.form[action^="/repo/migrate"]`)
+	assert.Equal(t, 1, form.Length(), "The template has changed")
+	assert.Equal(t, 1, form.Find(`input[name="auth_username"]`).Length())
+	assert.Equal(t, 1, form.Find(`input[name="auth_token"]`).Length())
+	assert.Equal(t, 1, form.Find(`input[name="pull_requests"]`).Length())
+	serviceType, _ := form.Find(`#service_type`).Attr("value")
+	assert.Equal(t, fmt.Sprintf("%d", structs.BitbucketDataCenterService), serviceType)
+	// A missing localization key renders as the raw key: make sure none leaked.
+	assert.NotContains(t, resp.Body.String(), "migrate.bitbucketdc.")
 }

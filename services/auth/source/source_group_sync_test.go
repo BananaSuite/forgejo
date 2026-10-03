@@ -3,17 +3,20 @@ package source
 import (
 	"testing"
 
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
+	org_model "forgejo.org/models/organization"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/container"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TestNewDynGroupMaps tests NewDynGroupMaps, case insensitive.
+// TestNewDynGroupMapsCaseInsensitive tests NewDynGroupMaps, case insensitive.
 func TestNewDynGroupMapsCaseInsensitive(t *testing.T) {
 	want := NewDynGroupMaps([]string{
 		"dyn-{org}-{team}",
@@ -30,6 +33,19 @@ func TestNewDynGroupMapsCaseInsensitive(t *testing.T) {
 		"oThEr:{oRg}/{tEaM}",
 	})
 	assert.Equal(t, want, got)
+}
+
+// TestNewDynGroupMapsInvalidPlaceholders tests NewDynGroupMaps, invalid placeholders.
+func TestNewDynGroupMapsInvalidPlaceholders(t *testing.T) {
+	got := NewDynGroupMaps([]string{
+		"dyn-{org}",
+		"dyn-{team}",
+		"dyn-{org}-{org}-{team}",
+		"dyn-{org}-{team}-{team}",
+		"dyn-{org}-{team}-{org}",
+		"dyn-{team}-{org}-{team}",
+	})
+	assert.True(t, got.Empty())
 }
 
 // TestGetDynGroupMaps tests GetDynGroupMaps.
@@ -266,6 +282,28 @@ func TestResolveMappedMemberships(t *testing.T) {
 			},
 			wantRemove: map[string][]string{},
 		},
+		// dynamic, regex char matches
+		{
+			name: "dynamic, regex chars matches",
+			srcGroups: container.SetOf(
+				"\\.+*?()|[]{}^$not_matching",
+				"\\.+*?()|[]{}^$invalid*org-invalid*team",
+				"\\.+*?()|[]{}^$dyn_org1-dyn_team1",
+				"\\\\n-dyn_org2-dyn_team2",
+			),
+			mappings: map[string]map[string][]string{},
+			dynMappings: NewDynGroupMaps([]string{
+				"\\.+*?()|[]{}^${org}-{team}",
+				"\\\\n-{org}-{team}",
+			}),
+			dynRemoval: false,
+			wantAdd: map[string][]string{
+				"dyn_org1": {"dyn_team1"},
+				"dyn_org2": {"dyn_team2"},
+			},
+			wantRemove: map[string][]string{},
+		},
+
 		// dynamic, some matches
 		{
 			name: "dynamic, some matches",
@@ -353,7 +391,7 @@ func TestResolveMappedMemberships(t *testing.T) {
 			},
 			wantRemove: map[string][]string{
 				"org17": {"test_team"},
-				"org3":  {"owners", "team1", "teamcreaterepo"},
+				"org3":  {"team1", "teamcreaterepo"}, // owners cannot be removed because user is last user
 			},
 		},
 		// mixed, some matches, dynamic remove
@@ -386,7 +424,7 @@ func TestResolveMappedMemberships(t *testing.T) {
 			wantRemove: map[string][]string{
 				// "static2-org": {"static2-team"} only if user added to it previously
 				"org17": {"test_team"},
-				"org3":  {"owners", "team1", "teamcreaterepo"},
+				"org3":  {"team1", "teamcreaterepo"}, // owners cannot be removed because user is last user
 			},
 		},
 	} {
@@ -399,4 +437,30 @@ func TestResolveMappedMemberships(t *testing.T) {
 			assert.Equal(t, test.wantRemove, gotRemove)
 		})
 	}
+}
+
+func TestSyncGroupsToTeams(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+	unittest.AssertSuccessfulInsert(t, auth_model.Source{ID: 1, Name: "Keycloak"})
+	loginSourceID := int64(1)
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+	team := unittest.AssertExistsAndLoadBean(t, &org_model.Team{ID: 1})
+	org := unittest.AssertExistsAndLoadBean(t, &org_model.Organization{ID: team.OrgID})
+	sourceUserGroups := container.SetOf("some-group")
+	sourceGroupTeamMapping := map[string]map[string][]string{
+		"some-group": {org.Name: {team.Name}},
+	}
+	sourceGroupTeamRemoval := false
+
+	err := SyncGroupsToTeams(t.Context(), user, loginSourceID, sourceUserGroups, sourceGroupTeamMapping, sourceGroupTeamRemoval, nil, false)
+	require.NoError(t, err)
+
+	unittest.AssertExistsAndLoadBean(t, &org_model.TeamUser{
+		UID:                    user.ID,
+		TeamID:                 team.ID,
+		OrgID:                  org.ID,
+		Reason:                 org_model.MembershipReasonAddedByAuthProvider,
+		CreatedByLoginSourceID: optional.Some(loginSourceID),
+	})
 }

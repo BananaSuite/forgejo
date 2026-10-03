@@ -193,14 +193,22 @@ func CommonRoutes() *web.Route {
 
 	verifyAuth(r, []auth.Method{
 		&auth_method.OAuth2{},
-		&auth_method.Basic{},
-		&auth_method.AccessToken{},
+		&auth_method.AccessToken{
+			PermitBasic:  true,
+			PermitBearer: true,
+		},
 		&auth_method.ActionRuntimeToken{},
-		&auth_method.ActionTaskToken{},
+		&auth_method.ActionTaskToken{
+			PermitBasic:  true,
+			PermitBearer: true,
+		},
 		&nuget.Auth{},
 		&conan.Auth{},
 		&chef.Auth{},
-		&auth_method.AuthorizedIntegration{},
+		&auth_method.AuthorizedIntegration{
+			PermitBasic: true,
+		},
+		&auth_method.Basic{},
 	})
 
 	r.Group("/{username}", func() {
@@ -514,6 +522,7 @@ func CommonRoutes() *web.Route {
 			r.Group("/{packagename}/{packageversion}", func() {
 				r.Delete("", reqPackageAccess(perm.AccessModeWrite), generic.DeletePackage)
 				r.Group("/{filename}", func() {
+					r.Head("", generic.CheckPackageFileExistence)
 					r.Get("", generic.DownloadPackageFile)
 					r.Group("", func() {
 						r.Put("", enforcePackagesQuota(), generic.UploadPackage)
@@ -856,16 +865,19 @@ func ContainerRoutes() *web.Route {
 	r.Use(context.PackageContexter())
 
 	verifyContainerAuth(r, []auth.Method{
-		&auth_method.Basic{},
-		&auth_method.AccessToken{},
-		&auth_method.ActionRuntimeToken{},
-		&auth_method.ActionTaskToken{},
+		&auth_method.AccessToken{
+			PermitBasic: true,
+		},
+		&auth_method.ActionTaskToken{
+			PermitBasic: true,
+		},
 		&container.Auth{},
 		&auth_method.AuthorizedIntegration{
 			// `docker login` can't send a bearer token, so enable reading a token from the password field of
 			// `Authorization: Basic ...`.
 			PermitBasic: true,
 		},
+		&auth_method.Basic{},
 	})
 
 	r.Get("", container.ReqContainerAccess, container.DetermineSupport)

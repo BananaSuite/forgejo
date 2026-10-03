@@ -397,7 +397,8 @@ func IntrospectOAuth(ctx *context.Context) {
 	}
 
 	form := web.GetForm(ctx).(*forms.IntrospectTokenForm)
-	token, err := oauth2.ParseToken(form.Token, oauth2.DefaultSigningKey)
+	var token oauth2.Token
+	_, err := oauth2.DefaultVerifier.ParseWithClaims(form.Token, &token)
 	if err == nil {
 		grant, err := auth.GetOAuth2GrantByID(ctx, token.GrantID)
 		if err == nil && grant != nil {
@@ -748,7 +749,7 @@ func AccessTokenOAuth(ctx *context.Context) {
 
 	switch form.GrantType {
 	case "refresh_token":
-		handleRefreshToken(ctx, form, serverKey, clientKey)
+		handleRefreshToken(ctx, form, oauth2.DefaultVerifier, serverKey, clientKey)
 	case "authorization_code":
 		handleAuthorizationCode(ctx, form, serverKey, clientKey)
 	default:
@@ -759,7 +760,7 @@ func AccessTokenOAuth(ctx *context.Context) {
 	}
 }
 
-func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, serverKey, clientKey jwtx.SigningKey) {
+func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, verifier *jwtx.Verifier, serverKey, clientKey jwtx.SigningKey) {
 	app, err := auth.GetOAuth2ApplicationByClientID(ctx, form.ClientID)
 	if err != nil {
 		handleAccessTokenError(ctx, AccessTokenErrorResponse{
@@ -784,7 +785,8 @@ func handleRefreshToken(ctx *context.Context, form forms.AccessTokenForm, server
 		return
 	}
 
-	token, err := oauth2.ParseToken(form.RefreshToken, serverKey)
+	var token oauth2.Token
+	_, err = verifier.ParseWithClaims(form.RefreshToken, &token)
 	if err != nil {
 		handleAccessTokenError(ctx, AccessTokenErrorResponse{
 			ErrorCode:        AccessTokenErrorCodeUnauthorizedClient,
@@ -993,6 +995,11 @@ func SignInOAuth(ctx *context.Context) {
 		if strings.Contains(err.Error(), "no provider for ") {
 			if err = oauth2.ResetOAuth2(ctx); err != nil {
 				ctx.ServerError("SignIn", err)
+				return
+			}
+			codeChallenge, err = generateCodeChallenge(ctx, provider)
+			if err != nil {
+				ctx.ServerError("SignIn", fmt.Errorf("could not generate code_challenge: %w", err))
 				return
 			}
 			if err = authSource.Cfg.(*oauth2.Source).Callout(ctx.Req, ctx.Resp, codeChallenge, promptParam); err != nil {
@@ -1210,7 +1217,7 @@ func syncGroupsToTeams(ctx *context.Context, authSource *auth.Source, gothUser *
 		groups := getClaimedGroups(source, gothUser)
 
 		if err := source_service.SyncGroupsToTeams(ctx,
-			u, groups, groupTeamMapping, source.GroupTeamMapRemoval,
+			u, authSource.ID, groups, groupTeamMapping, source.GroupTeamMapRemoval,
 			dynGroupMaps, source.DynGroupMapsRemoval,
 		); err != nil {
 			return err
@@ -1379,7 +1386,7 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 		ctx.ServerError("UnmarshalDynGroupMappings", err)
 		return
 	}
-	dynGroupMaps := source_service.NewDynGroupMaps(dynGroupMappings)
+	dynGroupMaps := source_service.GetDynGroupMaps(source.ID, dynGroupMappings)
 
 	groups := getClaimedGroups(oauth2Source, &gothUser)
 	quotaGroups := getClaimedQuotaGroups(oauth2Source, &gothUser)
@@ -1413,7 +1420,7 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 		if oauth2Source.GroupTeamMap != "" || oauth2Source.GroupTeamMapRemoval ||
 			oauth2Source.DynGroupMaps != "" || oauth2Source.DynGroupMapsRemoval {
 			if err := source_service.SyncGroupsToTeams(ctx,
-				u, groups, groupTeamMapping, oauth2Source.GroupTeamMapRemoval,
+				u, source.ID, groups, groupTeamMapping, oauth2Source.GroupTeamMapRemoval,
 				dynGroupMaps, oauth2Source.DynGroupMapsRemoval,
 			); err != nil {
 				ctx.ServerError("SyncGroupsToTeams", err)
@@ -1462,7 +1469,7 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 	if oauth2Source.GroupTeamMap != "" || oauth2Source.GroupTeamMapRemoval ||
 		oauth2Source.DynGroupMaps != "" || oauth2Source.DynGroupMapsRemoval {
 		if err := source_service.SyncGroupsToTeams(ctx,
-			u, groups, groupTeamMapping, oauth2Source.GroupTeamMapRemoval,
+			u, source.ID, groups, groupTeamMapping, oauth2Source.GroupTeamMapRemoval,
 			dynGroupMaps, oauth2Source.DynGroupMapsRemoval,
 		); err != nil {
 			ctx.ServerError("SyncGroupsToTeams", err)

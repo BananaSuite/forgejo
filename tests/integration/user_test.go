@@ -30,6 +30,7 @@ import (
 	app_context "forgejo.org/services/context"
 	"forgejo.org/services/mailer"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pquerna/otp/totp"
@@ -43,6 +44,14 @@ func TestViewUser(t *testing.T) {
 
 	req := NewRequest(t, "GET", "/user2")
 	MakeRequest(t, req, http.StatusOK)
+
+	t.Run("REQUIRE_SIGNIN_VIEW", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.Service.RequireSignInView, true)()
+		req := NewRequest(t, "GET", "/user2")
+		resp := MakeRequest(t, req, http.StatusSeeOther)
+		assert.Equal(t, "/user/login", resp.Header().Get("Location"))
+	})
 }
 
 func TestRenameUsername(t *testing.T) {
@@ -411,17 +420,16 @@ func TestUserHints(t *testing.T) {
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
 
 	// Create a known-good repo, with only one unit enabled
-	repo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit_model.Type{
-		unit_model.TypeCode,
-	}, []unit_model.Type{
+	repo := forgery.CreateRepository(t, user, nil)
+	forgery.EnableRepoUnits(t, repo, unit_model.TypeCode)
+	forgery.DisableRepoUnits(t, repo,
 		unit_model.TypePullRequests,
 		unit_model.TypeProjects,
 		unit_model.TypePackages,
 		unit_model.TypeActions,
 		unit_model.TypeIssues,
 		unit_model.TypeWiki,
-	}, nil)
-	defer f()
+	)
 
 	ensureRepoUnitHints := func(t *testing.T, hints bool) {
 		t.Helper()
@@ -477,7 +485,7 @@ func TestUserHints(t *testing.T) {
 			assert.Equal(t, enabled, hintChecked)
 
 			link, _ := htmlDoc.Find("form[action='/user/settings/appearance/language'] a").Attr("href")
-			assert.Equal(t, "https://forgejo.org/docs/next/contributor/localization/", link)
+			assert.Equal(t, "https://forgejo.org/docs/next/contributor/localization/", link) // NOT derived from setting.AppDocsVer (contrib docs aren't tied to the present version!)
 		}
 
 		t.Run("view", func(t *testing.T) {
@@ -502,11 +510,19 @@ func TestUserHints(t *testing.T) {
 		assertAddMore := func(t *testing.T, present bool) {
 			t.Helper()
 
+			// check if the tab is present
 			req := NewRequest(t, "GET", repo.Link())
 			resp := session.MakeRequest(t, req, http.StatusOK)
 			htmlDoc := NewHTMLParser(t, resp.Body)
 
 			htmlDoc.AssertElement(t, fmt.Sprintf("a[href='%s/settings/units']", repo.Link()), present)
+
+			// check if the user settings hint is present
+			req = NewRequest(t, "GET", repo.Link()+"/settings/units")
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			htmlDoc = NewHTMLParser(t, resp.Body)
+
+			htmlDoc.AssertElement(t, ".user-main-content a[href='/user/settings/appearance#hints']", present)
 		}
 
 		t.Run("hints enabled", func(t *testing.T) {
@@ -731,6 +747,65 @@ func TestUserPronouns(t *testing.T) {
 
 		userName := strings.TrimSpace(htmlDoc.Find(".profile-avatar-name .username").Text())
 		assert.Equal(t, "user2", userName)
+	})
+}
+
+func TestUserEditWebsite(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user := forgery.CreateUser(t, nil)
+	urlStr := "/api/v1/user/settings"
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteUser)
+
+	t.Run("an HTTPS website under default schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// changing website should work
+		website := "https://codeberg.org"
+		req := NewRequestWithJSON(t, "PATCH", urlStr, &api.UserSettingsOptions{
+			Website: &website,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+
+		var apiUser api.UserSettings
+		DecodeJSON(t, resp, &apiUser)
+
+		assert.Equal(t, website, apiUser.Website)
+	})
+
+	t.Run("an H3 website under default schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// changing website should not work
+		website := "h3://codeberg.org"
+		req := NewRequestWithJSON(t, "PATCH", urlStr, &api.UserSettingsOptions{
+			Website: &website,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusUnprocessableEntity)
+
+		var apiErr api.APIError
+		DecodeJSON(t, resp, &apiErr)
+
+		assert.Equal(t, "[Website]: Url", apiErr.Message)
+	})
+
+	t.Run("an H3 website under custom schemes", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockProtect(&setting.Service.ValidSiteURLSchemes)()
+		setting.Service.ValidSiteURLSchemes = append(setting.Service.ValidSiteURLSchemes, "h3")
+
+		// changing website should work
+		website := "h3://codeberg.org"
+		req := NewRequestWithJSON(t, "PATCH", urlStr, &api.UserSettingsOptions{
+			Website: &website,
+		}).AddTokenAuth(token)
+		resp := MakeRequest(t, req, http.StatusOK)
+
+		var apiUser api.UserSettings
+		DecodeJSON(t, resp, &apiUser)
+
+		assert.Equal(t, website, apiUser.Website)
 	})
 }
 

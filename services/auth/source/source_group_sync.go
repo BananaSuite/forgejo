@@ -28,6 +28,7 @@ const (
 // SyncGroupsToTeams maps authentication source groups to organization and team memberships
 func SyncGroupsToTeams(ctx context.Context,
 	user *user_model.User,
+	loginSourceID int64,
 	sourceUserGroups container.Set[string],
 	sourceGroupTeamMapping map[string]map[string][]string,
 	sourceGroupTeamRemoval bool,
@@ -37,7 +38,7 @@ func SyncGroupsToTeams(ctx context.Context,
 	orgCache := make(map[string]*organization.Organization)
 	teamCache := make(map[string]*organization.Team)
 
-	return SyncGroupsToTeamsCached(ctx, user,
+	return SyncGroupsToTeamsCached(ctx, user, loginSourceID,
 		sourceUserGroups, sourceGroupTeamMapping, sourceGroupTeamRemoval,
 		dynGroupMaps, dynGroupMapsRemoval,
 		orgCache, teamCache)
@@ -47,6 +48,7 @@ func SyncGroupsToTeams(ctx context.Context,
 func SyncGroupsToTeamsCached(
 	ctx context.Context,
 	user *user_model.User,
+	loginSourceID int64,
 	sourceUserGroups container.Set[string],
 	sourceGroupTeamMapping map[string]map[string][]string,
 	sourceGroupTeamRemoval bool,
@@ -58,15 +60,16 @@ func SyncGroupsToTeamsCached(
 	membershipsToAdd, membershipsToRemove := resolveMappedMemberships(
 		ctx, user,
 		sourceUserGroups, sourceGroupTeamMapping,
-		dynGroupMaps, dynGroupMapsRemoval)
+		dynGroupMaps, dynGroupMapsRemoval,
+	)
 
 	if sourceGroupTeamRemoval || dynGroupMapsRemoval {
-		if err := syncGroupsToTeamsCached(ctx, user, membershipsToRemove, syncRemove, orgCache, teamCache); err != nil {
+		if err := syncGroupsToTeamsCached(ctx, user, loginSourceID, membershipsToRemove, syncRemove, orgCache, teamCache); err != nil {
 			return fmt.Errorf("could not sync[remove] user groups: %w", err)
 		}
 	}
 
-	if err := syncGroupsToTeamsCached(ctx, user, membershipsToAdd, syncAdd, orgCache, teamCache); err != nil {
+	if err := syncGroupsToTeamsCached(ctx, user, loginSourceID, membershipsToAdd, syncAdd, orgCache, teamCache); err != nil {
 		return fmt.Errorf("could not sync[add] user groups: %w", err)
 	}
 
@@ -124,8 +127,17 @@ func NewDynGroupMaps(list []string) *DynGroupMaps {
 	for _, s := range list {
 		// replace placeholders with regex
 		s = strings.ToLower(s)
-		s = strings.Replace(s, "{org}", `(?<org>[\w-.]+)`, 1)
-		s = strings.Replace(s, "{team}", `(?<team>[\w-.]+)`, 1)
+		if strings.Count(s, "{org}") != 1 {
+			log.Error("group sync: invalid number of {org} placeholders in %s", s)
+			continue
+		}
+		if strings.Count(s, "{team}") != 1 {
+			log.Error("group sync: invalid number of {team} placeholders in %s", s)
+			continue
+		}
+		s = regexp.QuoteMeta(s)
+		s = strings.Replace(s, "\\{org\\}", `(?<org>[\w-.]+)`, 1)
+		s = strings.Replace(s, "\\{team\\}", `(?<team>[\w-.]+)`, 1)
 		s = fmt.Sprintf("^%s$", s)
 
 		// skip duplicates
@@ -212,6 +224,14 @@ func getMembershipsToRemoveNotAdded(
 			if team.OrgID != org.ID {
 				continue
 			}
+			if team.IsOwnerTeam() && team.NumMembers == 1 {
+				// skip team if user is last member of owner
+				// team to avoid errors when actually removing
+				// team memberships later
+				log.Warn("group sync: skipping removal of user %s from owner team in org %s: user is last member",
+					user.Name, org.Name)
+				continue
+			}
 			// remove membership if it's not added via group team mapping
 			if !slices.Contains(membershipsToAdd[org.Name], team.LowerName) {
 				membershipsToRemove[org.Name] = append(membershipsToRemove[org.Name], team.LowerName)
@@ -269,7 +289,7 @@ func resolveMappedMemberships(
 	return membershipsToAdd, membershipsToRemove
 }
 
-func syncGroupsToTeamsCached(ctx context.Context, user *user_model.User, orgTeamMap map[string][]string, action syncType, orgCache map[string]*organization.Organization, teamCache map[string]*organization.Team) error {
+func syncGroupsToTeamsCached(ctx context.Context, user *user_model.User, loginSourceID int64, orgTeamMap map[string][]string, action syncType, orgCache map[string]*organization.Organization, teamCache map[string]*organization.Team) error {
 	for orgName, teamNames := range orgTeamMap {
 		var err error
 		org, ok := orgCache[orgName]
@@ -306,7 +326,7 @@ func syncGroupsToTeamsCached(ctx context.Context, user *user_model.User, orgTeam
 			}
 
 			if action == syncAdd && !isMember {
-				if err := models.AddTeamMember(ctx, team, user.ID); err != nil {
+				if err := models.AddTeamMemberByLoginSource(ctx, team, user.ID, loginSourceID); err != nil {
 					log.Error("group sync: Could not add user to team: %v", err)
 					return err
 				}

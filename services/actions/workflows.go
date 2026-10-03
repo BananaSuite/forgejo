@@ -23,8 +23,8 @@ import (
 	"forgejo.org/modules/webhook"
 	"forgejo.org/services/convert"
 
-	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
-	act_model "code.forgejo.org/forgejo/runner/v12/act/model"
+	"code.forgejo.org/forgejo/runner/v13/act/jobparser"
+	act_model "code.forgejo.org/forgejo/runner/v13/act/model"
 )
 
 type InputRequiredErr struct {
@@ -191,12 +191,18 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		jobparser.SupportIncompleteRunsOn(),
 		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflows(entry.Commit)),
 		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
+		jobparser.WithGitContext(generateGiteaContextForRun(run)),
+		jobparser.EnableNamespaces(),
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if err := actions_model.InsertRun(ctx, run, jobs); err != nil {
+	if err := ConfigureActionRunTitle(jobs, run); err != nil {
+		return nil, nil, err
+	}
+
+	if err := InsertRun(ctx, run, jobs); err != nil {
 		return run, jobNames, err
 	}
 
@@ -211,6 +217,9 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 
 	commit, err := gitRepo.GetCommit(ref)
 	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			return nil, util.NewInvalidArgumentErrorf("reference '%s' does not exist", ref)
+		}
 		return nil, err
 	}
 
@@ -227,7 +236,7 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 		}
 	}
 	if workflowEntry == nil {
-		return nil, errors.New("workflow not found")
+		return nil, util.NewNotExistErrorf("workflow not found")
 	}
 
 	return &Workflow{
@@ -239,11 +248,29 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 	}, nil
 }
 
+// Sets Title of a workflow run to the value of the workflow's `run-name` field, if present.
+// Keeps the existing default title when run-name is absent or when run-name evaluates to "".
+func ConfigureActionRunTitle(workflows []*jobparser.SingleWorkflow, run *actions_model.ActionRun) error {
+	if len(workflows) == 0 {
+		return nil
+	}
+	// run-name is workflow-level, so each job's SingleWorkflow has the same run-name.
+	runName, err := workflows[0].EvaluateRunName()
+	if err != nil {
+		return fmt.Errorf("unable to evaluate workflow `run-name`: %w", err)
+	}
+	if runName != "" {
+		run.Title = runName
+	}
+	return nil
+}
+
 // Sets the ConcurrencyGroup & ConcurrencyType on the provided ActionRun based upon the Workflow's `concurrency` data,
 // or appropriate defaults if not present.
 func ConfigureActionRunConcurrency(workflow *act_model.Workflow, run *actions_model.ActionRun, vars map[string]string, inputs map[string]any) error {
 	concurrencyGroup, cancelInProgress, err := jobparser.EvaluateWorkflowConcurrency(
-		workflow.RawConcurrency, generateGiteaContextForRun(run), vars, inputs)
+		workflow.RawConcurrency, generateGiteaContextForRun(run), vars, inputs,
+	)
 	if err != nil {
 		return fmt.Errorf("unable to evaluate workflow `concurrency` block: %w", err)
 	}

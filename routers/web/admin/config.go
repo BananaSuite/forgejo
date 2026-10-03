@@ -50,11 +50,7 @@ func TestCache(ctx *context.Context) {
 	if err != nil {
 		ctx.Flash.Error(ctx.Tr("admin.config.cache_test_failed", err))
 	} else {
-		if elapsed > cache.SlowCacheThreshold {
-			ctx.Flash.Warning(ctx.Tr("admin.config.cache_test_slow", elapsed))
-		} else {
-			ctx.Flash.Info(ctx.Tr("admin.config.cache_test_succeeded", elapsed))
-		}
+		ctx.Flash.Info(ctx.Tr("admin.config.cache_test_succeeded", elapsed))
 	}
 
 	ctx.Redirect(setting.AppSubURL + "/admin/config")
@@ -205,7 +201,7 @@ func ChangeConfig(ctx *context.Context) {
 	value := ctx.FormString("value")
 	cfg := setting.Config()
 
-	marshalBool := func(v string) (string, error) { //nolint:unparam
+	marshalBool := func(v string) (string, error) {
 		if b, _ := strconv.ParseBool(v); b {
 			return "true", nil
 		}
