@@ -10,6 +10,7 @@ import (
 	"forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
 	"forgejo.org/modules/log"
+
 	ap "github.com/go-ap/activitypub"
 )
 
