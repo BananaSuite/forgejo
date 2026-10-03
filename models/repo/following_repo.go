@@ -4,6 +4,8 @@
 package repo
 
 import (
+	"fmt"
+
 	"forgejo.org/modules/validation"
 )
 
@@ -27,6 +29,10 @@ func NewFollowingRepo(repoID int64, externalID string, federationHostID int64, u
 		return FollowingRepo{}, err
 	}
 	return result, nil
+}
+
+func (user FollowingRepo) Inbox() string {
+	return fmt.Sprintf("%s/inbox", user.URI)
 }
 
 func (user FollowingRepo) Validate() []string {

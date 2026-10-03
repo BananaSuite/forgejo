@@ -48,24 +48,21 @@ func ProcessLikeActivity(ctx context.Context, activity *ap.Activity, repositoryI
 		return ServiceResult{}, NewErrNotAcceptablef("LatestActivity: activity already processed: %v", err)
 	}
 
-	// parse objectID (repository)
 	objectID, err := fm.NewRepositoryID(constructorLikeActivity.Object.GetID().String(), string(forgefed.ForgejoSourceType))
 	if err != nil {
 		return ServiceResult{}, NewErrNotAcceptablef("Parsing repo objectID failed: %v", err)
 	}
-	if objectID.ID != fmt.Sprint(repositoryID) {
-		return ServiceResult{}, NewErrNotAcceptablef("Invalid repoId: %v", err)
-	}
 	log.Trace("Object accepted: %#v", objectID)
 
 	// execute the activity if the repo was not stared already
-	alreadyStared := repo.IsStaring(ctx, user.ID, repositoryID)
-	if !alreadyStared {
+	alreadyStarred := repo.IsStaring(ctx, user.ID, repositoryID)
+	if !alreadyStarred {
 		err = repo.StarRepo(ctx, user.ID, repositoryID, true)
 		if err != nil {
 			return ServiceResult{}, NewErrNotAcceptablef("Staring failed: %v", err)
 		}
 	}
+
 	federationHost.LatestActivity = activity.StartTime
 	err = forgefed.UpdateFederationHost(ctx, federationHost)
 	if err != nil {
@@ -112,7 +109,6 @@ func SendLikeActivities(ctx context.Context, doer user.User, repoID int64) error
 		return err
 	}
 
-	likeActivityList := make([]fm.ForgeLike, 0, len(followingRepos))
 	hosts := make([]*url.URL, 0, len(followingRepos))
 	for _, followingRepo := range followingRepos {
 		log.Trace("Found following repo: %#v", followingRepo)
@@ -122,29 +118,37 @@ func SendLikeActivities(ctx context.Context, doer user.User, repoID int64) error
 			return fmt.Errorf("invalid repository URL: %w", err)
 		}
 		hosts = append(hosts, hostURL)
-		likeActivity, err := fm.NewForgeLike(doer.APActorID(), target, time.Now())
-		if err != nil {
-			return err
-		}
-		likeActivityList = append(likeActivityList, likeActivity)
+	}
+
+	id := repo.APActorID(repoID)
+	object, err := fm.NewRepositoryID(id, string(forgefed.ForgejoSourceType))
+	if err != nil {
+		return err
+	}
+
+	activity, err := fm.NewForgeLike(doer.APActorID(), object.AsURI(), time.Now())
+	if err != nil {
+		return err
 	}
 
 	apclientFactory, err := activitypub.GetClientFactory(ctx)
 	if err != nil {
 		return err
 	}
+
 	apclient, err := apclientFactory.WithKeys(ctx, &doer, doer.KeyID(), hosts)
 	if err != nil {
 		return err
 	}
-	for i, activity := range likeActivityList {
+
+	for i, repo := range followingRepos {
 		activity.StartTime = activity.StartTime.Add(time.Duration(i) * time.Second)
 		json, err := activity.MarshalJSON()
 		if err != nil {
 			return err
 		}
 
-		_, err = apclient.Post(json, fmt.Sprintf("%v/inbox", activity.Object))
+		_, err = apclient.Post(json, repo.Inbox())
 		if err != nil {
 			log.Error("error %v while sending activity: %#v", err, activity)
 		}

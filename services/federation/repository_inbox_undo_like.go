@@ -32,26 +32,15 @@ func ProcessRepositoryInboxUndoLike(ctx context.Context, activity *ap.Activity, 
 		return ServiceResult{}, NewErrNotAcceptablef("FindOrCreateFederatedUser: %v", err)
 	}
 
-	like, err := undoLikeActivity.Like()
+	objectID, err := fm.NewRepositoryID(undoLikeActivity.Object.GetID().String(), string(forgefed.ForgejoSourceType))
 	if err != nil {
-		return ServiceResult{}, NewErrNotAcceptablef("Invalid objectId: %v", err)
-	}
-
-	// parse objectID (repository)
-	objectID, err := fm.NewRepositoryID(like.Object.GetLink().String(), string(forgefed.ForgejoSourceType))
-	if err != nil {
-		return ServiceResult{}, NewErrNotAcceptablef("Invalid objectId: %v", err)
-	}
-
-	if objectID.ID != fmt.Sprint(repositoryID) {
-		return ServiceResult{}, NewErrNotAcceptablef("Invalid objectId: %v", err)
+		return ServiceResult{}, NewErrNotAcceptablef("Parsing repo objectID failed: %v", err)
 	}
 	log.Trace("Object accepted: %#v", objectID)
 
 	// execute the activity if the repo was already stared
-	alreadyStared := repo.IsStaring(ctx, user.ID, repositoryID)
-
-	if alreadyStared {
+	alreadyStarred := repo.IsStaring(ctx, user.ID, repositoryID)
+	if alreadyStarred {
 		err = repo.StarRepo(ctx, user.ID, repositoryID, false)
 		if err != nil {
 			return ServiceResult{}, NewErrNotAcceptablef("Error staring %v", err)
@@ -59,11 +48,13 @@ func ProcessRepositoryInboxUndoLike(ctx context.Context, activity *ap.Activity, 
 	} else {
 		return ServiceResult{}, NewErrNotAcceptablef("star not available: %v", err)
 	}
+
 	federationHost.LatestActivity = activity.StartTime
 	err = forgefed.UpdateFederationHost(ctx, federationHost)
 	if err != nil {
 		return ServiceResult{}, NewErrNotAcceptablef("Error updating federatedHost: %v", err)
 	}
+
 	return ServiceResult{}, nil
 }
 
@@ -74,7 +65,6 @@ func SendUndoLikeActivities(ctx context.Context, doer user.User, repoID int64) e
 		return err
 	}
 
-	undoLikeActivityList := make([]fm.ForgeUndoLike, 0, len(followingRepos))
 	hosts := make([]*url.URL, 0, len(followingRepos))
 	for _, followingRepo := range followingRepos {
 		log.Trace("Found following repo: %#v", followingRepo)
@@ -84,34 +74,37 @@ func SendUndoLikeActivities(ctx context.Context, doer user.User, repoID int64) e
 			return fmt.Errorf("invalid repository URL: %w", err)
 		}
 		hosts = append(hosts, hostURL)
-		undoLikeActivity, err := fm.NewForgeUndoLike(doer.APActorID(), target, time.Now())
-		if err != nil {
-			return err
-		}
-		undoLikeActivityList = append(undoLikeActivityList, undoLikeActivity)
+	}
+
+	id := repo.APActorID(repoID)
+	object, err := fm.NewRepositoryID(id, string(forgefed.ForgejoSourceType))
+	if err != nil {
+		return err
+	}
+
+	activity, err := fm.NewForgeUndoLike(doer.APActorID(), object.AsURI(), time.Now())
+	if err != nil {
+		return err
 	}
 
 	apclientFactory, err := activitypub.GetClientFactory(ctx)
 	if err != nil {
 		return err
 	}
+
 	apclient, err := apclientFactory.WithKeys(ctx, &doer, doer.KeyID(), hosts)
 	if err != nil {
 		return err
 	}
-	for i, activity := range undoLikeActivityList {
+
+	for i, repo := range followingRepos {
 		activity.StartTime = activity.StartTime.Add(time.Duration(i) * time.Second)
 		json, err := activity.MarshalJSON()
 		if err != nil {
 			return err
 		}
 
-		like, err := activity.Like()
-		if err != nil {
-			return err
-		}
-
-		_, err = apclient.Post(json, fmt.Sprintf("%v/inbox", like.Object))
+		_, err = apclient.Post(json, repo.Inbox())
 		if err != nil {
 			log.Error("error %v while sending activity: %#v", err, activity)
 		}

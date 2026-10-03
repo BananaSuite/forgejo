@@ -366,9 +366,14 @@ func (repo *Repository) APIURL() string {
 	return setting.AppURL + "api/v1/repos/" + url.PathEscape(repo.OwnerName) + "/" + url.PathEscape(repo.Name)
 }
 
+// APActorID returns the activitypub repository API URL for a given repository ID
+func APActorID(repoID int64) string {
+	return fmt.Sprintf("%vapi/v1/activitypub/repository-id/%v", setting.AppURL, url.PathEscape(fmt.Sprint(repoID)))
+}
+
 // APActorID returns the activitypub repository API URL
 func (repo *Repository) APActorID() string {
-	return fmt.Sprintf("%vapi/v1/activitypub/repository-id/%v", setting.AppURL, url.PathEscape(fmt.Sprint(repo.ID)))
+	return APActorID(repo.ID)
 }
 
 // GetCommitsCountCacheKey returns cache key used for commits count caching.
