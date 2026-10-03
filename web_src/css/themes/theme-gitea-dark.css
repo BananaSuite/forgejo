@@ -24,18 +24,15 @@
   --color-secondary-dark-2: #4a545b;
   --color-secondary-dark-3: #59646c;
   --color-secondary-dark-4: #6b7681;
-  --color-secondary-dark-5: #78858f;
+  --color-normal-foreground: #78858f;
   --color-secondary-dark-6: #87929d;
-  --color-secondary-dark-7: #939ea9;
+  --color-hover-foreground: #939ea9;
   --color-secondary-dark-8: #a1acb4;
-  --color-secondary-dark-10: #b6bfc8;
-  --color-secondary-dark-12: #ccd4dc;
+  --color-active-foreground: #b6bfc8;
   --color-secondary-light-1: #2e353b;
   --color-secondary-light-2: #2b353e;
   --color-secondary-light-3: #1c2227;
   --color-secondary-light-4: #161b1f;
-  --color-secondary-hover: var(--color-secondary-dark-3);
-  --color-secondary-active: var(--color-secondary-dark-2);
   /* console colors - used for actions console and console files */
   --color-console-fg: #f8f8f9;
   --color-console-fg-subtle: #bec4c8;

@@ -13,20 +13,20 @@
   height: 100%;
   width: 40px;
   background: none;
-  color: var(--color-secondary-dark-5);
+  color: var(--color-normal-foreground);
 
   @media (any-hover: none) {
     opacity: 1;
   }
 
   &.active {
-    color: var(--color-secondary-dark-10);
+    color: var(--color-active-foreground);
   }
 
   &:is(:hover, :focus-visible),
   &.selected {
     background: var(--color-secondary);
-    color: var(--color-secondary-dark-7);
+    color: var(--color-hover-foreground);
   }
 }
 

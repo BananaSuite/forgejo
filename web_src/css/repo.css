@@ -275,7 +275,7 @@ td .commit-summary {
 .repository.file.list #repo-files-table tbody .svg.octicon-file,
 .repository.file.list #repo-files-table tbody .svg.octicon-file-symlink-file,
 .repository.file.list #repo-files-table tbody .svg.octicon-file-directory-symlink {
-  color: var(--color-secondary-dark-7);
+  color: var(--color-hover-foreground);
 }
 
 .repository.file.list #repo-files-table td:not(.repo-files-table-latest-commit-cell) {
