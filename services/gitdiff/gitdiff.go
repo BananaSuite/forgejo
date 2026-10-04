@@ -76,13 +76,14 @@ const (
 
 // DiffLine represents a line difference in a DiffSection.
 type DiffLine struct {
-	LeftIdx       int
-	RightIdx      int
-	Match         int
-	Type          DiffLineType
-	Content       string
-	Conversations []issues_model.CodeConversation
-	SectionInfo   *DiffLineSectionInfo
+	LeftIdx        int
+	RightIdx       int
+	Match          int
+	Type           DiffLineType
+	Content        string
+	Conversations  []issues_model.CodeConversation
+	SectionInfo    *DiffLineSectionInfo
+	NoNewlineAtEOF bool
 }
 
 // DiffLineSectionInfo represents diff line section meta data
@@ -857,7 +858,10 @@ func parseHunks(ctx context.Context, curFile *DiffFile, maxLines, maxLineCharact
 				return nil, false, fmt.Errorf("unexpected line in hunk: %s", string(lineBytes))
 			}
 			// Technically this should be the end the file!
-			// FIXME: we should be putting a marker at the end of the file if there is no terminal new line
+			lines := len(curSection.Lines)
+			if curSection != nil && lines > 0 {
+				curSection.Lines[lines-1].NoNewlineAtEOF = true
+			}
 			continue
 		case '+':
 			curFileLinesCount++
