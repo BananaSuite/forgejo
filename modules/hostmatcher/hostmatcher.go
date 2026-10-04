@@ -10,6 +10,13 @@ import (
 	"strings"
 )
 
+type Policy int
+
+const (
+	PolicyAllow Policy = iota
+	PolicyDeny
+)
+
 // HostMatchList is used to check if a host or IP is in a list.
 type HostMatchList struct {
 	SettingKeyHint string
@@ -162,9 +169,4 @@ func (hl *HostMatchList) MatchIPAddr(ip net.IP) bool {
 	}
 	host := ip.String() // nil-safe, we will get "<nil>" if ip is nil
 	return hl.checkPattern(host) || hl.checkIP(ip)
-}
-
-// MatchHostOrIP checks if the host or IP matches an allow/deny(block) list
-func (hl *HostMatchList) MatchHostOrIP(host string, ip net.IP) bool {
-	return hl.MatchHostName(host) || hl.MatchIPAddr(ip)
 }

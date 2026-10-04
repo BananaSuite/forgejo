@@ -15,6 +15,7 @@ import (
 
 	"forgejo.org/models/forgefed"
 	"forgejo.org/modules/activitypub"
+	"forgejo.org/modules/hostmatcher"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/routers"
@@ -46,6 +47,8 @@ func TestActivityPubHostMatcher(t *testing.T) {
 		repositoryPath := fmt.Sprintf("repository-id/%d", repositoryID)
 		userPath := fmt.Sprintf("user-id/%d", userID)
 
+		hostmatcherErr := new(hostmatcher.ErrDialContextHostMatch)
+
 		for _, actorPath := range []string{repositoryPath, userPath} {
 			for _, internalHost := range []string{"http://127.0.0.1", "http://localhost"} {
 				// confirm that even setting the allow-list to an internal host still blocks local hosts
@@ -58,42 +61,42 @@ func TestActivityPubHostMatcher(t *testing.T) {
 
 				// avoid calls to internal IPs with invalid ports
 				resp, err := c.GetBody(fmt.Sprintf("https://127.0.0.1:9999/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
+				require.ErrorAs(t, err, &hostmatcherErr)
 				assert.Nil(t, resp)
 
 				resp, err = c.GetBody(fmt.Sprintf("http://127.0.0.1:5432/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
+				require.ErrorAs(t, err, &hostmatcherErr)
 				assert.Nil(t, resp)
 
 				// avoid calls to internal loopback with invalid ports
 				resp, err = c.GetBody(fmt.Sprintf("http://localhost/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
+				require.ErrorAs(t, err, &hostmatcherErr)
 				assert.Nil(t, resp)
 
 				resp, err = c.GetBody(fmt.Sprintf("http://localhost:5432/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
+				require.ErrorAs(t, err, &hostmatcherErr)
 				assert.Nil(t, resp)
 
 				resp, err = c.GetBody(fmt.Sprintf("http://loopback/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
+				require.ErrorAs(t, err, &hostmatcherErr)
 				assert.Nil(t, resp)
 
 				resp, err = c.GetBody(fmt.Sprintf("http://loopback:5432/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
+				require.ErrorAs(t, err, &hostmatcherErr)
 				assert.Nil(t, resp)
 
 				// avoid port-knocking on unexpected ports
-				resp, err = c.GetBody(fmt.Sprintf("%s:5432/api/v1/activitypub/%s", u.Hostname(), actorPath))
-				require.Error(t, err)
+				resp, err = c.GetBody(fmt.Sprintf("http://%s:5432/api/v1/activitypub/%s", u.Hostname(), actorPath))
+				require.ErrorAs(t, err, &hostmatcherErr)
 				assert.Nil(t, resp)
 
 				if port, err := strconv.Atoi(u.Port()); err == nil {
-					resp, err = c.GetBody(fmt.Sprintf("%s:%d/api/v1/activitypub/%s", u.Hostname(), port+1, actorPath))
-					require.Error(t, err)
+					resp, err = c.GetBody(fmt.Sprintf("http://%s:%d/api/v1/activitypub/%s", u.Hostname(), port+1, actorPath))
+					require.ErrorAs(t, err, &hostmatcherErr)
 					assert.Nil(t, resp)
 
-					resp, err = c.GetBody(fmt.Sprintf("%s:%d/api/v1/activitypub/%s", u.Hostname(), port-1, actorPath))
-					require.Error(t, err)
+					resp, err = c.GetBody(fmt.Sprintf("http://%s:%d/api/v1/activitypub/%s", u.Hostname(), port-1, actorPath))
+					require.ErrorAs(t, err, &hostmatcherErr)
 					assert.Nil(t, resp)
 				}
 			}

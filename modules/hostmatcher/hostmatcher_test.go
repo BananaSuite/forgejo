@@ -23,7 +23,8 @@ func TestHostOrIPMatchesList(t *testing.T) {
 
 	test := func(cases []tc) {
 		for _, c := range cases {
-			assert.Equalf(t, c.expected, hl.MatchHostOrIP(c.host, c.ip), "case domain=%s, ip=%v, expected=%v", c.host, c.ip, c.expected)
+			got := hl.MatchHostName(c.host) || hl.MatchIPAddr(c.ip)
+			assert.Equalf(t, c.expected, got, "case domain=%s, ip=%v, expected=%v", c.host, c.ip, c.expected)
 		}
 	}
 
