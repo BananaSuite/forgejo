@@ -54,6 +54,7 @@
 						*/}}{{end}}{{/*
 						*/}}{{if $line.LeftIdx}}{{/*
 							*/}}{{template "repo/diff/section_code" dict "diff" $leftDiff}}{{/*
+							*/}}{{if $line.NoNewlineAtEOF}}<br>{{svg "octicon-no-entry" 16 "text red"}}{{end}}{{/*
 						*/}}{{else}}{{/*
 						*/}}<code class="code-inner"></code>{{/*
 						*/}}{{end}}{{/*
@@ -69,6 +70,7 @@
 						*/}}{{end}}{{/*
 						*/}}{{if $match.RightIdx}}{{/*
 							*/}}{{template "repo/diff/section_code" dict "diff" $rightDiff}}{{/*
+							*/}}{{if $match.NoNewlineAtEOF }}<br>{{svg "octicon-no-entry" 16 "text red"}}{{end}}{{/*
 						*/}}{{else}}{{/*
 							*/}}<code class="code-inner"></code>{{/*
 						*/}}{{end}}{{/*
