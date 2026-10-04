@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
+import {getCurrentLocale} from '../utils.js';
 const {pageData} = window.config;
 
 dayjs.extend(utc);
@@ -9,7 +10,7 @@ export const ONE_MINUTE = 60 * 1000;
 export const ONE_HOUR = 60 * ONE_MINUTE;
 export const ONE_DAY = 24 * ONE_HOUR;
 
-const lang = window.config.lang || navigator.language;
+const lang = getCurrentLocale() || navigator.language;
 
 const ABSOLUTE_DATETIME_FORMAT = new Intl.DateTimeFormat(lang, {
   year: 'numeric',

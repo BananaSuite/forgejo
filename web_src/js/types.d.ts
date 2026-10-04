@@ -8,7 +8,6 @@ interface Window {
     i18n: Record<string, string>;
     customEmojis: Set<string>;
     mentionValues: MentionValue[];
-    lang?: string;
   }
 }
 
