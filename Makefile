@@ -29,7 +29,7 @@ ifeq ($(USE_GOTESTSUM), yes)
 	GOTESTFLAGS ?= -test.timeout=24h
 else
 	GOTEST ?= $(GO) test
-	GOTESTFLAGS ?= -timeout=24h
+	GOTESTFLAGS ?= -timeout=24h -v
 endif
 
 XGO_VERSION := go-1.21.x
