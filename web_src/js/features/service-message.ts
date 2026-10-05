@@ -4,7 +4,7 @@
 // initModalServiceMessage tries to retrieve session storage and fills it in the input fields,
 // on blur it will set the storage again
 export function initModalServiceMessageForm() {
-  const smForm: HTMLElement = document.querySelector('.service-message.form')
+  const smForm: HTMLElement = document.querySelector('.service-message.form');
   if (!smForm) return;
 
   const nav: HTMLElement = document.querySelector('#navbar');
