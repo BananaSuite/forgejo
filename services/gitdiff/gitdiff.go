@@ -858,8 +858,7 @@ func parseHunks(ctx context.Context, curFile *DiffFile, maxLines, maxLineCharact
 				return nil, false, fmt.Errorf("unexpected line in hunk: %s", string(lineBytes))
 			}
 			// Technically this should be the end the file!
-			lines := len(curSection.Lines)
-			if curSection != nil && lines > 0 {
+			if lines := len(curSection.Lines); lines > 0 {
 				curSection.Lines[lines-1].NoNewlineAtEOF = true
 			}
 			continue
