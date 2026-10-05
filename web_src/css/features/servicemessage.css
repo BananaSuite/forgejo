@@ -12,6 +12,11 @@ SPDX-License-Identifier: GPL-3.0-or-later */
   flex-direction: column;
 }
 
+.service-message-header {
+  margin: 0 0.5rem !important;
+  padding: 0.5rem !important;
+}
+
 .service-message-content h1 {
   padding-bottom: 2rem;
 }
