@@ -20,6 +20,7 @@ function lazyPromise<T>(newPromise: () => Promise<T>): () => Promise<T> {
 // NOTE: tsconfig "module" must be "esnext" or equivalent
 const loadableComponents = {
   'model-viewer': lazyPromise(() => {
+    // FIXME: this causes an error when WebGL context isn't available. We may need to do some detecting on our own for this case.
     return import(/* webpackChunkName: "model-viewer" */ '@google/model-viewer');
   }),
   'pdf-object': lazyPromise(() => {
