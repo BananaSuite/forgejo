@@ -61,6 +61,7 @@ func ProcessRepositoryInboxUndoLike(ctx context.Context, activity *ap.Activity, 
 }
 
 func SendUndoLikeActivities(ctx context.Context, doer user.User, repoID int64) error {
+	// TODO: The repository APActorID should be fetched from the the database.
 	id := repo.APActorID(repoID)
 	object, err := fm.NewRepositoryID(id, string(forgefed.ForgejoSourceType))
 	if err != nil {

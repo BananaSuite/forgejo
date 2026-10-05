@@ -100,6 +100,7 @@ func DeleteFollowingRepos(ctx context.Context, localRepoID int64) error {
 }
 
 func SendLikeActivities(ctx context.Context, doer user.User, repoID int64) error {
+	// TODO: The repository APActorID should
 	id := repo.APActorID(repoID)
 	object, err := fm.NewRepositoryID(id, string(forgefed.ForgejoSourceType))
 	if err != nil {
