@@ -23,7 +23,7 @@ const loadableComponents = {
     return import(/* webpackChunkName: "model-viewer" */ '@google/model-viewer');
   }),
   'pdf-object': lazyPromise(() => {
-    return import(/* webpackChunkName: "pdf-object" */ './pdf-object.js');
+    return import(/* webpackChunkName: "pdf-object" */ './pdf-object.ts');
   }),
   'citation-information': lazyPromise(() => {
     return import(/* webpackChunkName: "citation-information" */ './citation-information.js');
