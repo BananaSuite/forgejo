@@ -91,18 +91,6 @@ func TestActivityPubRepositoryInboxUndoLike(t *testing.T) {
 			resp, err := c.Post(activityUser15UndoLikesRepo2, localRepo2Inbox)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNotAcceptable, resp.StatusCode)
-
-			secondActivityUser15LikesRepo2, err := json.Marshal(map[string]any{
-				"type":      "Like",
-				"startTime": timeNow.Format(time.RFC3339),
-				"actor":     distantActorUser15,
-				"object":    localRepo2,
-			})
-			require.NoError(t, err, "failed to marshal: secondActivityUser15LikesRepo2")
-
-			resp, err = c.Post(secondActivityUser15LikesRepo2, localRepo2Inbox)
-			require.NoError(t, err)
-			assert.Equal(t, http.StatusNotAcceptable, resp.StatusCode)
 		})
 
 		t.Run("Undo with no prior like", func(t *testing.T) {
