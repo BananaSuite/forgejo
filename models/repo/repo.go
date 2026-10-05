@@ -368,7 +368,7 @@ func (repo *Repository) APIURL() string {
 
 // APActorID returns the activitypub repository API URL for a given repository ID
 func APActorID(repoID int64) string {
-	return fmt.Sprintf("%vapi/v1/activitypub/repository-id/%v", setting.AppURL, url.PathEscape(fmt.Sprint(repoID)))
+	return fmt.Sprintf("%vapi/v1/activitypub/repository-id/%d", setting.AppURL, repoID)
 }
 
 // APActorID returns the activitypub repository API URL
