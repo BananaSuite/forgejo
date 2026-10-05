@@ -5,11 +5,33 @@ package repo
 
 import (
 	"context"
+	"fmt"
 
 	"forgejo.org/models/db"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/timeutil"
+	"forgejo.org/modules/util"
 )
+
+// ErrStarNotExist represents a "StarNotExist" kind of error.
+type ErrStarNotExist struct {
+	UID    int64
+	RepoID int64
+}
+
+// IsErrStarNotExist checks if an error is a ErrStarNotExist.
+func IsErrStarNotExist(err error) bool {
+	_, ok := err.(ErrStarNotExist)
+	return ok
+}
+
+func (err ErrStarNotExist) Error() string {
+	return fmt.Sprintf("star does not exist [user_id: %d, repo_id: %d]", err.UID, err.RepoID)
+}
+
+func (err ErrStarNotExist) Unwrap() error {
+	return util.ErrNotExist
+}
 
 // Star represents a starred repo by an user.
 type Star struct {
@@ -63,6 +85,17 @@ func StarRepo(ctx context.Context, userID, repoID int64, star bool) error {
 	}
 
 	return committer.Commit()
+}
+
+func GetStar(ctx context.Context, userID, repoID int64) (*Star, error) {
+	star := new(Star)
+	has, err := db.GetEngine(ctx).Where("uid = ? AND repo_id = ?", userID, repoID).Get(star)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrStarNotExist{UID: userID, RepoID: repoID}
+	}
+	return star, err
 }
 
 // IsStaring checks if user has starred given repository.

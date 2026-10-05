@@ -33,6 +33,18 @@ func TestIsStaring(t *testing.T) {
 	assert.False(t, repo_model.IsStaring(db.DefaultContext, 3, 4))
 }
 
+func TestGetStar(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	star, err := repo_model.GetStar(db.DefaultContext, 2, 4)
+	require.NoError(t, err)
+	assert.NotNil(t, star)
+
+	star, err = repo_model.GetStar(db.DefaultContext, 3, 4)
+	assert.ErrorContains(t, err, "star does not exist [user_id: 3, repo_id: 4]")
+	assert.Nil(t, star)
+}
+
 func TestRepository_GetStargazers(t *testing.T) {
 	// repo with stargazers
 	require.NoError(t, unittest.PrepareTestDatabase())
