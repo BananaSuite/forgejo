@@ -15,8 +15,9 @@ import (
 
 func TestNewServiceMessage(t *testing.T) {
 	opts := service_message_module.ServiceMessageOptions{
-		Type: "modal",
-		Text: "Some Text.",
+		Type:  "modal",
+		Text:  "Some Text.",
+		Title: "Title",
 	}
 	sm, err := NewServiceMessage(&opts)
 	require.NoError(t, err)
