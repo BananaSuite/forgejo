@@ -11,13 +11,25 @@ type CreateOrUpdateProjectOptions struct {
 	Status       string `json:"status"`
 }
 
-type ProjectIssue struct {
+type Project struct {
+	ID           int64  `json:"id"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	OwnerName    string `json:"owner_name"`
+	RepoName     string `json:"repo_name"`
+	Status       string `json:"status"`
+	OwnerType    string `json:"project_type"`
+	TemplateType string `json:"template_type"`
+	CardType     string `json:"card_type"`
+}
+
+type MovedProjectIssue struct {
 	IssueID int64 `json:"issueID"`
 	Sorting int64 `json:"sorting"`
 }
 
 type MovedIssuesOption struct {
-	ProjectIssues []ProjectIssue `json:"issues"`
+	ProjectIssues []MovedProjectIssue `json:"issues"`
 }
 
 func (m *MovedIssuesOption) GetIssueIDs() []int64 {
