@@ -41,7 +41,7 @@ func TestGetStar(t *testing.T) {
 	assert.NotNil(t, star)
 
 	star, err = repo_model.GetStar(db.DefaultContext, 3, 4)
-	assert.ErrorContains(t, err, "star does not exist [user_id: 3, repo_id: 4]")
+	require.ErrorContains(t, err, "star does not exist [user_id: 3, repo_id: 4]")
 	assert.Nil(t, star)
 }
 
