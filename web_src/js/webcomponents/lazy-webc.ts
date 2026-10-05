@@ -26,7 +26,7 @@ const loadableComponents = {
     return import(/* webpackChunkName: "pdf-object" */ './pdf-object.ts');
   }),
   'citation-information': lazyPromise(() => {
-    return import(/* webpackChunkName: "citation-information" */ './citation-information.js');
+    return import(/* webpackChunkName: "citation-information" */ './citation-information.ts');
   }),
 } as const;
 
