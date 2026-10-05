@@ -94,8 +94,8 @@ import {initModalClose} from './modules/modal.ts';
 import {initAuthorizedIntegrationClaimRuleEditor} from './features/authorized-integration.js';
 import {
   initModalServiceMessageForm,
-  initPreviewServiceMessageButton, 
-  initDeleteServiceMessageButton
+  initPreviewServiceMessageButton,
+  initDeleteServiceMessageButton,
 } from './features/service-message.ts';
 
 // Init Gitea's Fomantic settings

@@ -51,7 +51,7 @@ export function initPreviewServiceMessageButton() {
 export function initDeleteServiceMessageButton() {
   const deleteSMButton = document.querySelector('#delete-sm-button');
   deleteSMButton?.addEventListener('click', () => {
-    const storage: Storage = sessionStorage
+    const storage: Storage = sessionStorage;
     storage.setItem('smTitle', '');
     storage.setItem('smText', '');
   });
