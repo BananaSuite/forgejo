@@ -29,7 +29,7 @@ ifeq ($(USE_GOTESTSUM), yes)
 	GOTESTFLAGS ?= -test.timeout=24h
 else
 	GOTEST ?= $(GO) test
-	GOTESTFLAGS ?=
+	GOTESTFLAGS ?= -timeout=24h
 endif
 
 XGO_VERSION := go-1.21.x
@@ -680,7 +680,7 @@ generate-ini-sqlite:
 
 .PHONY: test-sqlite
 test-sqlite: git-check $(GO_SOURCES) generate-ini-sqlite
-	PROJECT_ROOT="$(CURDIR)" PROJECT_CONF=tests/sqlite.ini $(GOTEST) forgejo.org/tests/integration $(GOTESTFLAGS) -tags '$(TEST_TAGS)'
+	PROJECT_ROOT="$(CURDIR)" PROJECT_CONF=tests/sqlite.ini $(GOTEST) forgejo.org/tests/integration -tags '$(TEST_TAGS)' $(GOTESTFLAGS)
 
 .PHONY: test-sqlite\#%
 test-sqlite\#%: git-check $(GO_SOURCES) generate-ini-sqlite
