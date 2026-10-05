@@ -31,19 +31,19 @@ func TestServiceMessage(t *testing.T) {
 		Title: "Service Message",
 	}
 
-	req := NewRequestWithJSON(t, "POST", "/admin/service_message?sm_type=modal", &smOpts)
-	session.MakeRequest(t, req, http.StatusSeeOther)
-	sm := unittest.AssertExistsAndLoadBean(t, &service_message_model.ServiceMessage{Type: "modal"})
-	assert.Equal(t, service_message_module.SMType(smOpts.Type), sm.Type)
-	assert.Equal(t, smOpts.Text, sm.Text)
-	assert.Equal(t, smOpts.Title, sm.Title)
-
 	t.Run("Preview", func(t *testing.T) {
 		// Admin clicks on preview
 		req := NewRequestWithJSON(t, "POST", "/admin/service_message/preview?sm_type=modal&status=show", &smOpts)
 		resp := session.MakeRequest(t, req, http.StatusOK)
 		assert.Contains(t, resp.Body.String(), smOpts.Text)
 	})
+
+	req := NewRequestWithJSON(t, "POST", "/admin/service_message?sm_type=modal", &smOpts)
+	session.MakeRequest(t, req, http.StatusSeeOther)
+	sm := unittest.AssertExistsAndLoadBean(t, &service_message_model.ServiceMessage{Type: "modal"})
+	assert.Equal(t, service_message_module.SMType(smOpts.Type), sm.Type)
+	assert.Equal(t, smOpts.Text, sm.Text)
+	assert.Equal(t, smOpts.Title, sm.Title)
 
 	t.Run("TestMustShow", func(t *testing.T) {
 		// ServiceMessage has been setup and is shown for the first time
@@ -53,19 +53,20 @@ func TestServiceMessage(t *testing.T) {
 		// User clicks accept, is updated and Service Message goes away
 		req = NewRequest(t, "POST", fmt.Sprintf("/user/confirm?sm_type=%s&sm_created=%v&redirect_to=localhost", sm.Type, sm.CreatedUnix))
 		session.MakeRequest(t, req, http.StatusSeeOther)
-		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-		assert.False(t, user.MustShowServiceMessage(sm.Type, sm.UpdatedUnix))
+		updatedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: user.ID})
+		assert.False(t, updatedUser.MustShowServiceMessage(sm.Type, sm.UpdatedUnix))
 
 		// Admin updates Service Message, so it needs to be shown again
 		test.SleepTillNextSecond()
 		smOpts = service_message_module.ServiceMessageOptions{
-			Type: "modal",
-			Text: "TestText2",
+			Type:  "modal",
+			Text:  "TestText2",
+			Title: "Title",
 		}
 		req2 := NewRequestWithJSON(t, "POST", "/admin/service_message?sm_type=modal", &smOpts)
 		session.MakeRequest(t, req2, http.StatusSeeOther)
 		sm2 := unittest.AssertExistsAndLoadBean(t, &service_message_model.ServiceMessage{Type: "modal"})
-		assert.True(t, user.MustShowServiceMessage(sm2.Type, sm2.UpdatedUnix))
+		assert.True(t, updatedUser.MustShowServiceMessage(sm2.Type, sm2.UpdatedUnix))
 	})
 
 	t.Run("Delete", func(t *testing.T) {
