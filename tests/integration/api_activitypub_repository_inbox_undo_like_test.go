@@ -92,7 +92,6 @@ func TestActivityPubRepositoryInboxUndoLike(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNotAcceptable, resp.StatusCode)
 
-			// second undo should result in error
 			secondActivityUser15LikesRepo2, err := json.Marshal(map[string]any{
 				"type":      "Like",
 				"startTime": timeNow.Format(time.RFC3339),
