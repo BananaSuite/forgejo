@@ -51,13 +51,17 @@ func ProcessLikeActivity(ctx context.Context, activity *ap.Activity, repositoryI
 	}
 	log.Trace("Object accepted: %#v", objectID)
 
-	// execute the activity if the repo was not stared already
-	alreadyStarred := repo.IsStaring(ctx, user.ID, repositoryID)
-	if !alreadyStarred {
-		err = repo.StarRepo(ctx, user.ID, repositoryID, true)
-		if err != nil {
-			return ServiceResult{}, NewErrNotAcceptablef("Staring failed: %v", err)
-		}
+	// execute the activity if the repo was not starred already
+	_, err = repo.GetStar(ctx, user.ID, repositoryID)
+	if err == nil {
+		return ServiceResult{}, NewErrNotAcceptablef("The repo is already starred")
+	} else if !repo.IsErrStarNotExist(err) {
+		return ServiceResult{}, NewErrNotAcceptablef("Failed to fetch the star: %v", err)
+	}
+
+	err = repo.StarRepo(ctx, user.ID, repositoryID, true)
+	if err != nil {
+		return ServiceResult{}, NewErrNotAcceptablef("Staring failed: %v", err)
 	}
 
 	federationHost.LatestActivity = activity.StartTime

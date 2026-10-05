@@ -40,15 +40,18 @@ func ProcessRepositoryInboxUndoLike(ctx context.Context, activity *ap.Activity, 
 	}
 	log.Trace("Object accepted: %#v", objectID)
 
-	// execute the activity if the repo was already stared
-	alreadyStarred := repo.IsStaring(ctx, user.ID, repositoryID)
-	if alreadyStarred {
-		err = repo.StarRepo(ctx, user.ID, repositoryID, false)
-		if err != nil {
-			return ServiceResult{}, NewErrNotAcceptablef("Error staring %v", err)
+	// execute the activity if the repo was already starred
+	_, err = repo.GetStar(ctx, user.ID, repositoryID)
+	if err != nil {
+		if repo.IsErrStarNotExist(err) {
+			return ServiceResult{}, NewErrNotAcceptablef("Failed to fetch the existing star: %v", err)
 		}
-	} else {
-		return ServiceResult{}, NewErrNotAcceptablef("star not available: %v", err)
+		return ServiceResult{}, NewErrNotAcceptablef("Failed to fetch the existing star: %v", err)
+	}
+
+	err = repo.StarRepo(ctx, user.ID, repositoryID, false)
+	if err != nil {
+		return ServiceResult{}, NewErrNotAcceptablef("Error staring %v", err)
 	}
 
 	federationHost.LatestActivity = activity.StartTime
