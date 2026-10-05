@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -25,7 +26,50 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestActivityPubHostMatcher(t *testing.T) {
+func hostMatcherTestHarness(ctx context.Context, t *testing.T, mock *test.FederationServerMock, federatedSrv *httptest.Server, u *url.URL, cf *activitypub.ClientFactory, internalHost, actorPath string) {
+	// confirm that even setting the allow-list to an internal host still blocks local hosts
+	internalURI, err := url.Parse(internalHost)
+	require.NoError(t, err)
+
+	c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
+		mock.Persons[0].KeyID(federatedSrv.URL), []*url.URL{internalURI})
+	require.NoError(t, err)
+
+	// avoid calls to internal IPs with invalid ports
+	resp, err := c.GetBody(fmt.Sprintf("https://127.0.0.1:9999/api/v1/activitypub/%s", actorPath))
+	require.Error(t, err)
+	assert.Nil(t, resp)
+
+	resp, err = c.GetBody(fmt.Sprintf("http://127.0.0.1:5432/api/v1/activitypub/%s", actorPath))
+	require.Error(t, err)
+	assert.Nil(t, resp)
+
+	// avoid calls to internal loopback with invalid ports
+	resp, err = c.GetBody(fmt.Sprintf("http://localhost/api/v1/activitypub/%s", actorPath))
+	require.Error(t, err)
+	assert.Nil(t, resp)
+
+	resp, err = c.GetBody(fmt.Sprintf("http://localhost:5432/api/v1/activitypub/%s", actorPath))
+	require.Error(t, err)
+	assert.Nil(t, resp)
+
+	// avoid port-knocking on unexpected ports
+	resp, err = c.GetBody(fmt.Sprintf("http://%s:5432/api/v1/activitypub/%s", u.Hostname(), actorPath))
+	require.Error(t, err)
+	assert.Nil(t, resp)
+
+	if port, err := strconv.Atoi(u.Port()); err == nil {
+		resp, err = c.GetBody(fmt.Sprintf("http://%s:%d/api/v1/activitypub/%s", u.Hostname(), port+1, actorPath))
+		require.Error(t, err)
+		assert.Nil(t, resp)
+
+		resp, err = c.GetBody(fmt.Sprintf("http://%s:%d/api/v1/activitypub/%s", u.Hostname(), port-1, actorPath))
+		require.Error(t, err)
+		assert.Nil(t, resp)
+	}
+}
+
+func TestActivityPubHostMatcherRepo(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
 	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, true)()
 	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, false)()
@@ -41,62 +85,36 @@ func TestActivityPubHostMatcher(t *testing.T) {
 		require.NoError(t, err)
 
 		repositoryID := 2
-		userID := 2
 
 		repositoryPath := fmt.Sprintf("repository-id/%d", repositoryID)
+
+		for _, internalHost := range []string{"http://127.0.0.1", "http://localhost"} {
+			hostMatcherTestHarness(ctx, t, mock, federatedSrv, u, cf, internalHost, repositoryPath)
+		}
+	})
+}
+
+func TestActivityPubHostMatcherUser(t *testing.T) {
+	defer test.MockVariableValue(&setting.Federation.Enabled, true)()
+	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, true)()
+	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, false)()
+	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
+
+	mock := test.NewFederationServerMock()
+	federatedSrv := mock.DistantServer(t)
+	defer federatedSrv.Close()
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		ctx, _ := contexttest.MockAPIContext(t, u.String())
+		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
+		require.NoError(t, err)
+
+		userID := 2
+
 		userPath := fmt.Sprintf("user-id/%d", userID)
 
-		for _, actorPath := range []string{repositoryPath, userPath} {
-			for _, internalHost := range []string{"http://127.0.0.1", "http://localhost"} {
-				// confirm that even setting the allow-list to an internal host still blocks local hosts
-				internalURI, err := url.Parse(internalHost)
-				require.NoError(t, err)
-
-				c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
-					mock.Persons[0].KeyID(federatedSrv.URL), []*url.URL{internalURI})
-				require.NoError(t, err)
-
-				// avoid calls to internal IPs with invalid ports
-				resp, err := c.GetBody(fmt.Sprintf("https://127.0.0.1:9999/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
-				assert.Nil(t, resp)
-
-				resp, err = c.GetBody(fmt.Sprintf("http://127.0.0.1:5432/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
-				assert.Nil(t, resp)
-
-				// avoid calls to internal loopback with invalid ports
-				resp, err = c.GetBody(fmt.Sprintf("http://localhost/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
-				assert.Nil(t, resp)
-
-				resp, err = c.GetBody(fmt.Sprintf("http://localhost:5432/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
-				assert.Nil(t, resp)
-
-				resp, err = c.GetBody(fmt.Sprintf("http://loopback/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
-				assert.Nil(t, resp)
-
-				resp, err = c.GetBody(fmt.Sprintf("http://loopback:5432/api/v1/activitypub/%s", actorPath))
-				require.Error(t, err)
-				assert.Nil(t, resp)
-
-				// avoid port-knocking on unexpected ports
-				resp, err = c.GetBody(fmt.Sprintf("%s:5432/api/v1/activitypub/%s", u.Hostname(), actorPath))
-				require.Error(t, err)
-				assert.Nil(t, resp)
-
-				if port, err := strconv.Atoi(u.Port()); err == nil {
-					resp, err = c.GetBody(fmt.Sprintf("%s:%d/api/v1/activitypub/%s", u.Hostname(), port+1, actorPath))
-					require.Error(t, err)
-					assert.Nil(t, resp)
-
-					resp, err = c.GetBody(fmt.Sprintf("%s:%d/api/v1/activitypub/%s", u.Hostname(), port-1, actorPath))
-					require.Error(t, err)
-					assert.Nil(t, resp)
-				}
-			}
+		for _, internalHost := range []string{"http://127.0.0.1", "http://localhost"} {
+			hostMatcherTestHarness(ctx, t, mock, federatedSrv, u, cf, internalHost, userPath)
 		}
 	})
 }
