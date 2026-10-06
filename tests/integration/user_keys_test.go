@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"testing/synctest"
 
 	"forgejo.org/modules/test"
 	"forgejo.org/tests"
@@ -21,32 +22,34 @@ func TestVerifySSHkeyPage(t *testing.T) {
 
 	// user2 has an SSH key in fixtures to test this on
 	session := loginUser(t, "user2")
-
 	page := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", "/user/settings/keys"), http.StatusOK).Body)
-	link, exists := page.Find("#keys-ssh a.button[href^='?verify_ssh=']").Attr("href")
-	assert.True(t, exists)
 
-	page = NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("/user/settings/keys%s", link)), http.StatusOK).Body)
+	synctest.Test(t, func(t *testing.T) {
+		link, exists := page.Find("#keys-ssh a.button[href^='?verify_ssh=']").Attr("href")
+		assert.True(t, exists)
 
-	// The hint contains a link to the same page the user is at now to get it reloaded if followed
-	linkShown, exists := page.Find("#keys-ssh form[action='/user/settings/keys'] .help a").Attr("href")
-	assert.True(t, exists)
-	// QueryUnescape links before comparison, because they contain "%3a" versus "%3A", both unescaping to ":"
-	linkUnescaped, err := url.QueryUnescape(link)
-	require.NoError(t, err)
-	linkShownUnescaped, err := url.QueryUnescape(linkShown)
-	require.NoError(t, err)
-	assert.Equal(t, linkUnescaped, linkShownUnescaped)
+		page = NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", fmt.Sprintf("/user/settings/keys%s", link)), http.StatusOK).Body)
 
-	// The token changes every minute, we can avoid this sleep via timeutil and mocking.
-	test.SleepTillNextMinute()
+		// The hint contains a link to the same page the user is at now to get it reloaded if followed
+		linkShown, exists := page.Find("#keys-ssh form[action='/user/settings/keys'] .help a").Attr("href")
+		assert.True(t, exists)
+		// QueryUnescape links before comparison, because they contain "%3a" versus "%3A", both unescaping to ":"
+		linkUnescaped, err := url.QueryUnescape(link)
+		require.NoError(t, err)
+		linkShownUnescaped, err := url.QueryUnescape(linkShown)
+		require.NoError(t, err)
+		assert.Equal(t, linkUnescaped, linkShownUnescaped)
 
-	// Verify that if you refresh it via the link another token is shown.
-	token, exists := page.Find("#keys-ssh form input[readonly]").Attr("value")
-	assert.True(t, exists)
+		// The token changes every minute
+		test.SleepTillNextMinute()
 
-	page = NewHTMLParser(t, session.MakeRequest(t, NewRequestf(t, "GET", "/user/settings/keys%s", linkShown), http.StatusOK).Body)
-	otherToken, exists := page.Find("#keys-ssh form .field input[readonly]").Attr("value")
-	assert.True(t, exists)
-	assert.NotEqual(t, token, otherToken)
+		// Verify that if you refresh it via the link another token is shown.
+		token, exists := page.Find("#keys-ssh form input[readonly]").Attr("value")
+		assert.True(t, exists)
+
+		page = NewHTMLParser(t, session.MakeRequest(t, NewRequestf(t, "GET", "/user/settings/keys%s", linkShown), http.StatusOK).Body)
+		otherToken, exists := page.Find("#keys-ssh form .field input[readonly]").Attr("value")
+		assert.True(t, exists)
+		assert.NotEqual(t, token, otherToken)
+	})
 }
