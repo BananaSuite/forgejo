@@ -51,7 +51,12 @@ func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) er
 		sha   string
 		event string
 	)
-	switch run.Event {
+	// Older scheduled runs retain the event that registered the schedule.
+	eventType := run.Event
+	if run.TriggerEvent == string(webhook_module.HookEventSchedule) {
+		eventType = webhook_module.HookEventSchedule
+	}
+	switch eventType {
 	case webhook_module.HookEventPush:
 		event = "push"
 		payload, err := run.GetPushEventPayload()
@@ -78,8 +83,8 @@ func createCommitStatus(ctx context.Context, job *actions_model.ActionRunJob) er
 			return errors.New("head of pull request is missing in event payload")
 		}
 		sha = payload.PullRequest.Head.Sha
-	case webhook_module.HookEventRelease:
-		event = string(run.Event)
+	case webhook_module.HookEventSchedule, webhook_module.HookEventRelease:
+		event = string(eventType)
 		sha = run.CommitSHA
 	default:
 		return nil

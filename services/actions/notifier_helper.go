@@ -621,7 +621,7 @@ func handleSchedules(
 			TriggerUserID:     user_model.ActionsUserID,
 			Ref:               input.Ref.String(),
 			CommitSHA:         commit.ID.String(),
-			Event:             input.Event,
+			Event:             webhook_module.HookEventSchedule,
 			EventPayload:      string(p),
 			Specs:             specs,
 			Content:           dwf.Content,
