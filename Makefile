@@ -26,10 +26,10 @@ DIFF ?= diff --unified
 
 ifeq ($(USE_GOTESTSUM), yes)
 	GOTEST ?= gotestsum --format testname
-	GOTESTFLAGS ?= -test.timeout=24h
+	GOTESTFLAGS ?= -test.timeout=2h
 else
 	GOTEST ?= $(GO) test
-	GOTESTFLAGS ?= -timeout=24h -v
+	GOTESTFLAGS ?= -timeout=2h -v
 endif
 
 XGO_VERSION := go-1.21.x
