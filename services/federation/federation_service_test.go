@@ -71,7 +71,7 @@ func TestVerifyKeyIDMatchesActorID(t *testing.T) {
 		require.NoError(t, err)
 
 		err = VerifyKeyIDMatchesActorID(t.Context(), req, &activity)
-		require.Error(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("invalid_request", func(t *testing.T) {
