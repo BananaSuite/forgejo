@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"net/http"
+	"time"
 
 	"github.com/42wim/httpsig"
 )
@@ -17,7 +18,7 @@ const (
 	httpsigExpirationTime      = 60
 )
 
-func CreateFederationPostReq(body []byte, privateKey, pubID, to string) (req *http.Request, err error) {
+func CreateFederationPostReq(body []byte, privateKey, pubID, to string, postHeaders []string) (req *http.Request, err error) {
 	privPem, _ := pem.Decode([]byte(privateKey))
 	privParsed, err := x509.ParsePKCS1PrivateKey(privPem.Bytes)
 	if err != nil {
@@ -26,7 +27,6 @@ func CreateFederationPostReq(body []byte, privateKey, pubID, to string) (req *ht
 
 	algs := HttpsigAlgs
 	digestAlg := httpsig.DigestAlgorithm("SHA-256")
-	postHeaders := []string{"(request-target)", "Date", "Host", "Digest"}
 
 	buf := bytes.NewBuffer(body)
 	req, err = http.NewRequest(http.MethodPost, to, buf)
@@ -35,7 +35,7 @@ func CreateFederationPostReq(body []byte, privateKey, pubID, to string) (req *ht
 	}
 
 	req.Header.Add("Accept", "application/json, "+ActivityStreamsContentType)
-	req.Header.Add("Date", "Mon, 21 Sep 2026 08:56:24 GMT")
+	req.Header.Add("Date", time.Now().UTC().Format(http.TimeFormat))
 	req.Header.Add("Host", req.URL.Host)
 	req.Header.Add("Content-Type", ActivityStreamsContentType)
 

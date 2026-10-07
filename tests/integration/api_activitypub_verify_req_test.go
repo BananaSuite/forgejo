@@ -80,17 +80,11 @@ func TestActivityPubPersonVerifyKeyID(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusUnauthorized, respFalse.StatusCode)
 
-			// follow does not exist
-			distantFederatedUser30 := unittest.AssertExistsAndLoadBean(t, &user_model.FederatedUser{ExternalID: "30"})
-			unittest.AssertNotExistsBean(t,
-				&user_model.FederatedUserFollower{
-					FollowedUserID:  localUser.ID,
-					FollowingUserID: distantFederatedUser30.UserID,
-				},
-			)
+			// user does not exist
+			unittest.AssertNotExistsBean(t, &user_model.FederatedUser{ExternalID: "30"})
 		})
 		//------------- Test keyID equal to ActorID -------------
-		t.Run("keyIDAEqualActorID", func(t *testing.T) {
+		t.Run("keyIDEqualActorID", func(t *testing.T) {
 			followTrue := fmt.Appendf(
 				nil,
 				`{"type":"Follow",`+
@@ -121,6 +115,7 @@ func TestActivityPubVeryfiyReqDigest(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, true)()
 	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
 	defer test.MockVariableValue(&testWebRoutes, routers.NormalRoutes())()
+	defer test.MockVariableValue(&setting.Federation.PostHeaders, []string{"(request-target)", "Date", "Host", "Digest"})()
 
 	federation.Init()
 
@@ -145,6 +140,7 @@ func TestActivityPubVeryfiyReqDigest(t *testing.T) {
 			mock.Persons[0].PrivKey,
 			mock.Persons[0].KeyID(federatedSrv.URL),
 			localUser2Inbox,
+			setting.Federation.PostHeaders,
 		)
 		require.NoError(t, err)
 

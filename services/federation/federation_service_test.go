@@ -25,6 +25,7 @@ func TestVerifyKeyIDMatchesActorID(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.SignatureEnforced, true)()
 	defer test.MockVariableValue(&setting.Federation.InsecureAllowInvalidHosts, true)()
 	defer test.MockVariableValue(&setting.Federation.MaxSize, 2048)()
+	defer test.MockVariableValue(&setting.Federation.PostHeaders, []string{"(request-target)", "Date", "Host", "Digest"})()
 
 	mock := test.NewFederationServerMock()
 	federatedSrv := mock.DistantServer(t)
@@ -51,6 +52,7 @@ func TestVerifyKeyIDMatchesActorID(t *testing.T) {
 			mock.Persons[0].PrivKey,
 			mock.Persons[0].KeyID(federatedSrv.URL),
 			"/api/v1/activitypub/user-id/2/inbox",
+			setting.Federation.PostHeaders,
 		)
 		require.NoError(t, err)
 
@@ -64,11 +66,12 @@ func TestVerifyKeyIDMatchesActorID(t *testing.T) {
 			mock.ApActor.PrivKey,
 			mock.ApActor.KeyID(federatedSrv.URL),
 			"/api/v1/activitypub/user-id/2/inbox",
+			setting.Federation.PostHeaders,
 		)
 		require.NoError(t, err)
 
 		err = VerifyKeyIDMatchesActorID(t.Context(), req, &activity)
-		require.NoError(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("invalid_request", func(t *testing.T) {
@@ -77,6 +80,7 @@ func TestVerifyKeyIDMatchesActorID(t *testing.T) {
 			mock.Persons[1].PrivKey,
 			mock.Persons[1].KeyID(federatedSrv.URL),
 			"/api/v1/activitypub/user-id/2/inbox",
+			setting.Federation.PostHeaders,
 		)
 		require.NoError(t, err)
 
