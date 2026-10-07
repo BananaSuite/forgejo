@@ -14,6 +14,7 @@ import (
 	"testing"
 	"testing/cryptotest"
 
+	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/util"
 
@@ -271,6 +272,7 @@ func TestVerifyRequestDigest(t *testing.T) {
 		mock.Persons[0].PrivKey,
 		mock.Persons[0].KeyID("someserver.com"),
 		"/api/v1/activitypub/user-id/2/inbox",
+		setting.Federation.PostHeaders,
 	)
 	require.NoError(t, err)
 
