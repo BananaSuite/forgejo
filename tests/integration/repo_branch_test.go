@@ -235,3 +235,13 @@ func TestCreateBranchButtonVisibility(t *testing.T) {
 		})
 	})
 }
+
+func TestBranchWithPipeGraph(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		session := loginUser(t, "user1")
+		repo1 := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 1})
+
+		req := NewRequest(t, "GET", "/"+repo1.FullName()+"/graph")
+		session.MakeRequest(t, req, http.StatusOK)
+	})
+}
