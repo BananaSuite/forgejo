@@ -54,7 +54,6 @@
 						*/}}{{end}}{{/*
 						*/}}{{if $line.LeftIdx}}{{/*
 							*/}}{{template "repo/diff/section_code" dict "diff" $leftDiff}}{{/*
-							*/}}{{if $line.NoNewlineAtEOF}}<br>{{svg "octicon-no-entry" 16 "text red"}}{{end}}{{/*
 						*/}}{{else}}{{/*
 						*/}}<code class="code-inner"></code>{{/*
 						*/}}{{end}}{{/*
@@ -70,7 +69,6 @@
 						*/}}{{end}}{{/*
 						*/}}{{if $match.RightIdx}}{{/*
 							*/}}{{template "repo/diff/section_code" dict "diff" $rightDiff}}{{/*
-							*/}}{{if $match.NoNewlineAtEOF }}<br>{{svg "octicon-no-entry" 16 "text red"}}{{end}}{{/*
 						*/}}{{else}}{{/*
 							*/}}<code class="code-inner"></code>{{/*
 						*/}}{{end}}{{/*
@@ -111,6 +109,21 @@
 			</tr>
 			{{if and (eq .GetType 3) $hasmatch}}
 				{{$match := index $section.Lines $line.Match}}
+				<tr class="eol-marker nl-1 ol-1">
+					<td></td>
+					<td></td>
+					{{if $line.NoNewlineAtEOF}}
+						<td class="tw-font-mono">\</td>
+						<td class="tw-font-mono">No newline at end of file</td>
+					{{else if $match.NoNewlineAtEOF}}
+						<td></td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td class="tw-font-mono">\</td>
+						<td class="tw-font-mono">No newline at end of file</td>
+					{{end}}
+				</tr>
 				{{if or $line.Conversations $match.Conversations}}
 					<tr class="add-comment" data-line-type="{{.GetHTMLDiffLineType}}">
 						<td class="add-comment-left" colspan="4">

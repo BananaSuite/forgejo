@@ -2468,6 +2468,10 @@ details.commit-body-toggle > summary.ellipsis-button {
   border-radius: var(--border-radius) !important;
 }
 
+.diff-file-box .eol-marker {
+  color: var(--color-text-light-2);
+}
+
 .ui.attached.header.diff-file-header.sticky-2nd-row {
   position: sticky;
   top: 44px; /* match .repository .diff-detail-box */

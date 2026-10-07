@@ -57,10 +57,19 @@
 							*/}}{{svg "octicon-plus"}}{{/*
 						*/}}</button>{{/*
 					*/}}{{end}}{{/*
-					*/}}{{template "repo/diff/section_code" dict "diff" $inlineDiff}}{{if .NoNewlineAtEOF}}<br>{{svg "octicon-no-entry" 16 "text red"}}{{end}}{{/*
+					*/}}{{template "repo/diff/section_code" dict "diff" $inlineDiff}}{{/*
 				*/}}</td>
 			{{end}}
 		</tr>
+		{{if $line.NoNewlineAtEOF}}
+			<tr class="eol-marker nl-1 ol-1">
+				<td></td>
+				<td></td>
+				<td></td>
+				<td class="tw-font-mono">\</td>
+				<td class="tw-font-mono">No newline at end of file</td>
+			</tr>
+		{{end}}
 		{{if $line.Conversations}}
 			<tr class="add-comment" data-line-type="{{.GetHTMLDiffLineType}}">
 				<td class="add-comment-left add-comment-right" colspan="5">
