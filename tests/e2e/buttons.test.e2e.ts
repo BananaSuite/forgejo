@@ -34,18 +34,26 @@ test('Buttons and other controls have consistent height', async ({page}) => {
 });
 
 test('Button visuals', async ({browser}) => {
-  async function getButtonProperties(page, selector) {
-    return await page.locator(selector).evaluate((el) => {
+  async function getButtonProperties(page, selector: string, isHover = false) {
+    const locator = page.locator(selector);
+    if (isHover) await locator.hover();
+
+    const properties = await locator.evaluate((el) => {
       // In Firefox getComputedStyle is undefined if returned from evaluate
       const s = getComputedStyle(el);
       return {
         backgroundColor: s.backgroundColor,
+        color: s.color,
         fontWeight: s.fontWeight,
         opacity: s.opacity,
         pointerEvents: s.pointerEvents,
         borderWidth: s.borderWidth,
       };
     });
+
+    // Reset hover
+    if (isHover) await page.locator('#navbar-logo').hover();
+    return properties;
   }
 
   const context = await browser.newContext({javaScriptEnabled: false});
@@ -54,6 +62,8 @@ test('Button visuals', async ({browser}) => {
   expect(response?.status()).toBe(200);
 
   const transparent = 'rgba(0, 0, 0, 0)';
+
+  // === Properties of regular buttons ===
 
   const primary = await getButtonProperties(page, 'button.primary:not(.disabled)');
   const secondary = await getButtonProperties(page, 'button.secondary:not(.disabled)');
@@ -74,17 +84,39 @@ test('Button visuals', async ({browser}) => {
   expect(primary.backgroundColor).not.toBe(secondary.backgroundColor);
   expect(primary.backgroundColor).not.toBe(danger.backgroundColor);
 
-  // Evaluate changing properties on hover
-  for (const item of [primary, secondary, danger]) {
-    await item.hover();
-    expect(item.backgroundColor).toBe(transparent);
+  // Evaluate outline from `:focus-visible` appearing
+  for (const button of await page.locator('.page-content .button-sequence .button').all()) {
+    // First, get to the element with .focus(), then activate :focus-visible by keyboard
+    await button.focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+
+    expect(await button.evaluate((el) => getComputedStyle(el).outlineWidth)).toBe('3px');
   }
+
+  // === Properties of hovered buttons ===
+
+  const primaryHover = await getButtonProperties(page, 'button.primary:not(.disabled)', true);
+  const secondaryHover = await getButtonProperties(page, 'button.secondary:not(.disabled)', true);
+  const dangerHover = await getButtonProperties(page, 'button.danger:not(.disabled)', true);
+
+  // Primary changes it's background-color but not text color
+  expect(primaryHover.backgroundColor).not.toBe(primary.backgroundColor);
+  expect(primaryHover.color).toBe(primary.color);
+
+  // But it's the opposite for secondary and danger
+  expect(secondaryHover.backgroundColor).toBe(secondary.backgroundColor);
+  expect(secondaryHover.color).not.toBe(secondary.color);
+
+  expect(dangerHover.backgroundColor).toBe(danger.backgroundColor);
+  expect(dangerHover.color).not.toBe(danger.color);
+
+  // === Properties of disabled buttons ===
 
   const primaryDisabled = await getButtonProperties(page, '.button.primary.disabled');
   const secondaryDisabled = await getButtonProperties(page, '.button.secondary.disabled');
   const dangerDisabled = await getButtonProperties(page, '.button.danger.disabled');
 
-  // Evaluate properties specific to disabled buttons
   for (const item of [primaryDisabled, secondaryDisabled, dangerDisabled]) {
     // Evaluate opacity
     expect(item.opacity).toBe('0.55');
@@ -94,15 +126,5 @@ test('Button visuals', async ({browser}) => {
     // Evaluate other properties of non-disabled buttons
     expect(item.backgroundColor).not.toBe(transparent);
     expect(item.fontWeight).toBe('500');
-  }
-
-  // Evaluate outline from `:focus-visible` appearing
-  for (const button of await page.locator('.page-content .button-sequence .button').all()) {
-    // First, get to the element with .focus(), then activate :focus-visible by keyboard
-    await button.focus();
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Shift+Tab');
-
-    expect(await button.evaluate((el) => getComputedStyle(el).outlineWidth)).toBe('3px');
   }
 });
