@@ -33,7 +33,7 @@ test('Buttons and other controls have consistent height', async ({page}) => {
   expect(buttonHeight).toBe(purgeButtonHeight);
 });
 
-test('Button visuals', async ({browser}) => {
+test.describe('Button visuals', () => {
   async function getButtonProperties(page, selector: string, isHover = false) {
     const locator = page.locator(selector);
     if (isHover) await locator.hover();
@@ -56,75 +56,84 @@ test('Button visuals', async ({browser}) => {
     return properties;
   }
 
-  const context = await browser.newContext({javaScriptEnabled: false});
-  const page = await context.newPage();
-  const response = await page.goto('/-/demo/buttons');
-  expect(response?.status()).toBe(200);
+  for (const run of [
+    {title: '<a>-based', selectorPrefix: '.page-content a.button'},
+    {title: '<button>-based', selectorPrefix: '.page-content button.button'},
+  ]) {
+    test(run.title, async ({browser}) => {
+      const context = await browser.newContext({javaScriptEnabled: false});
+      const page = await context.newPage();
+      const response = await page.goto('/-/demo/buttons');
+      expect(response?.status()).toBe(200);
 
-  const transparent = 'rgba(0, 0, 0, 0)';
+      const selectorPrefix = run.selectorPrefix;
+      const transparent = 'rgba(0, 0, 0, 0)';
 
-  // === Properties of regular buttons ===
+      // === Properties of regular buttons ===
 
-  const primary = await getButtonProperties(page, 'button.primary:not(.disabled)');
-  const secondary = await getButtonProperties(page, 'button.secondary:not(.disabled)');
-  const danger = await getButtonProperties(page, 'button.danger:not(.disabled)');
+      const primary = await getButtonProperties(page, `${selectorPrefix}.primary:not(.disabled)`);
+      const secondary = await getButtonProperties(page, `${selectorPrefix}.secondary:not(.disabled)`);
+      const danger = await getButtonProperties(page, `${selectorPrefix}.danger:not(.disabled)`);
 
-  for (const item of [primary, secondary, danger]) {
-    // Evaluate that all buttons have background-color specified
-    expect(item.backgroundColor).not.toBe(transparent);
-    // Evaluate font weights
-    expect(item.fontWeight).toBe('500');
-    // Evaluate opacity
-    expect(item.opacity).toBe('1');
-    // Evaluate border width
-    expect(item.borderWidth).toBe('1px');
-  }
+      for (const item of [primary, secondary, danger]) {
+        // Evaluate that all buttons have background-color specified
+        expect(item.backgroundColor).not.toBe(transparent);
+        // Evaluate font weights
+        expect(item.fontWeight).toBe('500');
+        // Evaluate opacity
+        expect(item.opacity).toBe('1');
+        // Evaluate border width
+        expect(item.borderWidth).toBe('1px');
+      }
 
-  // Evaluate that background-colors are different
-  expect(primary.backgroundColor).not.toBe(secondary.backgroundColor);
-  expect(primary.backgroundColor).not.toBe(danger.backgroundColor);
+      // Evaluate that background-colors are different
+      expect(primary.backgroundColor).not.toBe(secondary.backgroundColor);
+      expect(primary.backgroundColor).not.toBe(danger.backgroundColor);
 
-  // Evaluate outline from `:focus-visible` appearing
-  for (const button of await page.locator('.page-content .button-sequence .button').all()) {
-    // First, get to the element with .focus(), then activate :focus-visible by keyboard
-    await button.focus();
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Shift+Tab');
+      // Evaluate outline from `:focus-visible` appearing
+      for (const button of await page.locator('.page-content .button-sequence .button').all()) {
+        // First, get to the element with .focus(), then activate :focus-visible by keyboard
+        await button.focus();
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('Shift+Tab');
 
-    expect(await button.evaluate((el) => getComputedStyle(el).outlineWidth)).toBe('3px');
-  }
+        expect(await button.evaluate((el) => getComputedStyle(el).outlineWidth)).toBe('3px');
+      }
 
-  // === Properties of hovered buttons ===
+      // === Properties of hovered buttons ===
 
-  const primaryHover = await getButtonProperties(page, 'button.primary:not(.disabled)', true);
-  const secondaryHover = await getButtonProperties(page, 'button.secondary:not(.disabled)', true);
-  const dangerHover = await getButtonProperties(page, 'button.danger:not(.disabled)', true);
+      const primaryHover = await getButtonProperties(page, `${selectorPrefix}.primary:not(.disabled)`, true);
+      const secondaryHover = await getButtonProperties(page, `${selectorPrefix}.secondary:not(.disabled)`, true);
+      const dangerHover = await getButtonProperties(page, `${selectorPrefix}.danger:not(.disabled)`, true);
 
-  // Primary changes it's background-color but not text color
-  expect(primaryHover.backgroundColor).not.toBe(primary.backgroundColor);
-  expect(primaryHover.color).toBe(primary.color);
+      // Primary changes it's background-color but not text color
+      expect(primaryHover.backgroundColor).not.toBe(primary.backgroundColor);
+      expect(primaryHover.color).toBe(primary.color);
 
-  // But it's the opposite for secondary and danger
-  expect(secondaryHover.backgroundColor).toBe(secondary.backgroundColor);
-  expect(secondaryHover.color).not.toBe(secondary.color);
+      // But it's the opposite for secondary and danger
+      expect(secondaryHover.backgroundColor).toBe(secondary.backgroundColor);
+      expect(secondaryHover.color).not.toBe(secondary.color);
 
-  expect(dangerHover.backgroundColor).toBe(danger.backgroundColor);
-  expect(dangerHover.color).not.toBe(danger.color);
+      expect(dangerHover.backgroundColor).toBe(danger.backgroundColor);
+      expect(dangerHover.color).not.toBe(danger.color);
 
-  // === Properties of disabled buttons ===
+      // === Properties of disabled buttons ===
 
-  const primaryDisabled = await getButtonProperties(page, '.button.primary.disabled');
-  const secondaryDisabled = await getButtonProperties(page, '.button.secondary.disabled');
-  const dangerDisabled = await getButtonProperties(page, '.button.danger.disabled');
+      const primaryDisabled = await getButtonProperties(page, `${selectorPrefix}.primary.disabled`);
+      const secondaryDisabled = await getButtonProperties(page, `${selectorPrefix}.secondary.disabled`);
+      const dangerDisabled = await getButtonProperties(page, `${selectorPrefix}.danger.disabled`);
 
-  for (const item of [primaryDisabled, secondaryDisabled, dangerDisabled]) {
-    // Evaluate opacity
-    expect(item.opacity).toBe('0.55');
-    // Evaluate pointer-events
-    expect(item.pointerEvents).toBe('none');
+      for (const item of [primaryDisabled, secondaryDisabled, dangerDisabled]) {
+        // Evaluate opacity
+        expect(item.opacity).toBe('0.55');
+        // Evaluate pointer-events
+        expect(item.pointerEvents).toBe('none');
 
-    // Evaluate other properties of non-disabled buttons
-    expect(item.backgroundColor).not.toBe(transparent);
-    expect(item.fontWeight).toBe('500');
+        // Evaluate other properties of non-disabled buttons
+        expect(item.backgroundColor).not.toBe(transparent);
+        expect(item.fontWeight).toBe('500');
+      }
+
+    });
   }
 });
