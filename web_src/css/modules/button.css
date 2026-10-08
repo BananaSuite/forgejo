@@ -39,6 +39,7 @@
   &:hover,
   &:focus {
     text-decoration: none;
+    background: var(--button-background-hover, var(--button-background));
     color: var(--button-color-hover, var(--button-color));
   }
 
@@ -58,14 +59,10 @@
 
 .button.primary {
   --button-background: var(--color-primary);
+  --button-background-hover: var(--color-primary-hover);
   --button-border-color: var(--color-primary-dark-2);
   --button-color: var(--color-primary-contrast);
   --button-outline-color: oklch(from var(--button-background) l c h / 0.3);
-
-  &:hover,
-  &:focus {
-    --button-background: var(--color-primary-hover);
-  }
 }
 
 .button.secondary {
