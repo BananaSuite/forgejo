@@ -148,6 +148,7 @@ func Migrate(ctx *context.APIContext) {
 	}
 
 	opts := migrations.MigrateOptions{
+		OriginalURL:    form.CloneAddr,
 		CloneAddr:      remoteAddr,
 		RepoName:       form.RepoName,
 		Description:    form.Description,
@@ -193,26 +194,25 @@ func Migrate(ctx *context.APIContext) {
 
 	opts.MigrateToRepoID = repo.ID
 
+	// A failed migration must not leave the placeholder repository behind:
+	// it would block a retry with the same name until someone deletes it.
+	deletePlaceholder := func() {
+		if errDelete := repo_service.DeleteRepositoryDirectly(ctx, repo.ID, repo_service.DeleteRepositoryOpts{}); errDelete != nil {
+			log.Error("DeleteRepository: %v", errDelete)
+		}
+	}
+
 	defer func() {
 		if e := recover(); e != nil {
 			log.Error("PANIC recovered: %v\nStacktrace: %s", e, log.Stack(2))
-			err = fmt.Errorf("PANIC recover with error %v", e)
-			ctx.Error(http.StatusInternalServerError, "Recovered PANIC with error", err)
-		}
-
-		if err == nil {
-			notify_service.MigrateRepository(ctx, ctx.Doer(), repoOwner, repo)
-			return
-		}
-
-		if repo != nil {
-			if errDelete := repo_service.DeleteRepositoryDirectly(ctx, repo.ID, repo_service.DeleteRepositoryOpts{}); errDelete != nil {
-				log.Error("DeleteRepository: %v", errDelete)
-			}
+			deletePlaceholder()
+			ctx.Error(http.StatusInternalServerError, "Recovered PANIC with error", fmt.Errorf("PANIC recover with error %v", e))
 		}
 	}()
 
-	if repo, err = migrations.MigrateRepository(graceful.GetManager().HammerContext(), ctx.Doer(), repoOwner.Name, opts, nil); err != nil {
+	migratedRepo, err := migrations.MigrateRepository(graceful.GetManager().HammerContext(), ctx.Doer(), repoOwner.Name, opts, nil)
+	if err != nil {
+		deletePlaceholder()
 		handleMigrateError(ctx, repoOwner, err)
 		return
 	}
@@ -223,13 +223,14 @@ func Migrate(ctx *context.APIContext) {
 			HasWiki:     &opts.Wiki,
 		}
 
-		if err = updateRepoUnits(ctx, repoOwner.Name, repo, repoOpt); err != nil {
+		if err := updateRepoUnits(ctx, repoOwner.Name, migratedRepo, repoOpt); err != nil {
 			log.Error("Failed to update units on %s/%s repo. %w", repoOwner.Name, form.RepoName, err)
 		}
 	}
 
+	notify_service.MigrateRepository(ctx, ctx.Doer(), repoOwner, migratedRepo)
 	log.Trace("Repository migrated: %s/%s", repoOwner.Name, form.RepoName)
-	ctx.JSON(http.StatusCreated, convert.ToRepo(ctx, repo, access_model.Permission{AccessMode: perm.AccessModeAdmin}))
+	ctx.JSON(http.StatusCreated, convert.ToRepo(ctx, migratedRepo, access_model.Permission{AccessMode: perm.AccessModeAdmin}))
 }
 
 func handleMigrateError(ctx *context.APIContext, repoOwner *user_model.User, err error) {

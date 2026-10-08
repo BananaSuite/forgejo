@@ -13,12 +13,14 @@ import (
 	"forgejo.org/models/db"
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
+	system_model "forgejo.org/models/system"
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
 	repo_service "forgejo.org/services/repository"
 	"forgejo.org/tests"
 
@@ -755,6 +757,29 @@ func testAPIRepoMigrateConflict(t *testing.T, u *url.URL) {
 		DecodeJSON(t, resp, &respJSON)
 		assert.Equal(t, "The repository with the same name already exists.", respJSON["message"])
 	})
+}
+
+func TestAPIRepoMigrateFailureDeletesRepo(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	defer test.MockVariableValue(&setting.ImportLocalPaths, true)()
+
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	session := loginUser(t, user.Name)
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
+
+	// An existing directory that is not a Git repository passes the address checks, so the clone fails during the migration itself.
+	cloneAddr := t.TempDir()
+	req := NewRequestWithJSON(t, "POST", "/api/v1/repos/migrate", &api.MigrateRepoOptions{
+		CloneAddr:   cloneAddr,
+		RepoOwnerID: user.ID,
+		RepoName:    "migrate-failure",
+	}).AddTokenAuth(token)
+	MakeRequest(t, req, http.StatusUnprocessableEntity)
+
+	unittest.AssertNotExistsBean(t, &repo_model.Repository{OwnerID: user.ID, LowerName: "migrate-failure"})
+
+	unittest.AssertExistsAndLoadBean(t, &system_model.Notice{Type: system_model.NoticeRepository},
+		unittest.Cond("description LIKE ?", "Migrate repository from "+cloneAddr+" failed:%"))
 }
 
 // mirror-sync must fail with "400 (Bad Request)" when an attempt is made to
