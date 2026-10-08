@@ -133,7 +133,6 @@ test.describe('Button visuals', () => {
         expect(item.backgroundColor).not.toBe(transparent);
         expect(item.fontWeight).toBe('500');
       }
-
     });
   }
 });
