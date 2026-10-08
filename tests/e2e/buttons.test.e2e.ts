@@ -74,6 +74,12 @@ test('Button visuals', async ({browser}) => {
   expect(primary.backgroundColor).not.toBe(secondary.backgroundColor);
   expect(primary.backgroundColor).not.toBe(danger.backgroundColor);
 
+  // Evaluate changing properties on hover
+  for (const item of [primary, secondary, danger]) {
+    await item.hover();
+    expect(item.backgroundColor).toBe(transparent);
+  }
+
   const primaryDisabled = await getButtonProperties(page, '.button.primary.disabled');
   const secondaryDisabled = await getButtonProperties(page, '.button.secondary.disabled');
   const dangerDisabled = await getButtonProperties(page, '.button.danger.disabled');
