@@ -228,6 +228,10 @@ func getMembershipsToRemoveNotAdded(
 			if team.OrgID != org.ID {
 				continue
 			}
+			// keep membership if it's added via group team mapping
+			if slices.Contains(membershipsToAdd[orgName], team.LowerName) {
+				continue
+			}
 			if team.IsOwnerTeam() && team.NumMembers == 1 {
 				// skip team if user is last member of owner
 				// team to avoid errors when actually removing
@@ -236,10 +240,7 @@ func getMembershipsToRemoveNotAdded(
 					user.Name, org.Name)
 				continue
 			}
-			// remove membership if it's not added via group team mapping
-			if !slices.Contains(membershipsToAdd[orgName], team.LowerName) {
-				membershipsToRemove[orgName] = append(membershipsToRemove[orgName], team.LowerName)
-			}
+			membershipsToRemove[orgName] = append(membershipsToRemove[orgName], team.LowerName)
 		}
 	}
 
