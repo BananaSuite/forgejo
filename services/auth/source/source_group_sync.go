@@ -260,12 +260,14 @@ func resolveMappedMemberships(
 	// static mappings
 	for group, memberships := range sourceGroupTeamMapping {
 		isUserInGroup := sourceUserGroups.Contains(group)
-		if isUserInGroup {
-			for org, teams := range memberships {
-				membershipsToAdd[org] = append(membershipsToAdd[org], teams...)
+		for org, teams := range memberships {
+			org = strings.ToLower(org)
+			for i, team := range teams {
+				teams[i] = strings.ToLower(team)
 			}
-		} else {
-			for org, teams := range memberships {
+			if isUserInGroup {
+				membershipsToAdd[org] = append(membershipsToAdd[org], teams...)
+			} else {
 				membershipsToRemove[org] = append(membershipsToRemove[org], teams...)
 			}
 		}
