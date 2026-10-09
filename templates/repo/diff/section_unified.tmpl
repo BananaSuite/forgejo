@@ -62,12 +62,16 @@
 			{{end}}
 		</tr>
 		{{if $line.NoNewlineAtEOF}}
-			<tr class="eol-marker nl-1 ol-1">
+			<tr class="eof-marker nl-1 ol-1">
 				<td></td>
 				<td></td>
 				<td></td>
-				<td class="tw-font-mono">\</td>
-				<td class="tw-font-mono">No newline at end of file</td>
+				<td class="lines-type-marker lines-type-marker-old">
+					<span class="tw-font-mono" data-type-marker="\"></span>
+				</td>
+				<td class="tw-font-mono">
+					<code class="code-inner">No newline at end of file</code>
+				</td>
 			</tr>
 		{{end}}
 		{{if $line.Conversations}}

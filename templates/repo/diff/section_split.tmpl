@@ -109,21 +109,18 @@
 			</tr>
 			{{if and (eq .GetType 3) $hasmatch}}
 				{{$match := index $section.Lines $line.Match}}
-				<tr class="eol-marker nl-1 ol-1">
-					<td></td>
-					<td></td>
-					{{if $line.NoNewlineAtEOF}}
-						<td class="tw-font-mono">\</td>
-						<td class="tw-font-mono">No newline at end of file</td>
-					{{else if $match.NoNewlineAtEOF}}
+				{{if $line.NoNewlineAtEOF}}
+					<tr class="eof-marker nl-1 ol-1">
 						<td></td>
 						<td></td>
-						<td></td>
-						<td></td>
-						<td class="tw-font-mono">\</td>
-						<td class="tw-font-mono">No newline at end of file</td>
-					{{end}}
-				</tr>
+						<td class="lines-type-marker lines-type-marker-old">
+							<span class="tw-font-mono" data-type-marker="\"></span>
+						</td>
+						<td class="tw-font-mono">
+						  <code class="code-inner">No newline at end of file</code>
+						</td>
+					</tr>
+				{{end}}
 				{{if or $line.Conversations $match.Conversations}}
 					<tr class="add-comment" data-line-type="{{.GetHTMLDiffLineType}}">
 						<td class="add-comment-left" colspan="4">
@@ -166,6 +163,22 @@
 					</td>
 				</tr>
 			{{end}}
+		{{end}}
+		{{if and (eq .GetType 2) .NoNewlineAtEOF}}
+			<tr class="eof-marker nl-1 ol-1">
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td class="lines-type-marker lines-type-marker-new">
+					<span class="tw-font-mono" data-type-marker="\"></span>
+				</td>
+				<td class="tw-font-mono">
+				  <code class="code-inner">No newline at end of file</code>
+				</td>
+			</tr>
 		{{end}}
 	{{end}}
 {{end}}
