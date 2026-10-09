@@ -722,7 +722,8 @@ export function initRepoPullRequestReview() {
             <td class="add-comment-left add-comment-right" colspan="5"></td>
           `}
         </tr>`);
-      $(tr).after($ntr);
+      const eof = tr.nextElementSibling;
+      $(eof?.classList.contains('eof-marker') ? eof : tr).after($ntr);
     }
 
     const $td = $ntr.find(`.add-comment-${side}`);
