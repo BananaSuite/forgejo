@@ -163,7 +163,7 @@ func TestProjectAPICRUD(t *testing.T) {
 	readToken := getTokenForLoggedInUser(t, session,
 		auth_model.AccessTokenScopeReadProject,
 	)
-	org := forgery.CreateOrganisation(t, user, nil)
+	org := forgery.CreateOrganisation(t, user)
 	userRepo := forgery.CreateRepository(t, user, nil)
 	orgRepo := forgery.CreateRepository(t, org.AsUser(), nil)
 
