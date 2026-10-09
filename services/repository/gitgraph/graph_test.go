@@ -234,7 +234,7 @@ func TestCommitStringParsing(t *testing.T) {
 		commitMessage string
 	}{
 		{true, "normal", "not a fancy message"},
-		{true, "extra pipe", "An extra pipe: |"},
+		{true, "extra pipe", "An extra separator: \x1e"},
 		{true, "extra 'Data:'", "DATA: might be trouble"},
 	}
 
