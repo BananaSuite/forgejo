@@ -235,4 +235,3 @@ func TestCreateBranchButtonVisibility(t *testing.T) {
 		})
 	})
 }
-
