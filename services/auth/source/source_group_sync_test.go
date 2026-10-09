@@ -455,26 +455,50 @@ func TestResolveMappedMembershipsUpperCaseOrgTeam(t *testing.T) {
 	org = unittest.AssertExistsAndLoadBean(t, org)
 	require.Equal(t, "Org25", org.Name)
 
-	srcGroups := container.SetOf(
-		"dyn-org25-notowners",
-		"dyn-Org25-NotOwners",
-		"dyn-ORG25-NOTOWNERS",
-	)
-	mappings := map[string]map[string][]string{}
-	dynMappings := NewDynGroupMaps([]string{
-		"dyn-{org}-{team}",
-	})
-	dynRemoval := true
-	wantAdd := map[string][]string{
-		"org25": {"notowners"},
-	}
-	wantRemove := map[string][]string{}
-	gotAdd, gotRemove := resolveMappedMemberships(ctx, user,
-		srcGroups, mappings,
-		dynMappings, dynRemoval)
+	t.Run("dynamic mapping", func(t *testing.T) {
+		srcGroups := container.SetOf(
+			"dyn-org25-notowners",
+			"dyn-Org25-NotOwners",
+			"dyn-ORG25-NOTOWNERS",
+		)
+		mappings := map[string]map[string][]string{}
+		dynMappings := NewDynGroupMaps([]string{
+			"dyn-{org}-{team}",
+		})
+		dynRemoval := true
+		wantAdd := map[string][]string{
+			"org25": {"notowners"},
+		}
+		wantRemove := map[string][]string{}
+		gotAdd, gotRemove := resolveMappedMemberships(ctx, user,
+			srcGroups, mappings,
+			dynMappings, dynRemoval)
 
-	assert.Equal(t, wantAdd, gotAdd)
-	assert.Equal(t, wantRemove, gotRemove)
+		assert.Equal(t, wantAdd, gotAdd)
+		assert.Equal(t, wantRemove, gotRemove)
+	})
+	t.Run("static mapping", func(t *testing.T) {
+		// it is possible to configure dynamic removal with only static
+		// mappings and no dynamic mappings, so test it here.
+		srcGroups := container.SetOf(
+			"Org25-NotOwners",
+		)
+		mappings := map[string]map[string][]string{
+			"Org25-NotOwners": {"Org25": {"NotOwners"}},
+		}
+		dynMappings := NewDynGroupMaps([]string{})
+		dynRemoval := true
+		wantAdd := map[string][]string{
+			"org25": {"notowners"},
+		}
+		wantRemove := map[string][]string{}
+		gotAdd, gotRemove := resolveMappedMemberships(ctx, user,
+			srcGroups, mappings,
+			dynMappings, dynRemoval)
+
+		assert.Equal(t, wantAdd, gotAdd)
+		assert.Equal(t, wantRemove, gotRemove)
+	})
 }
 
 func TestSyncGroupsToTeams(t *testing.T) {
