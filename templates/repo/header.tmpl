@@ -154,6 +154,9 @@
 				{{if .Permission.CanRead $.UnitTypeWiki}}
 					<a class="{{if .PageIsWiki}}active {{end}}item" href="{{.RepoLink}}/wiki">
 						{{svg "octicon-book"}} {{ctx.Locale.Tr "repo.wiki"}}
+						{{if .NumWikiPages}}
+							<span class="ui small label">{{CountFmt .NumWikiPages}}</span>
+						{{end}}
 					</a>
 				{{end}}
 

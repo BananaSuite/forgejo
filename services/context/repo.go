@@ -595,6 +595,11 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 		ctx.ServerError("GetPackageCountByRepoID", err)
 		return nil
 	}
+	ctx.Data["NumWikiPages"], err = RepoNumWikiPages(ctx, repo)
+	if err != nil {
+		ctx.ServerError("GetNumWikiPagesByRepoID", err)
+		return nil
+	}
 	ctx.Data["NumOpenActionRuns"] = actions.RepoNumOpenActions(ctx, ctx.Repo.Repository.ID)
 
 	ctx.Data["Title"] = owner.Name + "/" + repo.Name
@@ -1155,4 +1160,37 @@ func UnitTypes() func(ctx *Context) {
 		ctx.Data["UnitTypePackages"] = unit_model.TypePackages
 		ctx.Data["UnitTypeActions"] = unit_model.TypeActions
 	}
+}
+
+func RepoNumWikiPages(ctx context.Context, repo *repo_model.Repository) (int, error) {
+	// see web/repo/wiki.go
+
+	if !repo.HasWiki() {
+		return 0, nil
+	}
+
+	gitRepo, err := git.OpenRepository(ctx, repo.WikiPath())
+	if err != nil {
+		return 0, err
+	}
+	defer gitRepo.Close()
+
+	commit, err := gitRepo.GetBranchCommit(repo.GetWikiBranchName())
+	if err != nil {
+		return 0, err
+	}
+
+	treePath := ""
+	tree, err := commit.SubTree(treePath)
+	if err != nil {
+		return 0, err
+	}
+
+	allEntries, err := tree.ListEntries()
+	if err != nil {
+		return 0, err
+	}
+
+	length := len(allEntries)
+	return length, nil
 }
