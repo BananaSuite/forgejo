@@ -61,9 +61,9 @@ func toUser(ctx context.Context, user *user_model.User, signed, authed bool) *ap
 		Website:     user.Website,
 		Description: user.Description,
 		// counter's
-		Followers:    -1, // https://codeberg.org/forgejo/forgejo/pulls/12891#issuecomment-18466403
-		Following:    -1, // not necessary data for client
-		StarredRepos: -1, // adding -1 for compatibilty only
+		Followers:         -1, // https://codeberg.org/forgejo/forgejo/pulls/12891#issuecomment-18466403
+		Following:         -1, // not necessary data for client
+		StarredReposCount: -1, // adding -1 for compatibilty only
 	}
 
 	result.Visibility = user.Visibility.String()

@@ -134,7 +134,6 @@ func TestGetUserStarCount(t *testing.T) {
 	require.EqualValues(t, 5, count,
 		"site admin should see all starred repos, bypassing all privacy filters")
 	user22 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 22})
-		user22.ID, user22.Name, user22.Visibility)
 
 	count, err = repo_model.GetUserStarCount(t.Context(), profileUser, user22)
 	require.NoError(t, err)
