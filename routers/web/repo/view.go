@@ -243,8 +243,8 @@ func getFileReader(ctx gocontext.Context, repoID int64, blob *git.Blob) ([]byte,
 		return buf, dataRc, &fileInfo{isTextFile, false, blob.Size(), nil, st}, nil
 	}
 
-	pointer, _ := lfs.ReadPointerFromBuffer(buf)
-	if !pointer.IsValid() { // fallback to plain file
+	pointer, err := lfs.ReadPointerFromBuffer(buf)
+	if err != nil { // fallback to plain file
 		return buf, dataRc, &fileInfo{isTextFile, false, blob.Size(), nil, st}, nil
 	}
 
@@ -660,6 +660,10 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 		case fInfo.st.Is3MF():
 			ctx.Data["Is3MFFile"] = true
 		}
+	case fInfo.st.IsFont() && setting.UI.FontPreviewEnabled:
+		ctx.Data["IsFontFile"] = true
+		ctx.Data["FontPreviewPangram"] = setting.UI.FontPreviewPangram
+		ctx.Data["FontPreviewSizes"] = []int{12, 18, 24, 36}
 	case fInfo.st.IsImage() && (setting.UI.SVG.Enabled || !fInfo.st.IsSvgImage()):
 		ctx.Data["IsImageFile"] = true
 		ctx.Data["CanCopyContent"] = true
