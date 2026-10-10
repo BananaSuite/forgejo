@@ -17,6 +17,7 @@ import (
 	user_model "forgejo.org/models/user"
 	ansible_module "forgejo.org/modules/packages/ansible"
 	"forgejo.org/tests"
+
 	gouuid "github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
