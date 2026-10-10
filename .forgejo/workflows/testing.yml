@@ -240,7 +240,6 @@ jobs:
           su forgejo -c 'make test-mysql-migration test-mysql'
         timeout-minutes: 120
         env:
-          CI: true
           USE_REPO_TEST_DIR: 1
   test-pgsql:
     if: vars.ROLE == 'forgejo-coding' || vars.ROLE == 'forgejo-testing'
@@ -278,7 +277,6 @@ jobs:
           su forgejo -c 'make test-pgsql-migration test-pgsql'
         timeout-minutes: 120
         env:
-          CI: true
           RACE_ENABLED: true
           USE_REPO_TEST_DIR: 1
           TEST_LDAP: 1
@@ -301,7 +299,6 @@ jobs:
           su forgejo -c '${{ env.INTEGRATION_TESTS_ENV }} make coverage-run-sqlite'
         timeout-minutes: 120
         env:
-          CI: true
           TAGS: sqlite sqlite_unlock_notify
           TEST_TAGS: sqlite sqlite_unlock_notify
           USE_REPO_TEST_DIR: 1
