@@ -32,6 +32,10 @@ else
 	GOTESTFLAGS ?= -timeout=2h
 endif
 
+ifneq ($(CI), true)
+	GOTESTFLAGS += -v
+endif
+
 XGO_VERSION := go-1.21.x
 
 AIR_PACKAGE ?= github.com/air-verse/air@v1 # renovate: datasource=go
