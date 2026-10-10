@@ -13,6 +13,7 @@ import (
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/util"
 
+	pep440 "github.com/aquasecurity/go-pep440-version"
 	"github.com/hashicorp/go-version"
 	"go.yaml.in/yaml/v3"
 )
@@ -21,8 +22,7 @@ var (
 	ErrMissingManifestFile = util.NewInvalidArgumentErrorf("MANIFEST.json file is missing")
 	ErrMissingRuntimeFile  = util.NewInvalidArgumentErrorf("meta/runtime.yml file is missing")
 
-	reName          = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
-	rePep440Version = regexp.MustCompile(`^((=|==|!=|>|<|>=|<=|~=|===)?([1-9][0-9]*!)?(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))*((a|b|rc)(0|[1-9][0-9]*))?(\.post(0|[1-9][0-9]*))?(\.dev(0|[1-9][0-9]*))?(, )?)+$`)
+	reName = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 )
 
 type CollectionInfo struct {
@@ -213,8 +213,9 @@ func verifyManifestData(data *RawManifest) error {
 
 // Verifies the used data in the meta/runtime.yml file
 func verifyRuntimeData(data *RawRuntimeData) error {
-	if !rePep440Version.MatchString(data.RequiresAnsible) {
-		return util.NewInvalidArgumentErrorf("Invalid version specifier for required ansible")
+	_, err := pep440.NewSpecifiers(data.RequiresAnsible)
+	if err != nil {
+		return err
 	}
 	return nil
 }
