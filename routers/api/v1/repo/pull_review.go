@@ -419,7 +419,10 @@ func CreatePullReviewCommentReply(ctx *context.APIContext) {
 	//     "$ref": "#/responses/validationError"
 
 	opts := web.GetForm(ctx).(*api.CreatePullReviewCommentReplyOptions)
-	parent := ctx.Comment()
+	parent := ctx.LoadComment("id")
+	if ctx.Written() {
+		return
+	}
 
 	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo().Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
