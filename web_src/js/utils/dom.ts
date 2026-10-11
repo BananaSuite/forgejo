@@ -51,10 +51,7 @@ export function toggleElem(el: string | Element | Element[] | NodeListOf<Element
 
 /** Returns `true` if the element has been forcibly hidden. */
 export function isElemHidden(el: Element): boolean {
-  const res: boolean[] = [];
-  elementsCall(el, (e) => res.push(e.classList.contains('tw-hidden')));
-  if (res.length > 1) throw new Error(`isElemHidden doesn't work for multiple elements`);
-  return res[0];
+  return el.classList.contains('tw-hidden');
 }
 
 export function resetForms(el: Element) {
