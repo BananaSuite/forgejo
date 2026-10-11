@@ -5,6 +5,7 @@ package repo
 
 import (
 	"context"
+	"strings"
 
 	"forgejo.org/models/db"
 	"forgejo.org/models/perm"
@@ -124,47 +125,44 @@ func GetReviewers(ctx context.Context, repo *Repository, doerID, posterID int64)
 		return nil, err
 	}
 
-	cond := builder.And(builder.Neq{"`user`.id": posterID}).
-		And(builder.Eq{"`user`.is_active": true})
+	candidateQueries := []string{
+		`SELECT user_id AS id FROM access WHERE repo_id = ? AND mode >= ?`,
+	}
+	candidateArgs := []any{repo.ID, perm.AccessModeRead}
 
 	if repo.IsPrivate || repo.Owner.Visibility == api.VisibleTypePrivate {
-		// This a private repository:
-		// Anyone who can read the repository is a requestable reviewer
-
-		cond = cond.And(builder.In("`user`.id",
-			builder.Select("user_id").From("access").Where(
-				builder.Eq{"repo_id": repo.ID}.
-					And(builder.Gte{"mode": perm.AccessModeRead}),
-			),
-		))
-
 		if repo.Owner.Type == user_model.UserTypeIndividual && repo.Owner.ID != posterID {
-			// as private *user* repos don't generate an entry in the `access` table,
-			// the owner of a private repo needs to be explicitly added.
-			cond = cond.Or(builder.Eq{"`user`.id": repo.Owner.ID})
+			candidateQueries = append(candidateQueries, `SELECT ? AS id`)
+			candidateArgs = append(candidateArgs, repo.Owner.ID)
 		}
 	} else {
-		// This is a "public" repository:
-		// Any user that has read access, is a watcher or organization member can be requested to review
-		cond = cond.And(builder.And(builder.In("`user`.id",
-			builder.Select("user_id").From("access").
-				Where(builder.Eq{"repo_id": repo.ID}.
-					And(builder.Gte{"mode": perm.AccessModeRead})),
-		).Or(builder.In("`user`.id",
-			builder.Select("user_id").From("watch").
-				Where(builder.Eq{"repo_id": repo.ID}.
-					And(
-						// Only care about user watching this repo's pull requests.
-						builder.Eq{"`watch`.watch_selection_pull_requests": true},
-					)),
-		).Or(builder.In("`user`.id",
-			builder.Select("uid").From("org_user").
-				Where(builder.Eq{"org_id": repo.OwnerID}),
-		)))))
+		candidateQueries = append(
+			candidateQueries,
+			`SELECT user_id AS id FROM watch WHERE repo_id = ? AND watch_selection_pull_requests = true`,
+			`SELECT uid AS id FROM org_user WHERE org_id = ?`,
+		)
+		candidateArgs = append(candidateArgs, repo.ID, repo.OwnerID)
 	}
 
+	cond := builder.And(
+		builder.Neq{"`user`.id": posterID},
+		builder.Eq{"`user`.is_active": true},
+	)
+
+	query, condArgs, err := builder.Select("`user`.*").
+		From("("+strings.Join(candidateQueries, " UNION ")+")", "AS candidate").
+		Join("INNER", "user", "user.id = candidate.id").
+		Where(cond).
+		OrderBy(user_model.GetOrderByName()).
+		ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	args := append(candidateArgs, condArgs...)
 	users := make([]*user_model.User, 0, 8)
-	return users, db.GetEngine(ctx).Where(cond).OrderBy(user_model.GetOrderByName()).Find(&users)
+	err = db.GetEngine(ctx).SQL(query, args...).Find(&users)
+	return users, err
 }
 
 // GetIssuePostersWithSearch returns up to 30 users whose username starts with or full_name contains the given search string for the given repository.
