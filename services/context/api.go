@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	auth_model "forgejo.org/models/auth"
@@ -654,5 +655,6 @@ func (ctx *APIContext) IsUserRepoWriter(unitTypes []unit.Type) bool {
 // This should be used to return information in the way that the Github API
 // specifies it. Avoids breaking compatibility with non-Github API clients.
 func (ctx *APIContext) AcceptsGithubResponse() bool {
-	return ctx.Req.Header.Get("Accept") == "application/vnd.github+json"
+	r := regexp.MustCompile(`application/vnd\.github(\.[^+]+)?\+json`)
+	return r.MatchString(ctx.Req.Header.Get("Accept"))
 }
