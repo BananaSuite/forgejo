@@ -51,7 +51,7 @@ func Test_NodeInfoWellKnownUnmarshalJSON(t *testing.T) {
 func Test_NodeInfoWellKnownValidate(t *testing.T) {
 	sut := NodeInfoWellKnown{Href: "https://federated-repo.prod.meissa.de/api/v1/nodeinfo"}
 	valid, err := validation.IsValid(sut)
-	require.True(t, valid, "sut should be valid, %v, %v", sut, err)
+	assert.True(t, valid, "sut '%v' should be valid: %v", sut, err)
 
 	sut = NodeInfoWellKnown{Href: "./federated-repo.prod.meissa.de/api/v1/nodeinfo"}
 	_, err = validation.IsValid(sut)

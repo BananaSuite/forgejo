@@ -25,7 +25,7 @@ func Test_FederationHostValidation(t *testing.T) {
 		HostSchema:     "https",
 	}
 	valid, err := validation.IsValid(sut)
-	assert.True(t, valid, "sut should be valid but was %q", err)
+	assert.True(t, valid, "sut '%v' should be valid: %v", sut, err)
 
 	sut = FederationHost{
 		HostFqdn: "",
@@ -98,7 +98,7 @@ func Test_FederationHostDefaultPort(t *testing.T) {
 		HostSchema:     "https",
 	}
 	valid, err := validation.IsValid(sut)
-	assert.True(t, valid, "sut should be valid but was %q", err)
+	assert.True(t, valid, "sut '%v' should be valid: %v", sut, err)
 
 	url := sut.AsURL()
 	require.Equal(t, "https://host.do.main", url.String())

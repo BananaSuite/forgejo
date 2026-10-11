@@ -19,7 +19,7 @@ func Test_FederatedUserValidation(t *testing.T) {
 		InboxPath:        "/api/v1/activitypub/user-id/12/inbox",
 	}
 	valid, err := validation.IsValid(sut)
-	assert.True(t, valid, "sut should be valid but was %q", err)
+	assert.True(t, valid, "sut '%v' should be valid: %v", sut, err)
 
 	sut = FederatedUser{
 		ExternalID:       "12",

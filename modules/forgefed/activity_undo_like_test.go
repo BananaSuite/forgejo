@@ -14,7 +14,6 @@ import (
 	"forgejo.org/modules/validation"
 
 	ap "github.com/go-ap/activitypub"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_NewForgeUndoLike(t *testing.T) {
@@ -29,13 +28,18 @@ func Test_NewForgeUndoLike(t *testing.T) {
 
 	startTime, _ := time.Parse("2006-Jan-02", "2024-Mar-27")
 	sut, err := forgefed.NewForgeUndoLike(actorIRI, objectIRI, startTime)
-	require.NoError(t, err)
-
-	valid, _ := validation.IsValid(sut)
-	require.True(t, valid, "sut expected to be valid: %v\n", sut.Validate())
+	if err != nil {
+		t.Errorf("unexpected error: %v\n", err)
+	}
+	if valid, _ := validation.IsValid(sut); !valid {
+		t.Errorf("sut expected to be valid: %v\n", sut.Validate())
+	}
 
 	got, err := sut.MarshalJSON()
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf("MarshalJSON() error = \"%v\"", err)
+		return
+	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("MarshalJSON() got = %q, want %q", got, want)
 	}
