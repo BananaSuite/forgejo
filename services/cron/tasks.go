@@ -19,6 +19,7 @@ import (
 	"forgejo.org/modules/process"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/translation"
+
 	"github.com/go-co-op/gocron/v2"
 )
 
