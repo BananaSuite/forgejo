@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"forgejo.org/modules/duration"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -226,7 +228,13 @@ func TestMustDuration(t *testing.T) {
 		sec := cfg.Section("test")
 		sec.NewKey("VALUE", value)
 
-		return sec.Key("VALUE").MustDuration(defaultValue)
+		d, err := sec.Key("VALUE").MustDuration(defaultValue)
+		if err == nil {
+			actual, err := duration.Parse(sec.Key("VALUE").String())
+			require.NoError(t, err)
+			assert.Equal(t, d, actual)
+		}
+		return d, err
 	}
 
 	val, err := test("", time.Hour)
