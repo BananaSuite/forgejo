@@ -108,8 +108,8 @@ func (Project) UpdateProject(ctx *context.APIContext) {
 	//   schema:
 	// 		"$ref": "#/definitions/CreateOrUpdateProjectOptions"
 	// responses:
-	//   "200":
-	//     "description": "Successfull update returns 200 OK"
+	//   "204":
+	//     "description": "Successful update returns 204 No Content"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
@@ -133,8 +133,8 @@ func (Project) DeleteProject(ctx *context.APIContext) {
 	//   type: string
 	//   required: true
 	// responses:
-	//   "200":
-	//     "description": "Successfull delete returns 200 OK"
+	//   "204":
+	//     "description": "Successful delete returns 204 No Content"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 

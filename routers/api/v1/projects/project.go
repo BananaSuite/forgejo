@@ -150,7 +150,7 @@ func UpdateProject(ctx *context.APIContext) {
 		ctx.ServerError("Update Project", err)
 		return
 	}
-	ctx.Status(http.StatusOK)
+	ctx.Status(http.StatusNoContent)
 }
 
 // DeleteProject deletes a project by ID
@@ -161,5 +161,5 @@ func DeleteProject(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.Status(http.StatusOK)
+	ctx.Status(http.StatusNoContent)
 }
