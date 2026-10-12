@@ -252,7 +252,7 @@ func TestProjectAPICRUD(t *testing.T) {
 					Status:      project.Status,
 				}
 				endpoint := fmt.Sprintf("%s/projects/%d", tt.baseURL, project.ID)
-				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusOK, projOpts)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, projOpts)
 				p := unittest.AssertExistsAndLoadBean(t, &project_model.Project{ID: project.ID})
 
 				assert.Equal(t, projOpts.Title, p.Title)
@@ -273,7 +273,7 @@ func TestProjectAPICRUD(t *testing.T) {
 					Status:      project_module.APIStatusClosed.String(),
 				}
 				endpoint := fmt.Sprintf("%s/projects/%d", tt.baseURL, project.ID)
-				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusOK, projOpts)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, projOpts)
 
 				p := unittest.AssertExistsAndLoadBean(t, &project_model.Project{ID: project.ID})
 				assert.Equal(t, isClosed(projOpts.Status), p.IsClosed)
@@ -285,7 +285,7 @@ func TestProjectAPICRUD(t *testing.T) {
 
 				// re-open project
 				projOpts.Status = project_module.APIStatusOpen.String()
-				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusOK, projOpts)
+				jsonRequestWithAuth(t, writeToken, "PATCH", endpoint, http.StatusNoContent, projOpts)
 
 				p = unittest.AssertExistsAndLoadBean(t, &project_model.Project{ID: project.ID})
 				assert.Equal(t, isClosed(projOpts.Status), p.IsClosed)
@@ -314,7 +314,7 @@ func TestProjectAPICRUD(t *testing.T) {
 
 				endpoint := fmt.Sprintf("%s/projects/%v",
 					tt.baseURL, project.ID)
-				requestWithAuth(t, writeToken, "DELETE", endpoint, http.StatusOK)
+				requestWithAuth(t, writeToken, "DELETE", endpoint, http.StatusNoContent)
 
 				unittest.AssertNotExistsBean(t, &project_model.Project{
 					ID: project.ID,
