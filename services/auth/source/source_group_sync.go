@@ -220,16 +220,12 @@ func getMembershipsToRemoveNotAdded(
 
 	// check memberships
 	for _, org := range orgs {
-		orgName := org.LowerName
-		if orgName == "" {
-			orgName = strings.ToLower(org.Name)
-		}
 		for _, team := range teams {
 			if team.OrgID != org.ID {
 				continue
 			}
 			// keep membership if it's added via group team mapping
-			if slices.Contains(membershipsToAdd[orgName], team.LowerName) {
+			if slices.Contains(membershipsToAdd[org.LowerName], team.LowerName) {
 				continue
 			}
 			if team.IsOwnerTeam() && team.NumMembers == 1 {
@@ -240,7 +236,7 @@ func getMembershipsToRemoveNotAdded(
 					user.Name, org.Name)
 				continue
 			}
-			membershipsToRemove[orgName] = append(membershipsToRemove[orgName], team.LowerName)
+			membershipsToRemove[org.LowerName] = append(membershipsToRemove[org.LowerName], team.LowerName)
 		}
 	}
 
