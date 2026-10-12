@@ -5,6 +5,7 @@ package repo
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"forgejo.org/models/db"
@@ -119,7 +120,7 @@ func GetRepoAssignees(ctx context.Context, repo *Repository) (_ []*user_model.Us
 // * for public repositories this returns all users that have read access or higher to the repository,
 // all repo watchers and all organization members.
 // TODO: may be we should have a busy choice for users to block review request to them.
-func GetReviewers(ctx context.Context, repo *Repository, doerID, posterID int64) ([]*user_model.User, error) {
+func GetReviewers(ctx context.Context, repo *Repository, posterID int64) ([]*user_model.User, error) {
 	// Get the owner of the repository - this often already pre-cached and if so saves complexity for the following queries
 	if err := repo.LoadOwner(ctx); err != nil {
 		return nil, err
@@ -131,11 +132,18 @@ func GetReviewers(ctx context.Context, repo *Repository, doerID, posterID int64)
 	candidateArgs := []any{repo.ID, perm.AccessModeRead}
 
 	if repo.IsPrivate || repo.Owner.Visibility == api.VisibleTypePrivate {
+		// If the repository is private and owned by an individual user, add the
+		// owner's user ID as a reviewer canidate
 		if repo.Owner.Type == user_model.UserTypeIndividual && repo.Owner.ID != posterID {
 			candidateQueries = append(candidateQueries, `SELECT ? AS id`)
 			candidateArgs = append(candidateArgs, repo.Owner.ID)
 		}
 	} else {
+		// If the repository is public, add all user IDs of users watching pull
+		// requests and members of the organization the repository is part of.
+		// Since organizations are a superset of users and are stored in the same
+		// table with a different user type, uncoditionally using the repository
+		// owner ID will return no users when it is of an individual user.
 		candidateQueries = append(
 			candidateQueries,
 			`SELECT user_id AS id FROM watch WHERE repo_id = ? AND watch_selection_pull_requests = true`,
@@ -144,14 +152,17 @@ func GetReviewers(ctx context.Context, repo *Repository, doerID, posterID int64)
 		candidateArgs = append(candidateArgs, repo.ID, repo.OwnerID)
 	}
 
+	// Filter out inactive users and the user who created the pull request
 	cond := builder.And(
 		builder.Neq{"`user`.id": posterID},
 		builder.Eq{"`user`.is_active": true},
 	)
 
 	query, condArgs, err := builder.Select("`user`.*").
+		// Union the SQL queries which have been constructed above, returning a
+		// deduplicated(!) list of user IDs
 		From("("+strings.Join(candidateQueries, " UNION ")+")", "AS candidate").
-		Join("INNER", "user", "user.id = candidate.id").
+		Join("INNER", "`user`", "`user`.id = candidate.id").
 		Where(cond).
 		OrderBy(user_model.GetOrderByName()).
 		ToSQL()
@@ -159,7 +170,7 @@ func GetReviewers(ctx context.Context, repo *Repository, doerID, posterID int64)
 		return nil, err
 	}
 
-	args := append(candidateArgs, condArgs...)
+	args := slices.Concat(candidateArgs, condArgs)
 	users := make([]*user_model.User, 0, 8)
 	err = db.GetEngine(ctx).SQL(query, args...).Find(&users)
 	return users, err
