@@ -111,6 +111,19 @@ func testRepoCommitsWithStatus(t *testing.T, resp, respOne *httptest.ResponseRec
 	}
 }
 
+func TestRepoCommitsCombinedStatusWithoutStatuses(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user2")
+	resp := session.MakeRequest(t, NewRequest(t, "GET", "/api/v1/repos/user2/repo1/commits/65f1bf27bc3bf70f64657658635e66094edbcb4d/status"), http.StatusOK)
+	assert.Equal(t, "0", resp.Header().Get("X-Total-Count"))
+
+	var status api.CombinedStatus
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &status))
+	assert.Equal(t, api.CommitStatusPending, status.State)
+	assert.Equal(t, []*api.CommitStatus{}, status.Statuses)
+}
+
 func TestRepoCommitsWithStatusPending(t *testing.T) {
 	doTestRepoCommitWithStatus(t, "pending", "octicon-dot-fill", "yellow")
 }
