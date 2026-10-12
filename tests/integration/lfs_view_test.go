@@ -693,7 +693,7 @@ func TestLFSPointerViewSimple(t *testing.T) {
 				oidHeader := tableHead.Find("th:nth-child(3)").Text()
 				assert.Equal(t, locale.TrString("repo.settings.lfs_pointers.oid"), oidHeader)
 				inRepoHeader := tableHead.Find("th:nth-child(4)").Text()
-				assert.Equal(t, locale.TrString("repo.settings.lfs.pointers.inRepo"), inRepoHeader)
+				assert.Equal(t, locale.TrString("repo.settings.lfs.pointers.in_repo"), inRepoHeader)
 				inStoreHeader := tableHead.Find("th:nth-child(5)").Text()
 				assert.Equal(t, locale.TrString("repo.settings.lfs.pointers.exists"), inStoreHeader)
 				accessibleHeader := tableHead.Find("th:nth-child(6)").Text()

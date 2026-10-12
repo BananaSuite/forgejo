@@ -8,7 +8,7 @@
 // web_src/js/features/repo-settings.js
 // @watch end
 
-import {expect} from '@playwright/test';
+import {expect, type Page, type Response} from '@playwright/test';
 import {test, dynamic_id} from './utils_e2e.ts';
 import {screenshot} from './shared/screenshots.ts';
 import {validate_form} from './shared/forms.ts';
@@ -137,6 +137,34 @@ test.describe('repo actions variables settings', () => {
 });
 
 test.describe('repo lfs settings', () => {
+  test('file overview settings', async ({page}) => {
+    const response = await page.goto('/user2/lfs/settings/lfs');
+    expect(response?.status()).toBe(200);
+    await screenshot(page);
+
+    // Choose some checkbox to work with
+    const arbitrarilyChosenCheckbox = page.locator('input[aria-label="7b6b2c88db"]');
+
+    // We haven't selected anything yet, so this should be disabled.
+    const deleteSelectedFiles = page.locator('#lfs-files-delete-button');
+    await expect(deleteSelectedFiles).toBeDisabled();
+
+    // Check a checkbox
+    await arbitrarilyChosenCheckbox.check();
+    await expect(arbitrarilyChosenCheckbox).toBeChecked({checked: true});
+    await screenshot(page);
+
+    // Now check the modal behavior
+    await expect(deleteSelectedFiles).toBeEnabled();
+    await deleteSelectedFiles.click();
+    await expect(page.locator('dialog#lfs-files-delete.modal')).toBeVisible();
+    await screenshot(page);
+
+    await page.locator('dialog#lfs-files-delete.modal article > div.actions > button.cancel').click();
+    await expect(page.locator('dialog#lfs-files-delete.modal')).toBeHidden();
+    await screenshot(page);
+  });
+
   test('pointer settings', async ({page}) => {
     const response = await page.goto('/user2/lfs/settings/lfs/pointers');
     expect(response?.status()).toBe(200);
@@ -167,8 +195,7 @@ test.describe('repo lfs settings', () => {
     await screenshot(page);
   });
 
-  test('pointer settings - (un)select all', async ({page}) => {
-    const response = await page.goto('/user2/lfs/settings/lfs/pointers');
+  async function selectAndUnselectAll(page: Page, response: Response, workWithInvalidFile: boolean) {
     expect(response?.status()).toBe(200);
     await screenshot(page);
 
@@ -182,7 +209,9 @@ test.describe('repo lfs settings', () => {
     await expect(checkbox1).toBeChecked({checked: false});
     await expect(checkbox2).toBeChecked({checked: false});
     await expect(checkbox3).toBeChecked({checked: false});
-    await expect(checkbox4).toBeChecked({checked: false});
+    if (workWithInvalidFile) {
+      await expect(checkbox4).toBeChecked({checked: false});
+    }
     await expect(checkbox5).toBeChecked({checked: false});
 
     // Let's "select all" (out of those that are in-repo)
@@ -193,7 +222,9 @@ test.describe('repo lfs settings', () => {
     await expect(checkbox1).toBeChecked({checked: true});
     await expect(checkbox2).toBeChecked({checked: true});
     await expect(checkbox3).toBeChecked({checked: true});
-    await expect(checkbox4).toBeChecked({checked: false});
+    if (workWithInvalidFile) {
+      await expect(checkbox4).toBeChecked({checked: false});
+    }
     await expect(checkbox5).toBeChecked({checked: true});
 
     await screenshot(page);
@@ -205,10 +236,28 @@ test.describe('repo lfs settings', () => {
     await expect(checkbox1).toBeChecked({checked: false});
     await expect(checkbox2).toBeChecked({checked: false});
     await expect(checkbox3).toBeChecked({checked: false});
-    await expect(checkbox4).toBeChecked({checked: false});
+    if (workWithInvalidFile) {
+      await expect(checkbox4).toBeChecked({checked: false});
+    }
     await expect(checkbox5).toBeChecked({checked: false});
 
     await screenshot(page);
+  }
+
+  // no assertions as the login in this test case is extracted for reuse
+  // eslint-disable-next-line playwright/expect-expect
+  test('file overview settings - (un)select all', async ({page}) => {
+    const response = await page.goto('/user2/lfs/settings/lfs');
+    // should never show 'invalid files'
+    await selectAndUnselectAll(page, response, false);
+  });
+
+  // no assertions as the login in this test case is extracted for reuse
+  // eslint-disable-next-line playwright/expect-expect
+  test('pointer settings - (un)select all', async ({page}) => {
+    const response = await page.goto('/user2/lfs/settings/lfs/pointers');
+    // blob pointer can point to invalid git lfs file
+    await selectAndUnselectAll(page, response, true);
   });
 
   test('pointer settings - reset filters', async ({page}) => {

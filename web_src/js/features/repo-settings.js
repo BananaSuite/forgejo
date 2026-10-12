@@ -107,43 +107,9 @@ export function initRepoSettingBranches() {
   document.getElementById('status_check_contexts').addEventListener('input', onInputDebounce(markMatchedStatusChecks));
 }
 
-export function initRepoSettingLfsPointers() {
+export function initRepoSettingLfs() {
   const lfsFilesTable = document.getElementById('lfs-files-table');
   if (!lfsFilesTable) return;
-
-  const searchForm = pageData.repoLfsPointersSearchForm;
-  if (!searchForm) return;
-
-  const form = document.getElementById('lfs-pointers-search-form');
-  if (!form) return;
-
-  if (searchForm.PointerFilterMap) {
-    for (const [k, v] of Object.entries(searchForm.PointerFilterMap)) {
-      if (!v) continue;
-      for (const input of form.querySelectorAll(`input[name="pointer_filter[${k}]"][value="${v}"]`)) {
-        input.checked = true;
-      }
-    }
-  }
-
-  for (const radio of form.querySelectorAll('input[type=radio]')) {
-    radio.addEventListener('click', () => {
-      form.submit();
-    });
-  }
-
-  const resetButtons = form.querySelectorAll('.j-reset-pointer-filter');
-  for (const button of resetButtons) {
-    button.addEventListener('click', (e) => {
-      e.preventDefault();
-      for (const input of form.querySelectorAll('input[type=radio]')) {
-        if (input.name.startsWith('pointer_filter[')) {
-          input.checked = false;
-        }
-      }
-      form.submit();
-    });
-  }
 
   const deleteButton = document.getElementById('lfs-files-delete-button');
 
@@ -192,5 +158,40 @@ export function initRepoSettingLfsPointers() {
     }
 
     updateSelectAllCheckboxState();
+  }
+
+  // Filtering for LFS pointers
+  const searchForm = pageData.repoLfsPointersSearchForm;
+  if (!searchForm) return;
+
+  const form = document.getElementById('lfs-pointers-search-form');
+  if (!form) return;
+
+  if (searchForm.PointerFilterMap) {
+    for (const [k, v] of Object.entries(searchForm.PointerFilterMap)) {
+      if (!v) continue;
+      for (const input of form.querySelectorAll(`input[name="pointer_filter[${k}]"][value="${v}"]`)) {
+        input.checked = true;
+      }
+    }
+  }
+
+  for (const radio of form.querySelectorAll('input[type=radio]')) {
+    radio.addEventListener('click', () => {
+      form.submit();
+    });
+  }
+
+  const resetButtons = form.querySelectorAll('.j-reset-pointer-filter');
+  for (const button of resetButtons) {
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      for (const input of form.querySelectorAll('input[type=radio]')) {
+        if (input.name.startsWith('pointer_filter[')) {
+          input.checked = false;
+        }
+      }
+      form.submit();
+    });
   }
 }
