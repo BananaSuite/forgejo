@@ -38,6 +38,8 @@ import (
 	"code.forgejo.org/go-chi/cache"
 )
 
+var ghMediaRE = regexp.MustCompile(`application/vnd\.github(\.[^+]+)?\+json`)
+
 // APIContext is a specific context for API service
 type APIContext struct {
 	*Base
@@ -655,6 +657,5 @@ func (ctx *APIContext) IsUserRepoWriter(unitTypes []unit.Type) bool {
 // This should be used to return information in the way that the Github API
 // specifies it. Avoids breaking compatibility with non-Github API clients.
 func (ctx *APIContext) AcceptsGithubResponse() bool {
-	r := regexp.MustCompile(`application/vnd\.github(\.[^+]+)?\+json`)
-	return r.MatchString(ctx.Req.Header.Get("Accept"))
+	return ghMediaRE.MatchString(ctx.Req.Header.Get("Accept"))
 }
