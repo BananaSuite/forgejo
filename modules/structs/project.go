@@ -18,7 +18,7 @@ type Project struct {
 	OwnerName    string `json:"owner_name"`
 	RepoName     string `json:"repo_name"`
 	Status       string `json:"status"`
-	OwnerType    string `json:"project_type"`
+	OwnerType    string `json:"owner_type"`
 	TemplateType string `json:"template_type"`
 	CardType     string `json:"card_type"`
 }
