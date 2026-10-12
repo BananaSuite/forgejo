@@ -428,12 +428,12 @@ func TestMoveIssuesOnProjectColumnErrors(t *testing.T) {
 
 	for _, tt := range []struct {
 		name          string
-		projectIssues []project_structs.MovedProjectIssue
+		projectIssues []project_structs.MoveProjectIssue
 		expectError   string
 	}{
 		{
 			name: "Duplicate Issue IDs",
-			projectIssues: []project_structs.MovedProjectIssue{
+			projectIssues: []project_structs.MoveProjectIssue{
 				{IssueID: int64(1), Sorting: int64(2)},
 				{IssueID: int64(1), Sorting: int64(1)},
 			},
@@ -441,7 +441,7 @@ func TestMoveIssuesOnProjectColumnErrors(t *testing.T) {
 		},
 		{
 			name: "Invalid Issue ID",
-			projectIssues: []project_structs.MovedProjectIssue{
+			projectIssues: []project_structs.MoveProjectIssue{
 				{IssueID: int64(1234567890), Sorting: int64(2)},
 				{IssueID: int64(1), Sorting: int64(1)},
 			},
@@ -449,7 +449,7 @@ func TestMoveIssuesOnProjectColumnErrors(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			pIs := &project_structs.MovedIssuesOption{
+			pIs := &project_structs.MoveIssuesOption{
 				ProjectIssues: tt.projectIssues,
 			}
 			err := MoveIssuesOnProjectColumn(t.Context(), column, pIs)
@@ -673,8 +673,8 @@ func TestCUDProject(t *testing.T) {
 		pI2 := unittest.AssertExistsAndLoadBean(t, &project_model.ProjectIssue{ID: 2})
 
 		// move/sort issues
-		pIs := &project_structs.MovedIssuesOption{
-			ProjectIssues: []project_structs.MovedProjectIssue{
+		pIs := &project_structs.MoveIssuesOption{
+			ProjectIssues: []project_structs.MoveProjectIssue{
 				{
 					IssueID: pI1.IssueID,
 					Sorting: int64(2),

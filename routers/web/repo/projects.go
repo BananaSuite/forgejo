@@ -566,7 +566,7 @@ func MoveIssues(ctx *context.Context) {
 		return
 	}
 
-	form := &project_structs.MovedIssuesOption{}
+	form := &project_structs.MoveIssuesOption{}
 	if err = json.NewDecoder(ctx.Req.Body).Decode(&form); err != nil {
 		ctx.ServerError("DecodeMovedIssuesForm", err)
 		return

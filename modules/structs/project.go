@@ -23,16 +23,16 @@ type Project struct {
 	CardType     string `json:"card_type"`
 }
 
-type MovedProjectIssue struct {
+type MoveProjectIssue struct {
 	IssueID int64 `json:"issueID"`
 	Sorting int64 `json:"sorting"`
 }
 
-type MovedIssuesOption struct {
-	ProjectIssues []MovedProjectIssue `json:"issues"`
+type MoveIssuesOption struct {
+	ProjectIssues []MoveProjectIssue `json:"issues"`
 }
 
-func (m *MovedIssuesOption) GetIssueIDs() []int64 {
+func (m *MoveIssuesOption) GetIssueIDs() []int64 {
 	issueIDs := make([]int64, 0, len(m.ProjectIssues))
 	for _, issue := range m.ProjectIssues {
 		issueIDs = append(issueIDs, issue.IssueID)
@@ -40,7 +40,7 @@ func (m *MovedIssuesOption) GetIssueIDs() []int64 {
 	return issueIDs
 }
 
-func (m *MovedIssuesOption) GetSortingsMap() map[int64]int64 {
+func (m *MoveIssuesOption) GetSortingsMap() map[int64]int64 {
 	sortedIssueIDs := make(map[int64]int64)
 	for _, issue := range m.ProjectIssues {
 		sortedIssueIDs[issue.Sorting] = issue.IssueID
