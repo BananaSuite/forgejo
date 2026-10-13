@@ -240,6 +240,14 @@ func TestProjectAPICRUD(t *testing.T) {
 			DecodeJSON(t, resp, &projResp)
 
 			assert.Equal(t, project.ID, projResp.ID)
+			assert.Equal(t, project.Title, projResp.Title)
+			assert.Equal(t, project.Description, projResp.Description)
+			assert.Equal(t, project.OwnerName, projResp.OwnerName)
+			assert.Equal(t, project.RepoName, projResp.RepoName)
+			assert.Equal(t, project.Status, projResp.Status)
+			assert.Equal(t, project.OwnerType, projResp.OwnerType)
+			assert.Equal(t, project.TemplateType, projResp.TemplateType)
+			assert.Equal(t, project.CardType, projResp.CardType)
 
 			// Update properties of a project
 			t.Run("Update properties of project", func(t *testing.T) {

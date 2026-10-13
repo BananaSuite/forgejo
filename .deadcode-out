@@ -228,6 +228,9 @@ forgejo.org/modules/util
 forgejo.org/modules/util/filebuffer
 	CreateFromReader
 
+forgejo.org/modules/validation
+	IsErrNotValid
+
 forgejo.org/modules/web
 	RouteMock
 	RouteMockReset

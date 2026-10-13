@@ -133,20 +133,6 @@ func GetSearchOpts(id int64, isShowClosed bool, sortType, keyword string, ownerT
 	return opts
 }
 
-// SetProjectOwnerAndRepo sets the owner and repo in the project if they are missing
-func SetProjectOwnerAndRepo(
-	p *project_model.Project,
-	setOwner *user_model.User,
-	setRepo *repo_model.Repository,
-) {
-	if p.Owner == nil {
-		p.Owner = setOwner
-	}
-	if p.Repo == nil && setRepo != nil {
-		p.Repo = setRepo
-	}
-}
-
 // GetProjectByIDForOwner Fetches a Project by its ID from the DB
 // and checks if it belongs to the given owner
 func GetProjectByIDForOwner(ctx context.Context, projectID, ownerID int64, repo *repo_model.Repository) (*project_model.Project, error) {

@@ -89,9 +89,9 @@ func ListProjects(ctx *context.APIContext) {
 	// set owner and repo in projects if set by caller
 	for _, p := range projects {
 		if ownerType == project_module.APIOwnerTypeRepository {
-			project_service.SetProjectOwnerAndRepo(p, nil, repo)
+			p.Repo = repo
 		} else {
-			project_service.SetProjectOwnerAndRepo(p, owner, nil)
+			p.Owner = owner
 		}
 	}
 
@@ -107,10 +107,11 @@ func GetProject(ctx *context.APIContext) {
 	var project *project_model.Project
 	if ownerType == project_module.APIOwnerTypeRepository {
 		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project().ProjectID, repo.ID)
+		project.Repo = repo
 	} else {
 		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project().ProjectID, owner.ID)
+		project.Owner = owner
 	}
-	project_service.SetProjectOwnerAndRepo(project, owner, repo)
 	if err != nil {
 		if project_model.IsErrProjectNotExist(err) {
 			ctx.NotFound("Get Project", err)
