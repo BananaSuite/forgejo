@@ -37,6 +37,7 @@ type Project struct {
 	ProjectID       int64
 	ProjectColumnID int64
 	ProjectIssueID  int64
+	APIOwnerType    project_module.APIOwnerType
 }
 
 // ReqProjectIDAssignableToIssueAndSetData expects a repository to be set in context
@@ -137,16 +138,21 @@ func ProjectAssignment(ctx *APIContext) {
 	}
 	columnID := ctx.ParamsInt64("column_id")
 	issueID := ctx.ParamsInt64("issue_id")
+	var ownerType project_module.APIOwnerType
 
+	if ctx.Project() != nil {
+		ownerType = ctx.Project().APIOwnerType
+	}
 	ctx.SetProject(&Project{
 		ProjectID:       projectID,
 		ProjectColumnID: columnID,
 		ProjectIssueID:  issueID,
+		APIOwnerType:    ownerType,
 	})
 }
 
 func ReqProjectReadPermissions(ctx *APIContext) {
-	hasRead, err := hasReadProjectPermission(ctx, ctx.Data["OwnerType"], ctx.Doer(), ctx.User(), ctx.Repo())
+	hasRead, err := hasReadProjectPermission(ctx, ctx.Project().APIOwnerType, ctx.Doer(), ctx.User(), ctx.Repo())
 	if err != nil {
 		ctx.ServerError("hasReadPerms", err)
 		return
@@ -159,7 +165,7 @@ func ReqProjectReadPermissions(ctx *APIContext) {
 }
 
 func ReqProjectWritePermissions(ctx *APIContext) {
-	hasWrite, err := hasWriteProjectPermission(ctx, ctx.Data["OwnerType"], ctx.Doer(), ctx.User(), ctx.Repo())
+	hasWrite, err := hasWriteProjectPermission(ctx, ctx.Project().APIOwnerType, ctx.Doer(), ctx.User(), ctx.Repo())
 	if err != nil {
 		ctx.ServerError("hasWritePerms", err)
 		return

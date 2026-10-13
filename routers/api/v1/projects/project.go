@@ -30,7 +30,7 @@ func getOwnerTypeAndOwnerAndRepoFromData(ctx *context.APIContext) (
 	var owner *user_model.User
 	var repo *repo_model.Repository
 
-	switch ctx.Data["OwnerType"] {
+	switch ctx.Project().APIOwnerType {
 	case project_module.APIOwnerTypeIndividual:
 		ownerType = project_module.APIOwnerTypeIndividual
 		owner = ctx.Doer()
@@ -41,7 +41,6 @@ func getOwnerTypeAndOwnerAndRepoFromData(ctx *context.APIContext) (
 		ownerType = project_module.APIOwnerTypeRepository
 		repo = ctx.Repository()
 	}
-
 	return ownerType, owner, repo
 }
 

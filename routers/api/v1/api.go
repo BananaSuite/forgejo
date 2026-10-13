@@ -216,7 +216,9 @@ func reqValidCommentID(idParam string) func(*context.APIContext) {
 
 func setOwnerType(ownerType project_module.APIOwnerType) func(ctx *context.APIContext) {
 	return func(ctx *context.APIContext) {
-		ctx.Data["OwnerType"] = ownerType
+		ctx.SetProject(&context.Project{
+			APIOwnerType: ownerType,
+		})
 	}
 }
 
