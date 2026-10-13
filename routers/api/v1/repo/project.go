@@ -36,6 +36,8 @@ func (Project) CreateProject(ctx *context.APIContext) {
 	// responses:
 	//   "201":
 	//     "$ref": "#/responses/Project"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
 
 	projects.CreateProject(ctx)
 }
@@ -95,6 +97,8 @@ func (Project) GetProject(ctx *context.APIContext) {
 	//     "$ref": "#/responses/Project"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
 
 	projects.GetProject(ctx)
 }
@@ -132,6 +136,8 @@ func (Project) UpdateProject(ctx *context.APIContext) {
 	//     "description": "Successful update returns 204 No Content"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
 
 	projects.UpdateProject(ctx)
 }
@@ -162,6 +168,8 @@ func (Project) DeleteProject(ctx *context.APIContext) {
 	//     "description": "Successful delete returns 204 No Content"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
 
 	projects.DeleteProject(ctx)
 }

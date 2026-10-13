@@ -4,7 +4,6 @@
 package projects
 
 import (
-	"errors"
 	"net/http"
 
 	"forgejo.org/models/db"
@@ -14,7 +13,7 @@ import (
 	"forgejo.org/modules/optional"
 	project_module "forgejo.org/modules/project"
 	api "forgejo.org/modules/structs"
-	"forgejo.org/modules/util"
+	"forgejo.org/modules/validation"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
@@ -53,7 +52,11 @@ func CreateProject(ctx *context.APIContext) {
 	// create the project
 	p, err := project_service.NewProject(form, owner, repo, ownerType)
 	if err != nil {
-		ctx.ServerError("Create Project", err)
+		if validation.IsErrNotValid(err) {
+			ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", err)
+		} else {
+			ctx.ServerError("Create Project", err)
+		}
 		return
 	}
 
@@ -113,10 +116,8 @@ func GetProject(ctx *context.APIContext) {
 		project.Owner = owner
 	}
 	if err != nil {
-		if project_model.IsErrProjectNotExist(err) {
+		if project_model.IsErrProjectNotExist(err) || project_module.IsErrMismatchedOwner(err) {
 			ctx.NotFound("Get Project", err)
-		} else if errors.Is(err, util.ErrInvalidArgument) {
-			ctx.Error(http.StatusBadRequest, "Invalid Arguments", err)
 		} else {
 			ctx.ServerError("Get Project", err)
 		}
@@ -138,17 +139,19 @@ func UpdateProject(ctx *context.APIContext) {
 		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project().ProjectID, owner.ID)
 	}
 	if err != nil {
-		if project_model.IsErrProjectNotExist(err) {
+		if project_model.IsErrProjectNotExist(err) || project_module.IsErrMismatchedOwner(err) {
 			ctx.NotFound("Update Project", err)
-		} else if errors.Is(err, util.ErrInvalidArgument) {
-			ctx.Error(http.StatusBadRequest, "Invalid Arguments", err)
 		} else {
 			ctx.ServerError("Update Project", err)
 		}
 		return
 	}
 	if err := project_service.UpdateProject(ctx, project, form); err != nil {
-		ctx.ServerError("Update Project", err)
+		if validation.IsErrNotValid(err) {
+			ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", err)
+		} else {
+			ctx.ServerError("Update Project", err)
+		}
 		return
 	}
 	ctx.Status(http.StatusNoContent)

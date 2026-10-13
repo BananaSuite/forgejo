@@ -133,7 +133,7 @@ func ProjectAssignment(ctx *APIContext) {
 	// get path parameters
 	projectID := ctx.ParamsInt64("project_id")
 	if projectID == 0 {
-		ctx.Error(http.StatusBadRequest, "Invalid arguments", "Project ID must not be zero")
+		ctx.Error(http.StatusUnprocessableEntity, "Invalid arguments", "Project ID must not be zero")
 		return
 	}
 	columnID := ctx.ParamsInt64("column_id")

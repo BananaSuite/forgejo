@@ -4219,6 +4219,9 @@
         "responses": {
           "201": {
             "$ref": "#/responses/Project"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       }
@@ -4255,6 +4258,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       },
@@ -4286,6 +4292,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       },
@@ -4328,6 +4337,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       }
@@ -19646,6 +19658,9 @@
         "responses": {
           "201": {
             "$ref": "#/responses/Project"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       }
@@ -19689,6 +19704,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       },
@@ -19727,6 +19745,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       },
@@ -19776,6 +19797,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       }
@@ -23699,6 +23723,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       }
@@ -23735,6 +23762,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       },
@@ -23766,6 +23796,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       },
@@ -23808,6 +23841,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
           }
         }
       }
@@ -26293,6 +26329,7 @@
       "type": "object",
       "properties": {
         "card_type": {
+          "description": "CardType can be: \"text_only\" and \"images_and_text\"",
           "type": "string",
           "x-go-name": "CardType"
         },
@@ -26301,10 +26338,12 @@
           "x-go-name": "Description"
         },
         "status": {
+          "description": "Status can be: \"open\" and \"closed\"",
           "type": "string",
           "x-go-name": "Status"
         },
         "template_type": {
+          "description": "TemplateType can be: \"text_only\" and \"images_and_text\"",
           "type": "string",
           "x-go-name": "TemplateType"
         },
@@ -30048,6 +30087,7 @@
       "type": "object",
       "properties": {
         "card_type": {
+          "description": "CardType can be: \"text_only\" and \"images_and_text\"",
           "type": "string",
           "x-go-name": "CardType"
         },
@@ -30065,6 +30105,7 @@
           "x-go-name": "OwnerName"
         },
         "owner_type": {
+          "description": "OwnerType can be: \"individual\", \"repository\" and \"organization\"",
           "type": "string",
           "x-go-name": "OwnerType"
         },
@@ -30073,10 +30114,12 @@
           "x-go-name": "RepoName"
         },
         "status": {
+          "description": "Status can be: \"open\" and \"closed\"",
           "type": "string",
           "x-go-name": "Status"
         },
         "template_type": {
+          "description": "TemplateType can be: \"none\", \"basic_kanban\" and \"bug_triage\"",
           "type": "string",
           "x-go-name": "TemplateType"
         },
