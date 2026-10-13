@@ -229,6 +229,8 @@ func TestMustDuration(t *testing.T) {
 		sec.NewKey("VALUE", value)
 
 		d, err := sec.Key("VALUE").MustDuration(defaultValue)
+		// test that the persisted value is the same as the returned value or
+		// defaultValue, matching gopkg.in/ini.v1 behavior
 		if err == nil {
 			actual, err := duration.Parse(sec.Key("VALUE").String())
 			require.NoError(t, err)
