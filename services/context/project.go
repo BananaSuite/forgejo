@@ -177,12 +177,10 @@ func ReqProjectWritePermissions(ctx *APIContext) {
 	}
 }
 
-// hasWriteProjectPermission checks if the doer has permission to write
 func hasWriteProjectPermission(ctx go_ctx.Context, ownerType any, doer, contextUser *user_model.User, repo *Repository) (bool, error) {
 	return hasProjectPermission(ctx, ownerType, doer, contextUser, repo, perm.AccessModeWrite)
 }
 
-// hasReadProjectPermission checks if the doer has permission to read
 func hasReadProjectPermission(ctx go_ctx.Context, ownerType any, doer, contextUser *user_model.User, repo *Repository) (bool, error) {
 	return hasProjectPermission(ctx, ownerType, doer, contextUser, repo, perm.AccessModeRead)
 }
