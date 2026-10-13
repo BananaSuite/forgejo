@@ -4,6 +4,7 @@
 package projects
 
 import (
+	"errors"
 	"net/http"
 
 	"forgejo.org/models/db"
@@ -13,7 +14,7 @@ import (
 	"forgejo.org/modules/optional"
 	project_module "forgejo.org/modules/project"
 	api "forgejo.org/modules/structs"
-	"forgejo.org/modules/validation"
+	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
@@ -113,7 +114,7 @@ func GetProject(ctx *context.APIContext) {
 	if err != nil {
 		if project_model.IsErrProjectNotExist(err) {
 			ctx.NotFound("Get Project", err)
-		} else if validation.IsErrNotValid(err) {
+		} else if errors.Is(err, util.ErrInvalidArgument) {
 			ctx.Error(http.StatusBadRequest, "Invalid Arguments", err)
 		} else {
 			ctx.ServerError("Get Project", err)
@@ -138,7 +139,7 @@ func UpdateProject(ctx *context.APIContext) {
 	if err != nil {
 		if project_model.IsErrProjectNotExist(err) {
 			ctx.NotFound("Update Project", err)
-		} else if validation.IsErrNotValid(err) {
+		} else if errors.Is(err, util.ErrInvalidArgument) {
 			ctx.Error(http.StatusBadRequest, "Invalid Arguments", err)
 		} else {
 			ctx.ServerError("Update Project", err)
