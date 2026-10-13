@@ -4,23 +4,30 @@
 package structs
 
 type CreateOrUpdateProjectOptions struct {
-	Title        string `json:"title"`
-	Description  string `json:"description"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	// TemplateType can be: "text_only" and "images_and_text"
 	TemplateType string `json:"template_type"`
-	CardType     string `json:"card_type"`
-	Status       string `json:"status"`
+	// CardType can be: "text_only" and "images_and_text"
+	CardType string `json:"card_type"`
+	// Status can be: "open" and "closed"
+	Status string `json:"status"`
 }
 
 type Project struct {
-	ID           int64  `json:"id"`
-	Title        string `json:"title"`
-	Description  string `json:"description"`
-	OwnerName    string `json:"owner_name"`
-	RepoName     string `json:"repo_name"`
-	Status       string `json:"status"`
-	OwnerType    string `json:"owner_type"`
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	OwnerName   string `json:"owner_name"`
+	RepoName    string `json:"repo_name"`
+	// Status can be: "open" and "closed"
+	Status string `json:"status"`
+	// OwnerType can be: "individual", "repository" and "organization"
+	OwnerType string `json:"owner_type"`
+	// TemplateType can be: "none", "basic_kanban" and "bug_triage"
 	TemplateType string `json:"template_type"`
-	CardType     string `json:"card_type"`
+	// CardType can be: "text_only" and "images_and_text"
+	CardType string `json:"card_type"`
 }
 
 type MoveProjectIssue struct {
