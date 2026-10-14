@@ -86,6 +86,24 @@ func (l *LayeredFS) Open(name string) (fs.File, error) {
 	return nil, fs.ErrNotExist
 }
 
+// ReadLayerFiles use this when you need contents of all layers,
+func (l *LayeredFS) ReadAllLayerFiles(elems ...string) (map[string][]byte, error) {
+	name := util.PathJoinRel(elems...)
+	len := len(l.layers)
+	res := make(map[string][]byte, len)
+	for _, layer := range l.layers {
+		bs, err := fs.ReadFile(layer, name)
+		if errors.Is(err, fs.ErrNotExist) {
+			// Its okay if a file is missing in a layer
+			continue
+		} else if err != nil {
+			return nil, err
+		}
+		res[layer.Name()] = bs
+	}
+	return res, nil
+}
+
 // ReadFile reads the named file.
 func (l *LayeredFS) ReadFile(elems ...string) ([]byte, error) {
 	bs, _, err := l.ReadLayeredFile(elems...)
