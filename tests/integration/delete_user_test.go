@@ -6,6 +6,7 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	issues_model "forgejo.org/models/issues"
@@ -15,6 +16,8 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/tests"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func assertUserDeleted(t *testing.T, userID int64, purged bool) {
@@ -42,6 +45,25 @@ func TestUserDeleteAccount(t *testing.T) {
 
 	assertUserDeleted(t, 8, false)
 	unittest.CheckConsistencyFor(t, &user_model.User{})
+}
+
+// A deleted user must not stay logged in: the session that issued the deletion has to be ended.
+func TestUserDeleteAccountEndsSession(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user8")
+
+	// Sanity check: the session is authenticated before the deletion.
+	session.MakeRequest(t, NewRequest(t, "GET", "/user/settings"), http.StatusOK)
+
+	urlStr := fmt.Sprintf("/user/settings/account/delete?password=%s", userPassword)
+	session.MakeRequest(t, NewRequest(t, "POST", urlStr), http.StatusSeeOther)
+	assertUserDeleted(t, 8, false)
+
+	// The same browser session must now be treated as anonymous.
+	resp := session.MakeRequest(t, NewRequest(t, "GET", "/user/settings"), http.StatusSeeOther)
+	assert.True(t, strings.HasSuffix(resp.Header().Get("Location"), "/user/login"),
+		"expected redirect to login, got %q", resp.Header().Get("Location"))
 }
 
 func TestUserDeleteAccountStillOwnRepos(t *testing.T) {

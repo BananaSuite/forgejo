@@ -19,6 +19,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/validation"
 	"forgejo.org/modules/web"
+	"forgejo.org/routers/web/auth"
 	auth_method "forgejo.org/services/auth/method"
 	"forgejo.org/services/auth/source/db"
 	"forgejo.org/services/auth/source/smtp"
@@ -324,7 +325,9 @@ func DeleteAccount(ctx *context.Context) {
 		}
 	} else {
 		log.Trace("Account deleted: %s", ctx.Doer.Name)
-		ctx.Redirect(setting.AppSubURL + "/")
+		// The user no longer exists, so end the session and clear the "remember me" cookie; otherwise
+		// the browser keeps a stale session for a deleted account.
+		auth.SignOut(ctx)
 	}
 }
 
