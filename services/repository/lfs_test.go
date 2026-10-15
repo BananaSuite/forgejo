@@ -13,6 +13,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/lfs"
+	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
 	"forgejo.org/modules/test"
@@ -38,7 +39,7 @@ func TestGarbageCollectLFSMetaObjects(t *testing.T) {
 
 	// add lfs object
 	lfsContent := []byte("gitea1")
-	lfsOid := storeObjectInRepo(t, repo.ID, &lfsContent)
+	lfsOid := storeObjectInRepo(t, repo, &lfsContent)
 
 	// gc
 	err = repo_service.GarbageCollectLFSMetaObjects(t.Context(), repo_service.GarbageCollectLFSMetaObjectsOptions{
@@ -58,18 +59,13 @@ func TestGarbageCollectLFSMetaObjects(t *testing.T) {
 	assert.Equal(t, validLFSObjects-1, remainingLFSObjects)
 }
 
-func storeObjectInRepo(t *testing.T, repositoryID int64, content *[]byte) string {
+func storeObjectInRepo(t *testing.T, repo *repo_model.Repository, content *[]byte) string {
 	pointer, err := lfs.GeneratePointer(bytes.NewReader(*content))
 	require.NoError(t, err)
 
-	_, err = git_model.NewLFSMetaObject(db.DefaultContext, repositoryID, pointer)
-	require.NoError(t, err)
 	contentStore := lfs.NewContentStore()
-	exist, err := contentStore.Exists(pointer)
+	err = repo_module.NewLFSMetaObjectThenPutContentInStore(t.Context(), repo, contentStore, pointer, bytes.NewReader(*content), true)
 	require.NoError(t, err)
-	if !exist {
-		err := contentStore.Put(pointer, bytes.NewReader(*content))
-		require.NoError(t, err)
-	}
+
 	return pointer.Oid
 }

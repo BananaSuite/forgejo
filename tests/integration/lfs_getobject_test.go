@@ -20,6 +20,7 @@ import (
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/json"
 	"forgejo.org/modules/lfs"
+	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/tests"
 
@@ -29,26 +30,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func storeObjectInRepo(t *testing.T, repositoryID int64, content *[]byte) string {
+func storeObjectInRepo(t *testing.T, repo *repo_model.Repository, content *[]byte) string {
 	pointer, err := lfs.GeneratePointer(bytes.NewReader(*content))
 	require.NoError(t, err)
 
-	_, err = git_model.NewLFSMetaObject(db.DefaultContext, repositoryID, pointer)
-	require.NoError(t, err)
 	contentStore := lfs.NewContentStore()
-	exist, err := contentStore.Exists(pointer)
+	err = repo_module.NewLFSMetaObjectThenPutContentInStore(t.Context(), repo, contentStore, pointer, bytes.NewReader(*content), true)
 	require.NoError(t, err)
-	if !exist {
-		err := contentStore.Put(pointer, bytes.NewReader(*content))
-		require.NoError(t, err)
-	}
+
 	return pointer.Oid
 }
 
 func makeStoreRequest(t *testing.T, content *[]byte, extraHeader *http.Header) *RequestWrapper {
 	repo, err := repo_model.GetRepositoryByOwnerAndName(db.DefaultContext, "user2", "repo1")
 	require.NoError(t, err)
-	oid := storeObjectInRepo(t, repo.ID, content)
+	oid := storeObjectInRepo(t, repo, content)
 	t.Cleanup(func() {
 		git_model.RemoveLFSMetaObjectByOid(db.DefaultContext, repo.ID, oid)
 	})

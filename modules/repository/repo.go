@@ -173,6 +173,52 @@ func PushUpdateAddTag(ctx context.Context, repo *repo_model.Repository, gitRepo 
 	return repo_model.SaveOrUpdateTag(ctx, repo, &rel)
 }
 
+// Create an LFS meta object using [git_model.NewLFSMetaObject], check if the
+// provided [lfs.Pointer] already exists in the store (as long as checkIfExists
+// is set to true); if checkIfExists is false or if the pointer does not exist
+// in the store, run [lfs.ContentStore.Put].
+func NewLFSMetaObjectThenPutContentInStore(
+	ctx context.Context,
+	repo *repo_model.Repository,
+	store *lfs.ContentStore,
+	pointer lfs.Pointer,
+	content io.Reader,
+	checkIfExists bool,
+) error {
+	_, err := git_model.NewLFSMetaObject(ctx, repo.ID, pointer)
+	if err != nil {
+		log.Error("Repo[%-v]: Error creating LFS meta object %-v: %v", repo, pointer, err)
+		return err
+	}
+
+	// If the caller has already checked that the pointer exists in the store,
+	// then it makes sense to assume that calling this function means that it
+	// does not and that the callee must do that.
+	putInStore := !checkIfExists
+	if checkIfExists {
+		exists, err := store.Exists(pointer)
+		if err != nil {
+			log.Error("Repo[%-v]: Error establishing existence of LFS meta object %-v in store: %v", repo, pointer, err)
+			if _, err2 := git_model.RemoveLFSMetaObjectByOid(ctx, repo.ID, pointer.Oid); err2 != nil {
+				log.Error("Repo[%-v]: Error removing LFS meta object %-v after the store existence check failed: %v", repo, pointer, err2)
+			}
+			return err
+		}
+		putInStore = !exists
+	}
+	if putInStore {
+		if err := store.Put(pointer, content); err != nil {
+			log.Error("Repo[%-v]: Error storing content for LFS meta object %-v: %v", repo, pointer, err)
+			if _, err2 := git_model.RemoveLFSMetaObjectByOid(ctx, repo.ID, pointer.Oid); err2 != nil {
+				log.Error("Repo[%-v]: Error removing LFS meta object %-v after a write in the content store failed: %v", repo, pointer, err2)
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
 // StoreMissingLfsObjectsInRepository downloads missing LFS objects
 func StoreMissingLfsObjectsInRepository(ctx context.Context, repo *repo_model.Repository, gitRepo *git.Repository, lfsClient lfs.Client) error {
 	contentStore := lfs.NewContentStore()
@@ -194,20 +240,7 @@ func StoreMissingLfsObjectsInRepository(ctx context.Context, repo *repo_model.Re
 
 			defer content.Close()
 
-			_, err := git_model.NewLFSMetaObject(ctx, repo.ID, p)
-			if err != nil {
-				log.Error("Repo[%-v]: Error creating LFS meta object %-v: %v", repo, p, err)
-				return err
-			}
-
-			if err := contentStore.Put(p, content); err != nil {
-				log.Error("Repo[%-v]: Error storing content for LFS meta object %-v: %v", repo, p, err)
-				if _, err2 := git_model.RemoveLFSMetaObjectByOid(ctx, repo.ID, p.Oid); err2 != nil {
-					log.Error("Repo[%-v]: Error removing LFS meta object %-v: %v", repo, p, err2)
-				}
-				return err
-			}
-			return nil
+			return NewLFSMetaObjectThenPutContentInStore(ctx, repo, contentStore, p, content, true)
 		})
 		if err != nil {
 			select {

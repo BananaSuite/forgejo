@@ -29,6 +29,7 @@ import (
 	"forgejo.org/modules/json"
 	lfs_module "forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
+	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
 	"forgejo.org/services/context"
@@ -343,12 +344,21 @@ func UploadHandler(ctx *context.Context) {
 					return lfs_module.ErrHashMismatch
 				}
 			}
-		} else if err := contentStore.Put(p, ctx.Req.Body); err != nil {
-			log.Error("Error putting LFS MetaObject [%s] into content store. Error: %v", p.Oid, err)
+			_, err = git_model.NewLFSMetaObject(ctx, repository.ID, p)
+			if err != nil {
+				log.Error("Repo[%-v]: Error creating LFS meta object %-v: %v", repository, p, err)
+			}
 			return err
 		}
-		_, err := git_model.NewLFSMetaObject(ctx, repository.ID, p)
-		return err
+
+		return repo_module.NewLFSMetaObjectThenPutContentInStore(
+			ctx,
+			repository,
+			contentStore,
+			p,
+			ctx.Req.Body,
+			false,
+		)
 	}
 
 	defer ctx.Req.Body.Close()

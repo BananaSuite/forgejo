@@ -20,6 +20,7 @@ import (
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/lfs"
 	"forgejo.org/modules/log"
+	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	asymkey_service "forgejo.org/services/asymkey"
@@ -436,26 +437,24 @@ func CreateOrUpdateFile(ctx context.Context, t *TemporaryUploadRepository, file 
 	}
 
 	if lfsMetaObject != nil {
-		// We have an LFS object - create it
-		lfsMetaObject, err = git_model.NewLFSMetaObject(ctx, lfsMetaObject.RepositoryID, lfsMetaObject.Pointer)
+		repo, err := repo_model.GetRepositoryByID(ctx, lfsMetaObject.RepositoryID)
 		if err != nil {
 			return err
 		}
-		exist, err := contentStore.Exists(lfsMetaObject.Pointer)
+		_, err = file.ContentReader.Seek(0, io.SeekStart)
 		if err != nil {
 			return err
 		}
-		if !exist {
-			_, err := file.ContentReader.Seek(0, io.SeekStart)
-			if err != nil {
-				return err
-			}
-			if err := contentStore.Put(lfsMetaObject.Pointer, file.ContentReader); err != nil {
-				if _, err2 := git_model.RemoveLFSMetaObjectByOid(ctx, repoID, lfsMetaObject.Oid); err2 != nil {
-					return fmt.Errorf("unable to remove failed inserted LFS object %s: %v (Prev Error: %w)", lfsMetaObject.Oid, err2, err)
-				}
-				return err
-			}
+		err = repo_module.NewLFSMetaObjectThenPutContentInStore(
+			ctx,
+			repo,
+			contentStore,
+			lfsMetaObject.Pointer,
+			file.ContentReader,
+			true,
+		)
+		if err != nil {
+			return err
 		}
 	}
 
