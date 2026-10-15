@@ -21,7 +21,43 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// check that files stored in LFS render properly in the web UI
+func TestLFSFileGet(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user2")
+	locale := translation.NewLocale("en-US")
+
+	// No Markdown rendering available here
+	t.Run("Markup", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequest(t, "GET", "/user2/lfs/settings/lfs/show/9d172e5c64b4f0024b9901ec6afe9ea052f3c9b6ff9f4b07956d8c48c86fca82")
+		resp := session.MakeRequest(t, req, http.StatusOK)
+
+		doc := NewHTMLParser(t, resp.Body).doc
+
+		fileInfo := doc.Find("div.file-view").First().Text()
+		assert.Contains(t, fileInfo, "# Testing READMEs in LFS")
+	})
+
+	// Check the "View raw" link
+	t.Run("Binary", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequest(t, "GET", "/user2/lfs/settings/lfs/show/2eccdb43825d2a49d99d542daa20075cff1d97d9d2349a8977efe9c03661737c")
+		resp := session.MakeRequest(t, req, http.StatusOK)
+
+		doc := NewHTMLParser(t, resp.Body).doc
+
+		fileInfo := doc.Find("div.view-raw > a").First()
+		assert.Contains(t, fileInfo.Text(), locale.TrString("repo.file_view_raw"))
+		hrefValue, hrefExists := fileInfo.Attr("href")
+		require.True(t, hrefExists)
+		assert.Contains(t, hrefValue, "/user2/lfs.git/info/lfs/objects/2eccdb43825d2a49d99d542daa20075cff1d97d9d2349a8977efe9c03661737c/direct")
+	})
+}
+
+// check that files stored in LFS render properly in the repo's web UI endpoints
 func TestLFSFileRender(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
