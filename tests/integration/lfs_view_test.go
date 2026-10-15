@@ -57,8 +57,7 @@ func TestLFSFileGet(t *testing.T) {
 	})
 }
 
-// check that files stored in LFS render properly in the repo's web UI endpoints
-func TestLFSFileRender(t *testing.T) {
+func TestLFSFileOverview(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 
 	session := loginUser(t, "user2")
@@ -74,6 +73,14 @@ func TestLFSFileRender(t *testing.T) {
 		filesTable := NewHTMLParser(t, resp.Body).doc.Find("#lfs-files-table")
 		assert.Contains(t, filesTable.Text(), locale.TrString("repo.settings.lfs_no_lfs_files"))
 	})
+}
+
+// check that files stored in LFS render properly in the repo's web UI endpoints
+func TestLFSFileRender(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user2")
+	locale := translation.NewLocale("en-US")
 
 	// check that a markup file is flagged with the appropriate Git LFS label
 	// and that its text is shown in the file view and the diff view
