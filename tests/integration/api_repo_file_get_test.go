@@ -11,7 +11,9 @@ import (
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/test"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -62,25 +64,38 @@ func TestAPIGetRawFileOrLFS(t *testing.T) {
 
 				lfs, _ := lfsCommitAndPushTest(t, dstPath)
 
-				// checking for the lfs file in the correct repo with proper token.
-				reqLFS := NewRequest(
-					t, "GET",
-					fmt.Sprintf("/api/v1/repos/%s/%s/media/%s", httpContext.Username, httpContext.Reponame, lfs),
-				).AddTokenAuth(httpContext.Token)
-				respLFS := MakeRequestNilResponseRecorder(t, reqLFS, http.StatusOK)
-				assert.Equal(t, littleSize, respLFS.Length)
-
 				// checking for the lfs file in an incorrect (i.e. another) repo.
-				MakeRequestNilResponseRecorder(t, NewRequest(
-					t, "GET",
-					fmt.Sprintf("/api/v1/repos/%s/%s/media/%s", httpContext.Username, "repo2", lfs),
-				).AddTokenAuth(httpContext.Token), http.StatusNotFound)
+				t.Run("WrongRepo", func(t *testing.T) {
+					defer tests.PrintCurrentTest(t)()
+
+					MakeRequestNilResponseRecorder(t, NewRequest(
+						t, "GET",
+						fmt.Sprintf("/api/v1/repos/%s/%s/media/%s", httpContext.Username, "repo2", lfs),
+					).AddTokenAuth(httpContext.Token), http.StatusNotFound)
+				})
 
 				// checking for the lfs file in the correct repo, but without token with right scopes.
-				MakeRequestNilResponseRecorder(t, NewRequest(
-					t, "GET",
-					fmt.Sprintf("/api/v1/repos/%s/%s/media/%s", httpContext.Username, httpContext.Reponame, lfs),
-				), http.StatusNotFound)
+				t.Run("RightRepoInappropriateToken", func(t *testing.T) {
+					defer tests.PrintCurrentTest(t)()
+
+					MakeRequestNilResponseRecorder(t, NewRequest(
+						t, "GET",
+						fmt.Sprintf("/api/v1/repos/%s/%s/media/%s", httpContext.Username, httpContext.Reponame, lfs),
+					), http.StatusNotFound)
+				})
+
+				// checking for the lfs file in the correct repo with proper token.
+				t.Run("ServeIndirect", func(t *testing.T) {
+					defer tests.PrintCurrentTest(t)()
+					defer test.MockVariableValue(&setting.Packages.Storage.MinioConfig.ServeDirect, false)()
+
+					reqLFS := NewRequest(
+						t, "GET",
+						fmt.Sprintf("/api/v1/repos/%s/%s/media/%s", httpContext.Username, httpContext.Reponame, lfs),
+					).AddTokenAuth(httpContext.Token)
+					respLFS := MakeRequestNilResponseRecorder(t, reqLFS, http.StatusOK)
+					assert.Equal(t, littleSize, respLFS.Length)
+				})
 
 				doAPIDeleteRepository(httpContext)(t)
 			})(t)
