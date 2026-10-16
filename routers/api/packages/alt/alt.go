@@ -164,21 +164,12 @@ func UploadPackageFile(ctx *context.Context) {
 }
 
 func DownloadPackageFile(ctx *context.Context) {
-	name := ctx.Params("name")
-	version := ctx.Params("version")
-
-	s, u, pf, err := packages_service.GetFileStreamByPackageNameAndVersion(
+	s, u, pf, err := packages_service.GetFileStreamByFileNameAndCompositeKey(
 		ctx,
-		&packages_service.PackageInfo{
-			Owner:       ctx.Package.Owner,
-			PackageType: packages_model.TypeAlt,
-			Name:        name,
-			Version:     version,
-		},
-		&packages_service.PackageFileInfo{
-			Filename:     fmt.Sprintf("%s-%s.%s.rpm", name, version, ctx.Params("architecture")),
-			CompositeKey: ctx.Params("group"),
-		},
+		ctx.Package.Owner.ID,
+		packages_model.TypeAlt,
+		ctx.Params("filename"),
+		ctx.Params("group"),
 	)
 	if err != nil {
 		if errors.Is(err, util.ErrNotExist) {
@@ -194,27 +185,16 @@ func DownloadPackageFile(ctx *context.Context) {
 
 func DeletePackageFile(webctx *context.Context) {
 	group := webctx.Params("group")
-	name := webctx.Params("name")
-	version := webctx.Params("version")
-	architecture := webctx.Params("architecture")
+	filename := webctx.Params("filename")
 
 	var pd *packages_model.PackageDescriptor
 
 	err := db.WithTx(webctx, func(ctx stdctx.Context) error {
-		pv, err := packages_model.GetVersionByNameAndVersion(ctx,
+		pf, err := packages_model.GetFileByNameAndCompositeKey(
+			ctx,
 			webctx.Package.Owner.ID,
 			packages_model.TypeAlt,
-			name,
-			version,
-		)
-		if err != nil {
-			return err
-		}
-
-		pf, err := packages_model.GetFileForVersionByName(
-			ctx,
-			pv.ID,
-			fmt.Sprintf("%s-%s.%s.rpm", name, version, architecture),
+			filename,
 			group,
 		)
 		if err != nil {
@@ -225,11 +205,16 @@ func DeletePackageFile(webctx *context.Context) {
 			return err
 		}
 
-		has, err := packages_model.HasVersionFileReferences(ctx, pv.ID)
+		has, err := packages_model.HasVersionFileReferences(ctx, pf.VersionID)
 		if err != nil {
 			return err
 		}
 		if !has {
+			pv, err := packages_model.GetVersionByID(ctx, pf.VersionID)
+			if err != nil {
+				return err
+			}
+
 			pd, err = packages_model.GetPackageDescriptor(ctx, pv)
 			if err != nil {
 				return err

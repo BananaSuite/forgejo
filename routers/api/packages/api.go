@@ -707,7 +707,7 @@ func CommonRoutes() *web.Route {
 				baseURLPattern  = regexp.MustCompile(`\A(.*?)\.repo\z`)
 				uploadPattern   = regexp.MustCompile(`\A(.*?)/upload\z`)
 				baseRepoPattern = regexp.MustCompile(`(\S+)\.repo/(\S+)\/base/(\S+)`)
-				rpmsRepoPattern = regexp.MustCompile(`\A/(.+?)\.repo/([^/]+)/RPMS\.([^/]+)/(.+)-([0-9][^-]*-[^-]*)\.([^.]+)\.rpm\z`)
+				rpmsRepoPattern = regexp.MustCompile(`\A(.+?)\.repo/([^/]+)/RPMS\.([^/]+)/(.+\.rpm)\z`)
 			)
 
 			r.Methods("HEAD,GET,PUT,DELETE", "*", func(ctx *context.Context) {
@@ -747,13 +747,12 @@ func CommonRoutes() *web.Route {
 				}
 
 				m = rpmsRepoPattern.FindStringSubmatch(path)
-				if len(m) == 7 && (isGetHead || isDelete) {
+				if len(m) == 5 && (isGetHead || isDelete) {
 					if strings.Trim(m[1], "/") != "alt" {
 						ctx.SetParams("group", strings.Trim(m[1], "/"))
 					}
-					ctx.SetParams("name", m[4])
-					ctx.SetParams("version", m[5])
-					ctx.SetParams("architecture", m[6])
+					// alt file names are not unambiguously parsable into package coordinates
+					ctx.SetParams("filename", m[4])
 					if isGetHead {
 						alt.DownloadPackageFile(ctx)
 					} else {

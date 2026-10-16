@@ -125,6 +125,39 @@ func GetFileForVersionByName(ctx context.Context, versionID int64, name, key str
 	return GetFileForVersionByNameMatchCase(ctx, versionID, strings.ToLower(name), key)
 }
 
+// GetFileByNameAndCompositeKey gets a file of an owner by its name and composite key, without
+// requiring a version. Package types like "alt" store file names that cannot be split into
+// name, version, release and architecture, so the file name is the only identifier.
+func GetFileByNameAndCompositeKey(ctx context.Context, ownerID int64, ptype Type, name, key string) (*PackageFile, error) {
+	if name == "" {
+		return nil, ErrPackageFileNotExist
+	}
+
+	pf := &PackageFile{}
+
+	versionIDs := builder.
+		Select("package_version.id").
+		From("package_version").
+		InnerJoin("package", "package.id = package_version.package_id").
+		Where(builder.Eq{
+			"package.owner_id":            ownerID,
+			"package.type":                ptype,
+			"package_version.is_internal": false,
+		})
+
+	has, err := db.GetEngine(ctx).Where(builder.In("version_id", versionIDs)).And(builder.Eq{
+		"lower_name":    strings.ToLower(name),
+		"composite_key": key,
+	}).Get(pf)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, ErrPackageFileNotExist
+	}
+	return pf, nil
+}
+
 // DeleteFileByID deletes a file
 func DeleteFileByID(ctx context.Context, fileID int64) error {
 	return db.WithTx(ctx, func(ctx context.Context) error {

@@ -669,6 +669,20 @@ func GetFileStreamByPackageVersion(ctx context.Context, pv *packages_model.Packa
 	return GetPackageFileStream(ctx, pf)
 }
 
+// GetFileStreamByFileNameAndCompositeKey returns the content of the package file stored under the
+// given file name and composite key of an owner. Use this instead of reconstructing package
+// coordinates from the file name when the file name is not unambiguously parsable.
+func GetFileStreamByFileNameAndCompositeKey(ctx context.Context, ownerID int64, ptype packages_model.Type, filename, compositeKey string) (ReadSeekCloseSizer, *url.URL, *packages_model.PackageFile, error) {
+	log.Trace("Getting package file stream by file name: %d, %s, %s, %s", ownerID, ptype, filename, compositeKey)
+
+	pf, err := packages_model.GetFileByNameAndCompositeKey(ctx, ownerID, ptype, filename, compositeKey)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return GetPackageFileStream(ctx, pf)
+}
+
 // GetPackageFileStream returns the content of the specific package file
 func GetPackageFileStream(ctx context.Context, pf *packages_model.PackageFile) (ReadSeekCloseSizer, *url.URL, *packages_model.PackageFile, error) {
 	pb, err := packages_model.GetBlobByID(ctx, pf.BlobID)
