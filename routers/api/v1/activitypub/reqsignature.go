@@ -29,6 +29,8 @@ func verifyHTTPSignature(ctx app_context.APIContext) (authenticated bool, err er
 		return false, err
 	}
 
+	ctx.Data[federation.FedCtxDataKeyIDKey] = v.KeyId()
+
 	log.Debug("Verify %q, signed by KeyId: %v", r.URL.Path, v.KeyId())
 	signatureAlgorithm := httpsig.Algorithm(setting.Federation.SignatureAlgorithms[0])
 	pubKey, err := federation.FindOrCreateActorKey(ctx, v.KeyId())

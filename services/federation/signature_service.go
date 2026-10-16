@@ -10,17 +10,17 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"forgejo.org/models/forgefed"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/web/middleware"
 
-	"github.com/42wim/httpsig"
 	ap "github.com/go-ap/activitypub"
 )
 
@@ -214,30 +214,36 @@ func decodePublicKeyPem(pubKeyPem string) ([]byte, error) {
 	return block.Bytes, nil
 }
 
-func getKeyID(r *http.Request) (string, error) {
-	if !setting.Federation.SignatureEnforced {
-		return "", fmt.Errorf("Signature Enforcing is not enabled")
+var FedCtxDataKeyIDKey = "FederationKeyID"
+
+func getKeyID(ctx context.Context) (string, error) {
+	dataStore, ok := ctx.(middleware.ContextDataStore)
+	if !ok {
+		return "", fmt.Errorf("Error getting ContextDataStore from context")
 	}
 
-	v, err := httpsig.NewVerifier(r)
-	if err != nil {
-		log.Debug("For %q verification failed: %v", r.URL.Path, err)
+	v := dataStore.GetData()[FedCtxDataKeyIDKey]
+	if v == nil {
+		return "", fmt.Errorf("Error getting keyID from ContextDataStore")
 	}
 
-	keyURI := v.KeyId()
+	keyID, ok := v.(string)
+	if !ok {
+		return "", fmt.Errorf("Error converting value of type (%t) to string", v)
+	}
 
-	return keyURI, nil
+	return keyID, nil
 }
 
 // Finds the ID of requester and actor and compares them
 // This function should only be called **after** http signature verification
-func VerifyKeyIDMatchesActorID(ctx context.Context, req *http.Request, activity *ap.Activity) error {
+func VerifyKeyIDMatchesActorID(ctx context.Context, activity *ap.Activity) error {
 	// skip if key veryfication is not enforced
 	if !setting.Federation.SignatureEnforced {
 		return nil
 	}
 
-	keyID, err := getKeyID(req)
+	keyID, err := getKeyID(ctx)
 	if err != nil {
 		return err
 	}
@@ -251,25 +257,18 @@ func VerifyKeyIDMatchesActorID(ctx context.Context, req *http.Request, activity 
 		return fmt.Errorf("Invalid getting actor from request")
 	}
 
-	actorURI := activity.Actor.GetLink().String()
-
-	_, federatedUser, federationHost, err := FindOrCreateFederatedUser(ctx, actorURI)
+	actorURL, err := url.Parse(activity.Actor.GetLink().String())
 	if err != nil {
-		log.Error("Error finding or creating federated user (%s): %v", actorURI, err)
-		return fmt.Errorf("Error finding or creating federated user (%s): %v", actorURI, err)
-	}
-	_, keyUser, err := user.FindFederatedUserByKeyID(ctx, keyURL.String())
-	if err == nil && federatedUser.KeyID.String != keyUser.KeyID.String {
-		return fmt.Errorf("KeyID (%v) in signature does not match FederatedUserID (%v)", keyUser.KeyID.String, federatedUser.KeyID.String)
-	} else if err != nil && user.IsErrFederatedUserNotExists(err) {
-		keyHost, err := forgefed.FindFederationHostByKeyID(ctx, keyURL.String())
-		if err != nil {
-			return err
-		} else if federationHost.KeyID.String != keyHost.KeyID.String {
-			return fmt.Errorf("KeyID (%v) in signature does not match FederationHostID (%v)", keyHost.KeyID.String, federationHost.KeyID.String)
-		}
-	} else {
 		return err
 	}
+
+	if keyURL.Host != actorURL.Host {
+		return fmt.Errorf("Host in KeyID (%v) in signature does not match Host in ActorID in body (%v)", keyURL.Host, actorURL.Host)
+	}
+
+	if !strings.HasSuffix(keyURL.Path, "actor") && keyURL.Path != actorURL.Path {
+		return fmt.Errorf("KeyID (%v) in signature does not match ActorID in body (%v)", keyURL.Path, actorURL.Path)
+	}
+
 	return nil
 }

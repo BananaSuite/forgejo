@@ -4,12 +4,12 @@
 package federation
 
 import (
-	"fmt"
 	"testing"
 
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	"forgejo.org/services/contexttest"
 
 	ap "github.com/go-ap/activitypub"
 	"github.com/stretchr/testify/require"
@@ -27,64 +27,38 @@ func TestVerifyKeyIDMatchesActorID(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.MaxSize, 2048)()
 	defer test.MockVariableValue(&setting.Federation.PostHeaders, []string{"(request-target)", "Date", "Host", "Digest"})()
 
+	ctx, _ := contexttest.MockAPIContext(t, "/api/v1/activitypub/user-id/2/inbox")
 	mock := test.NewFederationServerMock()
-	federatedSrv := mock.DistantServer(t)
-	defer federatedSrv.Close()
+	federatedSrvURL := "https://127.0.0.1:12345"
 
-	_, err := FindOrCreateActorKey(t.Context(), mock.ApActor.KeyID(federatedSrv.URL))
-	require.NoError(t, err)
-
-	actor := ap.Actor{ID: ap.IRI(mock.Persons[0].ActorID(federatedSrv.URL))}
+	actor := ap.Actor{ID: ap.IRI(mock.Persons[0].ActorID(federatedSrvURL))}
 	activity := ap.Activity{Actor: actor}
 
-	followActivity := fmt.Appendf(
-		nil,
-		`{"type":"Follow",`+
-			`"actor":"%s",`+
-			`"object":"%s"}`,
-		mock.Persons[0].KeyID(federatedSrv.URL),
-		"/api/v1/activitypub/user-id/2/inbox",
-	)
-
 	t.Run("valid_signed_with_user_key", func(t *testing.T) {
-		req, err := test.CreateFederationPostReq(
-			followActivity,
-			mock.Persons[0].PrivKey,
-			mock.Persons[0].KeyID(federatedSrv.URL),
-			"/api/v1/activitypub/user-id/2/inbox",
-			setting.Federation.PostHeaders,
-		)
-		require.NoError(t, err)
+		ctx.Data[FedCtxDataKeyIDKey] = mock.Persons[0].KeyID(federatedSrvURL)
 
-		err = VerifyKeyIDMatchesActorID(t.Context(), req, &activity)
+		err := VerifyKeyIDMatchesActorID(ctx, &activity)
 		require.NoError(t, err)
 	})
 
 	t.Run("valid_signed_with_host_key", func(t *testing.T) {
-		req, err := test.CreateFederationPostReq(
-			followActivity,
-			mock.ApActor.PrivKey,
-			mock.ApActor.KeyID(federatedSrv.URL),
-			"/api/v1/activitypub/user-id/2/inbox",
-			setting.Federation.PostHeaders,
-		)
-		require.NoError(t, err)
+		ctx.Data[FedCtxDataKeyIDKey] = mock.ApActor.KeyID(federatedSrvURL)
 
-		err = VerifyKeyIDMatchesActorID(t.Context(), req, &activity)
+		err := VerifyKeyIDMatchesActorID(ctx, &activity)
 		require.NoError(t, err)
 	})
 
-	t.Run("invalid_request", func(t *testing.T) {
-		req, err := test.CreateFederationPostReq(
-			followActivity,
-			mock.Persons[1].PrivKey,
-			mock.Persons[1].KeyID(federatedSrv.URL),
-			"/api/v1/activitypub/user-id/2/inbox",
-			setting.Federation.PostHeaders,
-		)
-		require.NoError(t, err)
+	t.Run("invalid_request_false_host", func(t *testing.T) {
+		ctx.Data[FedCtxDataKeyIDKey] = mock.ApActor.KeyID("https://some-attacker.org")
 
-		err = VerifyKeyIDMatchesActorID(t.Context(), req, &activity)
+		err := VerifyKeyIDMatchesActorID(ctx, &activity)
+		require.Error(t, err)
+	})
+
+	t.Run("invalid_request_false_keyid", func(t *testing.T) {
+		ctx.Data[FedCtxDataKeyIDKey] = mock.Persons[1].KeyID(federatedSrvURL)
+
+		err := VerifyKeyIDMatchesActorID(ctx, &activity)
 		require.Error(t, err)
 	})
 }

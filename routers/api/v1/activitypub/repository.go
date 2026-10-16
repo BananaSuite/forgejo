@@ -80,7 +80,7 @@ func RepositoryInbox(ctx *context.APIContext) {
 	form := web.GetForm(ctx)
 	activity := form.(*ap.Activity)
 
-	err := federation.VerifyKeyIDMatchesActorID(*ctx, ctx.Req, activity)
+	err := federation.VerifyKeyIDMatchesActorID(*ctx, activity)
 	if err != nil {
 		log.Error("Failed to verify keyID and actorID: %v", err)
 		ctx.Error(http.StatusUnauthorized, "Failed to verify keyID and actorID: %v", err)
