@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAPIRepoLFSMigrateLocal(t *testing.T) {
+func TestAPILFSRepoMigrateLocal(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	defer test.MockVariableValue(&setting.ImportLocalPaths, true)()
 	defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
