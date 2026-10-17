@@ -229,10 +229,10 @@ func TestRepoWithTagButNoBranch(t *testing.T) {
 			resp := session.MakeRequest(t, req, http.StatusOK)
 
 			respJSON := struct {
-				Results *[]string
+				Results []string
 			}{}
 			DecodeJSON(t, resp, &respJSON)
-			assert.Equal(t, &[]string{}, respJSON.Results)
+			assert.Equal(t, []string{}, respJSON.Results)
 		})
 	})
 }
