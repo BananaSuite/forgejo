@@ -206,12 +206,8 @@ func TestRepoWithTagButNoBranch(t *testing.T) {
 		// create a commit
 		generateCommitWithNewData(t, littleSize, repoPath, user.Email, user.Name, "newFile")
 
-		// get the commit hash
-		sha, _, err := git.NewCommand(git.DefaultContext, "log", "-1", "--pretty=format:%H").RunStdString(&git.RunOpts{Dir: repoPath})
-		require.NoError(t, err)
-
 		// create tag
-		_, _, err = git.NewCommand(git.DefaultContext, "tag").AddDynamicArguments(tagName).RunStdString(&git.RunOpts{Dir: repoPath})
+		_, _, err := git.NewCommand(git.DefaultContext, "tag").AddDynamicArguments(tagName).RunStdString(&git.RunOpts{Dir: repoPath})
 		require.NoError(t, err)
 
 		// push the tag
@@ -222,10 +218,10 @@ func TestRepoWithTagButNoBranch(t *testing.T) {
 
 		session := loginUser(t, user.Name)
 
-		t.Run("repo view should redirect to the tagged commit", func(t *testing.T) {
+		t.Run("repo view should redirect to the tag", func(t *testing.T) {
 			req := NewRequest(t, "GET", "/"+repo.FullName())
 			resp := session.MakeRequest(t, req, http.StatusSeeOther)
-			assert.Equal(t, "/"+repo.FullName()+"/src/commit/"+sha, test.RedirectURL(resp))
+			assert.Equal(t, "/"+repo.FullName()+"/src/tag/"+tagName, test.RedirectURL(resp))
 		})
 
 		t.Run("/branches/list is an empty list, not nil", func(t *testing.T) {
