@@ -900,3 +900,110 @@ func reviewsCountCheck(t *testing.T, name string, issueID, reviewerID int64, exp
 		}, approvalCount)
 	})
 }
+
+func TestAPIPullReviewResolveConversation(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	pullIssue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 3})
+	otherRepo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{OwnerName: "user2", LowerName: "repo20"})
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: pullIssue.RepoID})
+
+	token := getTokenForLoggedInUser(t, loginUser(t, "user2"), auth_model.AccessTokenScopeWriteRepository)
+
+	var review api.PullReview
+	req := NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/pulls/%d/reviews", repo.FullName(), pullIssue.Index), &api.CreatePullReviewOptions{
+		Event:    api.ReviewStateComment,
+		Comments: []api.CreatePullReviewComment{{Path: "README.md", Body: "root", NewLineNum: 1}},
+	}).AddTokenAuth(token)
+	DecodeJSON(t, MakeRequest(t, req, http.StatusOK), &review)
+
+	var rootComments []*api.PullReviewComment
+	req = NewRequestf(t, http.MethodGet, "/api/v1/repos/%s/pulls/%d/reviews/%d/comments", repo.FullName(), pullIssue.Index, review.ID).AddTokenAuth(token)
+	DecodeJSON(t, MakeRequest(t, req, http.StatusOK), &rootComments)
+	require.Len(t, rootComments, 1)
+	root := rootComments[0]
+
+	var reply api.PullReviewComment
+	req = NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/pulls/%d/reviews/%d/comments", repo.FullName(), pullIssue.Index, review.ID), &api.CreatePullReviewCommentOptions{
+		Path:       "README.md",
+		Body:       "reply",
+		NewLineNum: 1,
+	}).AddTokenAuth(token)
+	DecodeJSON(t, MakeRequest(t, req, http.StatusOK), &reply)
+
+	resolveURL := func(repo *repo_model.Repository, commentID int64) string {
+		return fmt.Sprintf("/api/v1/repos/%s/pulls/comments/%d/resolve", repo.FullName(), commentID)
+	}
+	unresolveURL := func(repo *repo_model.Repository, commentID int64) string {
+		return fmt.Sprintf("/api/v1/repos/%s/pulls/comments/%d/unresolve", repo.FullName(), commentID)
+	}
+	getComment := func(commentID int64) api.PullReviewComment {
+		var comment api.PullReviewComment
+		req := NewRequestf(t, http.MethodGet, "/api/v1/repos/%s/pulls/%d/reviews/%d/comments/%d", repo.FullName(), pullIssue.Index, review.ID, commentID).AddTokenAuth(token)
+		DecodeJSON(t, MakeRequest(t, req, http.StatusOK), &comment)
+		return comment
+	}
+
+	t.Run("Resolve via a reply resolves the conversation root", func(t *testing.T) {
+		var resolved api.PullReviewComment
+		req := NewRequest(t, http.MethodPost, resolveURL(repo, reply.ID)).AddTokenAuth(token)
+		DecodeJSON(t, MakeRequest(t, req, http.StatusOK), &resolved)
+		assert.Equal(t, root.ID, resolved.ID)
+		require.NotNil(t, resolved.Resolver)
+		assert.Equal(t, "user2", resolved.Resolver.UserName)
+
+		require.NotNil(t, getComment(root.ID).Resolver)
+		assert.Nil(t, getComment(reply.ID).Resolver)
+	})
+
+	t.Run("Resolve is idempotent", func(t *testing.T) {
+		var resolved api.PullReviewComment
+		req := NewRequest(t, http.MethodPost, resolveURL(repo, root.ID)).AddTokenAuth(token)
+		DecodeJSON(t, MakeRequest(t, req, http.StatusOK), &resolved)
+		require.NotNil(t, resolved.Resolver)
+		assert.Equal(t, "user2", resolved.Resolver.UserName)
+	})
+
+	t.Run("Without write access", func(t *testing.T) {
+		otherToken := getTokenForLoggedInUser(t, loginUser(t, "user4"), auth_model.AccessTokenScopeWriteRepository)
+		req := NewRequest(t, http.MethodPost, unresolveURL(repo, root.ID)).AddTokenAuth(otherToken)
+		MakeRequest(t, req, http.StatusForbidden)
+		require.NotNil(t, getComment(root.ID).Resolver)
+	})
+
+	t.Run("Read-only token", func(t *testing.T) {
+		readToken := getTokenForLoggedInUser(t, loginUser(t, "user2"), auth_model.AccessTokenScopeReadRepository)
+		req := NewRequest(t, http.MethodPost, unresolveURL(repo, root.ID)).AddTokenAuth(readToken)
+		MakeRequest(t, req, http.StatusForbidden)
+	})
+
+	t.Run("Unresolve", func(t *testing.T) {
+		var unresolved api.PullReviewComment
+		req := NewRequest(t, http.MethodPost, unresolveURL(repo, reply.ID)).AddTokenAuth(token)
+		DecodeJSON(t, MakeRequest(t, req, http.StatusOK), &unresolved)
+		assert.Equal(t, root.ID, unresolved.ID)
+		assert.Nil(t, unresolved.Resolver)
+		assert.Nil(t, getComment(root.ID).Resolver)
+	})
+
+	t.Run("Comment of another repository", func(t *testing.T) {
+		req := NewRequest(t, http.MethodPost, resolveURL(otherRepo, root.ID)).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("Unknown comment", func(t *testing.T) {
+		req := NewRequest(t, http.MethodPost, resolveURL(repo, 999999)).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusNotFound)
+	})
+
+	t.Run("Not a code comment", func(t *testing.T) {
+		token := getTokenForLoggedInUser(t, loginUser(t, "user2"), auth_model.AccessTokenScopeWriteRepository, auth_model.AccessTokenScopeWriteIssue)
+		var issueComment api.Comment
+		req := NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/issues/%d/comments", repo.FullName(), pullIssue.Index), &api.CreateIssueCommentOption{
+			Body: "plain comment",
+		}).AddTokenAuth(token)
+		DecodeJSON(t, MakeRequest(t, req, http.StatusCreated), &issueComment)
+
+		req = NewRequest(t, http.MethodPost, resolveURL(repo, issueComment.ID)).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusUnprocessableEntity)
+	})
+}

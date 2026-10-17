@@ -267,6 +267,11 @@ func GetPullReviewComment(ctx *context.APIContext) {
 		return
 	}
 
+	if err := (issues_model.CommentList{comment}).LoadResolveDoers(ctx); err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
 	apiComment, err := convert.ToPullReviewComment(ctx, review, comment, ctx.Doer())
 	if err != nil {
 		ctx.InternalServerError(err)
@@ -1265,4 +1270,144 @@ func dismissReview(ctx *context.APIContext, msg string, isDismiss, dismissPriors
 		return
 	}
 	ctx.JSON(http.StatusOK, apiReview)
+}
+
+// ResolvePullReviewConversation marks the review conversation of a pull review comment as resolved
+func ResolvePullReviewConversation(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/pulls/comments/{id}/resolve repository repoResolvePullReviewConversation
+	// ---
+	// summary: Resolve the review conversation a pull review comment belongs to
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repository
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repository
+	//   type: string
+	//   required: true
+	// - name: id
+	//   in: path
+	//   description: ID of any comment in the conversation
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/PullReviewComment"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
+
+	markPullReviewConversation(ctx, true)
+}
+
+// UnresolvePullReviewConversation marks the review conversation of a pull review comment as unresolved
+func UnresolvePullReviewConversation(ctx *context.APIContext) {
+	// swagger:operation POST /repos/{owner}/{repo}/pulls/comments/{id}/unresolve repository repoUnresolvePullReviewConversation
+	// ---
+	// summary: Unresolve the review conversation a pull review comment belongs to
+	// produces:
+	// - application/json
+	// parameters:
+	// - name: owner
+	//   in: path
+	//   description: owner of the repository
+	//   type: string
+	//   required: true
+	// - name: repo
+	//   in: path
+	//   description: name of the repository
+	//   type: string
+	//   required: true
+	// - name: id
+	//   in: path
+	//   description: ID of any comment in the conversation
+	//   type: integer
+	//   format: int64
+	//   required: true
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/PullReviewComment"
+	//   "403":
+	//     "$ref": "#/responses/forbidden"
+	//   "404":
+	//     "$ref": "#/responses/notFound"
+	//   "422":
+	//     "$ref": "#/responses/validationError"
+
+	markPullReviewConversation(ctx, false)
+}
+
+func markPullReviewConversation(ctx *context.APIContext, isResolve bool) {
+	comment := ctx.LoadComment(":id")
+	if ctx.Written() {
+		return
+	}
+
+	if !comment.Issue.IsPull {
+		ctx.NotFound()
+		return
+	}
+
+	if comment.Type != issues_model.CommentTypeCode {
+		ctx.Error(http.StatusUnprocessableEntity, "", "comment is not part of a review conversation")
+		return
+	}
+
+	canMark, err := issues_model.CanMarkConversation(ctx, comment.Issue, ctx.Doer())
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+	if !canMark {
+		ctx.Error(http.StatusForbidden, "", "user is not allowed to resolve this conversation")
+		return
+	}
+
+	root, isWrong := loadConversationRoot(ctx, comment)
+	if isWrong {
+		return
+	}
+
+	if err := issues_model.MarkConversation(ctx, root, ctx.Doer(), isResolve); err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	if root, isWrong = loadConversationRoot(ctx, comment); isWrong {
+		return
+	}
+
+	root.Review.Issue = comment.Issue
+	apiComment, err := convert.ToPullReviewComment(ctx, root.Review, root, ctx.Doer())
+	if err != nil {
+		ctx.InternalServerError(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, apiComment)
+}
+
+// loadConversationRoot returns the first comment of the conversation, which is the only one holding the resolved mark
+func loadConversationRoot(ctx *context.APIContext, comment *issues_model.Comment) (*issues_model.Comment, bool) {
+	conversation, err := issues_model.FetchCodeConversation(ctx, comment, ctx.Doer())
+	if err != nil {
+		ctx.InternalServerError(err)
+		return nil, true
+	}
+
+	if len(conversation) == 0 || conversation[0].Review == nil {
+		ctx.NotFound()
+		return nil, true
+	}
+
+	return conversation[0], false
 }
