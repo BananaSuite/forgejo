@@ -68,6 +68,47 @@
 		{{template "user/settings/grants_oauth2" .}}
 		{{template "user/settings/applications_oauth2" .}}
 	{{end}}
+
+	<h4 class="ui top attached header" id="buttplug">{{ctx.Locale.Tr "settings.buttplug.title"}}</h4>
+	<div class="ui attached segment" id="buttplug-panel">
+		<p>{{ctx.Locale.Tr "settings.buttplug.description"}}</p>
+		<p class="help">{{ctx.Locale.Tr "settings.buttplug.session_note"}}</p>
+		<div class="ui form">
+			<div class="field">
+				<label for="buttplug-address">{{ctx.Locale.Tr "settings.buttplug.address"}}</label>
+				<input id="buttplug-address" type="text" inputmode="url" value="ws://127.0.0.1:12345" spellcheck="false" autocomplete="off">
+			</div>
+			<div class="field">
+				<button id="buttplug-connect" type="button" class="ui primary button">{{ctx.Locale.Tr "settings.buttplug.connect"}}</button>
+				<button id="buttplug-disconnect" type="button" class="ui button" disabled>{{ctx.Locale.Tr "settings.buttplug.disconnect"}}</button>
+			</div>
+			<div class="field">
+				<label for="buttplug-device">{{ctx.Locale.Tr "settings.buttplug.device"}}</label>
+				<select id="buttplug-device" disabled><option value="">{{ctx.Locale.Tr "settings.buttplug.choose_device"}}</option></select>
+			</div>
+			<div class="field">
+				<button id="buttplug-scan" type="button" class="ui button" disabled>{{ctx.Locale.Tr "settings.buttplug.scan"}}</button>
+				<button id="buttplug-test" type="button" class="ui button" disabled>{{ctx.Locale.Tr "settings.buttplug.test"}}</button>
+			</div>
+			<fieldset>
+				<legend>{{ctx.Locale.Tr "settings.buttplug.events"}}</legend>
+				<div class="field">
+					<label><input id="buttplug-notifications" type="checkbox"> {{ctx.Locale.Tr "settings.buttplug.notifications"}}</label>
+				</div>
+				<div class="field">
+					<label><input id="buttplug-stopwatches" type="checkbox" {{if not EnableTimetracking}}disabled{{end}}> {{ctx.Locale.Tr "settings.buttplug.stopwatches"}}</label>
+				</div>
+			</fieldset>
+			<p id="buttplug-status" role="status" aria-live="polite"
+				data-connected="{{ctx.Locale.Tr "settings.buttplug.connected"}}"
+				data-disconnected="{{ctx.Locale.Tr "settings.buttplug.disconnected"}}"
+				data-connecting="{{ctx.Locale.Tr "settings.buttplug.connecting"}}"
+				data-failed="{{ctx.Locale.Tr "settings.buttplug.failed"}}"
+				data-invalid-address="{{ctx.Locale.Tr "settings.buttplug.invalid_address"}}"
+				data-scan-failed="{{ctx.Locale.Tr "settings.buttplug.scan_failed"}}"
+			>{{ctx.Locale.Tr "settings.buttplug.disconnected"}}</p>
+		</div>
+	</div>
 </div>
 
 <div class="ui g-modal-confirm delete modal" id="regenerate-token">

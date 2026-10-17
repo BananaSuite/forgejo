@@ -134,6 +134,18 @@ onDomReady(() => {
   initMarkupAnchors();
   initMarkupContent();
   initSshKeyFormParser();
+  const buttplugUserId = document.getElementById('buttplug-quick-stop')?.dataset.userId;
+  if (buttplugUserId) {
+    let buttplugEnabled = false;
+    try {
+      buttplugEnabled = Boolean(JSON.parse(sessionStorage.getItem(`forgejo-buttplug:${buttplugUserId}`))?.enabled);
+    } catch {}
+    if (document.getElementById('buttplug-panel') || buttplugEnabled) {
+      void import('./features/buttplug/index.js').then(({initButtplug}) => initButtplug()).catch((error) => {
+        console.error('Buttplug: load failed', error);
+      });
+    }
+  }
   initStopwatch();
   initTableSort();
   initAutoFocusEnd();

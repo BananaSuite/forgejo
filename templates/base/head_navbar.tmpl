@@ -192,6 +192,9 @@
 								{{ctx.Locale.Tr "your_settings"}}
 							</a>
 						</li>
+						<li id="buttplug-quick-stop" data-user-id="{{.SignedUser.ID}}" class="tw-hidden">
+							<button type="button">{{svg "octicon-stop"}} {{ctx.Locale.Tr "settings.buttplug.quick_stop"}}</button>
+						</li>
 						<li>
 							<a target="_blank" rel="noopener noreferrer" href="{{AppDocsURL "/"}}">
 								{{svg "octicon-question"}}
