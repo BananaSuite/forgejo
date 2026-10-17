@@ -373,7 +373,7 @@ func CreatePullReviewComment(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, apiComment)
 }
 
-// CreatePullReviewCommentReply add a reply to a pull request review comment
+// CreatePullReviewCommentReply adds a reply to a pull request review comment
 func CreatePullReviewCommentReply(ctx *context.APIContext) {
 	// swagger:operation POST /repos/{owner}/{repo}/pulls/{index}/comments/{id}/replies repository repoCreatePullReviewCommentReply
 	// ---
@@ -383,12 +383,12 @@ func CreatePullReviewCommentReply(ctx *context.APIContext) {
 	// parameters:
 	// - name: owner
 	//   in: path
-	//   description: owner of the repo
+	//   description: owner of the repository
 	//   type: string
 	//   required: true
 	// - name: repo
 	//   in: path
-	//   description: name of the repo
+	//   description: name of the repository
 	//   type: string
 	//   required: true
 	// - name: index
@@ -399,7 +399,7 @@ func CreatePullReviewCommentReply(ctx *context.APIContext) {
 	//   required: true
 	// - name: id
 	//   in: path
-	//   description: id of the review comment
+	//   description: ID of the review comment
 	//   type: integer
 	//   format: int64
 	//   required: true
@@ -453,18 +453,11 @@ func CreatePullReviewCommentReply(ctx *context.APIContext) {
 		}
 		return
 	}
-	if review.IssueID != pr.IssueID {
-		ctx.NotFound("ReviewNotInPR")
-		return
-	}
-	if review.Type == issues_model.ReviewTypePending && review.ReviewerID != ctx.Doer().ID && !ctx.IsUserSiteAdmin() {
+	if !review.AcceptsCommentsFrom(ctx.Doer()) {
 		ctx.NotFound("GetReviewByID")
 		return
 	}
-	if err := review.LoadAttributes(ctx); err != nil && !user_model.IsErrUserNotExist(err) {
-		ctx.Error(http.StatusInternalServerError, "ReviewLoadAttributes", err)
-		return
-	}
+	review.Issue = parent.Issue
 
 	comment, err := pull_service.CreateCodeComment(ctx,
 		ctx.Doer(),
