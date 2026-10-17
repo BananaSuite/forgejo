@@ -1102,7 +1102,7 @@ func renderHomeCode(ctx *context.Context) {
 		}
 
 		log.Trace("Tag with latest commit: \"%s\" - redirecting", tags[0].Name)
-		ctx.Redirect(ctx.Link + "/src/commit/" + tags[0].ID.String())
+		ctx.Redirect(ctx.Link + "/src/tag/" + tags[0].Name)
 		return
 	}
 
