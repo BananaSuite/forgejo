@@ -23,10 +23,14 @@ const levels = {
     background: 'var(--color-red)',
     duration: -1, // requires dismissal to hide
   },
-};
+} as const;
 
-// See https://github.com/apvarun/toastify-js#api for options
-function showToast(message, level, {gravity, position, duration, useHtmlBody, ...other} = {}) {
+export type ToastOptions = Toastify.Options & {useHtmlBody?: boolean};
+
+type Toast = ReturnType<typeof Toastify>;
+
+/** See https://github.com/apvarun/toastify-js#api for options */
+function showToast(message: string, level: keyof typeof levels, {gravity, position, duration, useHtmlBody, ...other}: ToastOptions = {}): Toast {
   const {icon, background, duration: levelDuration} = levels[level ?? 'info'];
   const toast = Toastify({
     text: `
@@ -47,18 +51,18 @@ function showToast(message, level, {gravity, position, duration, useHtmlBody, ..
   return toast;
 }
 
-export function showHintToast(message, opts) {
+export function showHintToast(message: string, opts?: ToastOptions): Toast {
   return showToast(message, 'hint', opts);
 }
 
-export function showInfoToast(message, opts) {
+export function showInfoToast(message: string, opts?: ToastOptions): Toast {
   return showToast(message, 'info', opts);
 }
 
-export function showWarningToast(message, opts) {
+export function showWarningToast(message: string, opts?: ToastOptions): Toast {
   return showToast(message, 'warning', opts);
 }
 
-export function showErrorToast(message, opts) {
+export function showErrorToast(message: string, opts?: ToastOptions): Toast {
   return showToast(message, 'error', opts);
 }
