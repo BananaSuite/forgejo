@@ -33,7 +33,7 @@ func MailTeamInvite(ctx context.Context, inviter *user_model.User, team *org_mod
 		return err
 	}
 
-	locale := translation.NewLocale(inviter.Language)
+	locale := translation.NewLocale(invite.InvitedUser.Language)
 
 	// check if a user with this email already exists
 	user, err := user_model.GetUserByEmail(ctx, invite.Email)
@@ -62,7 +62,6 @@ func MailTeamInvite(ctx context.Context, inviter *user_model.User, team *org_mod
 		"InviteURL":       inviteURL,
 		"ExpirationDelay": setting.Service.TeamInvitationExpiryDays,
 	}
-
 	var mailBody bytes.Buffer
 	if err := bodyTemplates.ExecuteTemplate(&mailBody, string(tplTeamInviteMail), mailMeta); err != nil {
 		log.Error("ExecuteTemplate [%s]: %v", string(tplTeamInviteMail)+"/body", err)
