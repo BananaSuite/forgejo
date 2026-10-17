@@ -5,6 +5,7 @@ package setting
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	gotemplate "html/template"
 	"io"
@@ -285,7 +286,13 @@ func LFSFileGet(ctx *context.Context) {
 
 	fileSize := meta.Size
 	ctx.Data["FileSize"] = meta.Size
-	ctx.Data["RawFileLink"] = fmt.Sprintf("%s.git/info/lfs/objects/%s/%s", ctx.Repo.Repository.Link(), url.PathEscape(meta.Oid), "direct")
+
+	filenameBase64 := base64.RawURLEncoding.EncodeToString([]byte("direct"))
+	ctx.Data["RawFileLink"] = fmt.Sprintf("%s.git/info/lfs/objects/%s/%s",
+		ctx.Repo.Repository.Link(),
+		url.PathEscape(meta.Oid),
+		url.PathEscape(filenameBase64),
+	)
 	switch {
 	case isRepresentableAsText:
 		if st.IsSvgImage() {

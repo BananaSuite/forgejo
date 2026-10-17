@@ -53,7 +53,17 @@ func TestLFSFileGet(t *testing.T) {
 		assert.Contains(t, fileInfo.Text(), locale.TrString("repo.file_view_raw"))
 		hrefValue, hrefExists := fileInfo.Attr("href")
 		require.True(t, hrefExists)
-		assert.Contains(t, hrefValue, "/user2/lfs.git/info/lfs/objects/2eccdb43825d2a49d99d542daa20075cff1d97d9d2349a8977efe9c03661737c/direct")
+		assert.Contains(t, hrefValue, "/user2/lfs.git/info/lfs/objects/2eccdb43825d2a49d99d542daa20075cff1d97d9d2349a8977efe9c03661737c/ZGlyZWN0")
+
+		t.Run("Download", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req = NewRequest(t, "GET", hrefValue)
+			resp = session.MakeRequest(t, req, http.StatusOK)
+			assert.Equal(t, "application/octet-stream", resp.Header().Get("Content-Type"))
+			assert.Contains(t, resp.Header().Get("Content-Disposition"), "attachment; filename=\"direct\"")
+			assert.Equal(t, "107", resp.Header().Get("Content-Length"))
+		})
 	})
 }
 
