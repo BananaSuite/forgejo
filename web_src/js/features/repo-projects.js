@@ -1,6 +1,6 @@
 import $ from 'jquery';
 import {contrastColor} from '../utils/color.ts';
-import {createSortable} from '../modules/sortable.js';
+import {createSortable} from '../modules/sortable.ts';
 import {POST, DELETE, PUT} from '../modules/fetch.ts';
 
 function updateIssueCount(cards) {
