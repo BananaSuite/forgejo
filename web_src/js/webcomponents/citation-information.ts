@@ -3,7 +3,7 @@
 
 import '@citation-js/plugin-software-formats';
 import '@citation-js/plugin-bibtex';
-import {Cite, plugins} from '@citation-js/core'; // FIXME: install v0.9.0, which contains type declarations
+import {Cite, plugins, type InputOptions} from '@citation-js/core';
 
 import {getCurrentLocale} from '../utils.ts';
 import {initTab} from '../modules/tab.ts';
@@ -33,7 +33,8 @@ window.customElements.define(
       const inputType = plugins.input.type(code);
       let parsed: Cite;
       try {
-        parsed = new Cite(code, {forceType: inputType});
+        // FIXME: upstream failed to mark Cite constructor options as optional, despite them each having default values, so tsc complains here about an incomplete object
+        parsed = new Cite(code, {forceType: inputType} as InputOptions);
       } catch (err) {
         const elContainer = document.createElement('div');
         elContainer.classList.add('ui', 'warning', 'message');
@@ -94,7 +95,7 @@ window.customElements.define(
           'bibtex',
           'BibTeX',
           '',
-          parsed.format('bibtex', {lang}).trim(),
+          parsed.format('bibtex', {lang, format: 'text'}).trim(),
         );
       }
       if (inputType !== '@else/yaml') {
@@ -102,7 +103,7 @@ window.customElements.define(
           'cff',
           'CFF',
           'Citation File Format',
-          parsed.format('cff', {lang}).trim(),
+          parsed.format('cff').trim(),
         );
       }
 
