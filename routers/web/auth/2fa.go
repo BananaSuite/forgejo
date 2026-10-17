@@ -32,7 +32,6 @@ func TwoFactor(ctx *context.Context) {
 
 	// Ensure user is in a 2FA session.
 	if ctx.Session.Get("twofaUid") == nil {
-		ctx.Flash.Error("must be logged in to set 2fa", false)
 		ctx.Redirect("/user/login?redirect_to=%2Fuser%2Ftwo_factor", http.StatusFound)
 		return
 	}
