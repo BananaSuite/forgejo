@@ -954,53 +954,12 @@
 		"enable": "Enable keyboard shortcuts",
 		"button": {
 			"global": "Global",
-			"repo": "Repository",
-			"code": "Code",
-			"issue": "Issue/pull request"
+			"repo": "Repository"
 		},
 		"global": {
-			"down": "Navigate down a list",
-			"up": "Navigate up a list",
-			"home": "Go to homepage",
-			"notifications": "Go to Notifications",
-			"toggle": "Toggle checkbox on list",
 			"search": "Focus on searchbar",
 			"popup": "Show keyboard shortcuts dialog",
 			"close": "Close this dialog"
-		},
-		"repo": {
-			"create": "Create issue/pull request/release",
-			"action": "Go to actions",
-			"code": "Go to code",
-			"issue": "Go to issues",
-			"project": "Go to projects",
-			"pr": "Go to pull requests",
-			"release": "Go to releases",
-			"wiki": "Go to wiki",
-			"switch": "Switch branch/tag"
-		},
-		"code": {
-			"blame": "Toggle between blame and normal",
-			"history": "Go to history",
-			"line": "Go to line",
-			"raw": "View raw",
-			"permalink": "Copy permalink to clipboard"
-		},
-		"issue": {
-			"assignee": "Filter by assignee or edit assignees",
-			"author": "Filter by author",
-			"label": "Filter by label or edit labels",
-			"milestone": "Filter by milestone or edit milestones",
-			"project": "Filter by project or edit projects",
-			"sort": "Sort by",
-			"type": "Filter by type"
-		},
-		"line": {
-			"title": "Jump to line",
-			"prompt": "Line number",
-			"button": "Go",
-			"invalid": "Invalid input",
-			"notfound": "Line not found"
 		}
 	},
 	"meta.last_line": "Thank you for translating Forgejo! This line isn't seen by the users but it serves other purposes in the translation management. You can place a fun fact in the translation instead of translating it."

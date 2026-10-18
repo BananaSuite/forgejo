@@ -1,57 +1,5 @@
 import {POST} from '../modules/fetch.js';
 
-const Page = Object.freeze({
-  Actions: 0,
-  Code: 1,
-  Homepage: 2,
-  Issues: 3,
-  Notifications: 4,
-  Projects: 5,
-  Pulls: 6,
-  Releases: 7,
-  Wiki: 8,
-});
-type PageType = (typeof Page)[keyof typeof Page];
-
-let goto_state = false;
-let where: PageType = Page.Homepage;
-const list = document.querySelector('.kb-nav');
-
-function keyboardSelector(up: boolean, tab: boolean) {
-  const rows = Array.from(list?.children ?? []) as HTMLElement[];
-  if (rows.length === 0) return;
-  const cur = rows.findIndex((row) =>
-    row.classList.contains('keyboard-selected'),
-  );
-  if (cur === -1) {
-    const idx = up ? rows.length - 1 : 0;
-    rows[idx].classList.add('keyboard-selected');
-    const anchor = rows[idx].querySelector<HTMLAnchorElement>('.kb-nav-item');
-    if (!anchor) return;
-    anchor.scrollIntoView({block: 'center'});
-    anchor.focus();
-    return;
-  }
-  let el = rows[cur];
-  if (up) {
-    if (el.previousElementSibling) {
-      el = el.previousElementSibling as HTMLElement;
-    }
-  } else if (el.nextElementSibling) {
-    el = el.nextElementSibling as HTMLElement;
-  }
-  if (tab) {
-    if (rows[cur] === el) {
-      el.classList.remove('keyboard-selected');
-      return;
-    }
-  } else el.querySelector<HTMLAnchorElement>('.kb-nav-item')?.focus();
-  if (rows[cur] === el) return;
-  el.classList.add('keyboard-selected');
-  el.scrollIntoView({block: 'center'});
-  rows[cur].classList.remove('keyboard-selected');
-}
-
 function initPopupTabs() {
   const dialog = document.querySelector<HTMLDialogElement>('#shortcuts');
   const inputs = dialog.querySelectorAll<HTMLInputElement>('[type="radio"]');
@@ -96,99 +44,6 @@ function initEnableCheckbox() {
   });
 }
 
-function clearErrors(dialog: HTMLDialogElement) {
-  for (const el of dialog.querySelectorAll<HTMLElement>('[data-error]')) {
-    el.style.display = 'none';
-    el.toggleAttribute('aria-hidden', true);
-  }
-}
-
-function showError(dialog: HTMLDialogElement, type: string) {
-  clearErrors(dialog);
-  const div = dialog.querySelector<HTMLElement>(`[data-error="${type}"]`);
-  if (!div) return;
-  div.style.display = '';
-  div.toggleAttribute('aria-hidden', false);
-}
-
-function validate(input: HTMLInputElement, dialog: HTMLDialogElement) {
-  const num = Number(input.value);
-  if (Number.isNaN(num) || num < 1) {
-    showError(dialog, 'invalid');
-    return;
-  }
-  if (!document.querySelector(`#L${num}`)) {
-    showError(dialog, 'notfound');
-    return;
-  }
-  window.location.hash = `#L${num}`;
-  input.value = '';
-  dialog.close();
-}
-
-function initLineJump() {
-  const dialog = document.querySelector<HTMLDialogElement>('#line-jump');
-  if (!dialog) return;
-  clearErrors(dialog);
-  const input = dialog.querySelector('input');
-  if (!input) return;
-  input.max = document.querySelectorAll('.code-view tr').length.toString();
-  dialog.addEventListener('close', () => {
-    input.value = '';
-    clearErrors(dialog);
-  });
-  input.addEventListener('keydown', (ev) => {
-    if (ev.key !== 'Enter') return;
-    validate(input, dialog);
-  });
-  const btn = dialog.querySelector('[type="button"]');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    validate(input, dialog);
-  });
-}
-
-function goto(page: PageType): boolean {
-  if (!goto_state) return false;
-  switch (page) {
-    case Page.Actions:
-      document.querySelector<HTMLAnchorElement>('#repo-actions-tab')?.click();
-      break;
-    case Page.Code:
-      document.querySelector<HTMLAnchorElement>('#repo-code-tab')?.click();
-      break;
-    case Page.Homepage:
-      window.location.pathname = '/';
-      break;
-    case Page.Issues: {
-      if (document.querySelector('.repo-header')) {
-        document.querySelector<HTMLAnchorElement>('#repo-issues-tab')?.click();
-      } else window.location.pathname = '/issues';
-      break;
-    }
-    case Page.Notifications:
-      window.location.pathname = '/notifications';
-      break;
-    case Page.Projects:
-      document.querySelector<HTMLAnchorElement>('#repo-projects-tab')?.click();
-      break;
-    case Page.Pulls: {
-      if (document.querySelector('.repo-header')) {
-        document
-          .querySelector<HTMLAnchorElement>('#repo-pull-requests-tab')
-          ?.click();
-      } else window.location.pathname = '/pulls';
-      break;
-    }
-    case Page.Releases:
-      document.querySelector<HTMLAnchorElement>('#repo-releases-tab')?.click();
-      break;
-    case Page.Wiki:
-      document.querySelector<HTMLAnchorElement>('#repo-wiki-tab')?.click();
-  }
-  return true;
-}
-
 function onKeydown(e: KeyboardEvent) {
   if (
     (e.altKey ||
@@ -198,162 +53,20 @@ function onKeydown(e: KeyboardEvent) {
       !(e.target instanceof Element) ||
       e.target.closest('input, textarea, [contenteditable]')) &&
     (e.target as HTMLInputElement).type !== 'checkbox'
-  ) {
-    goto_state = false;
-    return;
-  }
+  ) return;
+
   switch (e.key) {
-    case 'a':
-      if (goto(Page.Actions)) return;
-      switch (where) {
-        case Page.Issues:
-        case Page.Pulls:
-          document
-            .querySelector<HTMLAnchorElement>('#assignee-dropdown')
-            ?.click();
-          e.preventDefault();
-          break;
-      }
-      break;
-    case 'b':
-      document.querySelector<HTMLAnchorElement>('#blame-btn')?.click();
-      break;
-    case 'c':
-      if (goto(Page.Code)) return;
-      document
-        .querySelector<HTMLAnchorElement>(
-          '.issue-list-new, .release-list-buttons .primary',
-        )
-        ?.click();
-      break;
-    case 'g':
-      if (goto_state) return;
-      goto_state = true;
-      setTimeout(() => {
-        goto_state = false;
-      }, 750);
-      return;
-    case 'h': {
-      if (goto(Page.Homepage)) return;
-      const btn = document.querySelector<HTMLAnchorElement>('#history-btn');
-      if (btn) btn.click();
-      else if (document.querySelector('#commits-table')) {
-        window.location.pathname = window.location.pathname.replace(
-          'commits',
-          'src',
-        );
-      }
-      break;
-    }
-    case 'i':
-      goto(Page.Issues);
-      break;
-    case 'j':
-      (e.target as HTMLInputElement).blur();
-      keyboardSelector(false, false);
-      break;
-    case 'k':
-      (e.target as HTMLInputElement).blur();
-      keyboardSelector(true, false);
-      break;
-    case 'l':
-      switch (where) {
-        case Page.Code: {
-          const dialog =
-            document.querySelector<HTMLDialogElement>('#line-jump');
-          if (dialog) {
-            dialog.showModal();
-            dialog.querySelector('input')?.focus();
-            e.preventDefault();
-          }
-          break;
-        }
-        case Page.Issues:
-        case Page.Pulls:
-          document.querySelector<HTMLAnchorElement>('#label-dropdown')?.click();
-          e.preventDefault();
-          break;
-      }
-      break;
-    case 'm':
-      document.querySelector<HTMLAnchorElement>('#milestone-dropdown')?.click();
-      e.preventDefault();
-      break;
-    case 'n':
-      goto(Page.Notifications);
-      break;
-    case 'o':
-      goto(Page.Projects);
-      break;
-    case 'p':
-      if (goto(Page.Pulls)) return;
-      switch (where) {
-        case Page.Issues:
-        case Page.Pulls:
-          document
-            .querySelector<HTMLAnchorElement>('#project-dropdown')
-            ?.click();
-          e.preventDefault();
-          break;
-      }
-      break;
-    case 'q':
-    case 'Escape':
-      document.querySelector<HTMLDialogElement>('dialog[open]')?.close();
-      break;
-    case 'r':
-      if (goto(Page.Releases)) return;
-      document.querySelector<HTMLAnchorElement>('#raw-btn')?.click();
-      break;
     case 's':
-      document.querySelector<HTMLAnchorElement>('#sort-dropdown')?.focus();
-      break;
-    case 't':
-      document.querySelector<HTMLAnchorElement>('#type-dropdown')?.focus();
-      break;
-    case 'u':
-      document.querySelector<HTMLAnchorElement>('#author-dropdown')?.click();
-      e.preventDefault();
-      break;
-    case 'w':
-      if (goto(Page.Wiki)) return;
-      document
-        .querySelector<HTMLAnchorElement>('.branch-dropdown-button')
-        ?.click();
-      e.preventDefault();
-      break;
-    case 'x':
-      document
-        .querySelector<HTMLInputElement>(
-          '.keyboard-selected input[type="checkbox"]',
-        )
-        ?.click();
-      break;
-    case 'y': {
-      const perma = document.querySelector<HTMLAnchorElement>('#permalink-btn');
-      if (!perma) return;
-      const msg = document.querySelector('#permalink-msg');
-      msg.classList.toggle('tw-hidden');
-      msg.toggleAttribute('aria-hidden');
-      const fn = (error: boolean) => {
-        const el = msg.querySelector(error ? '.error' : '.success');
-        el.classList.toggle('tw-hidden');
-        setTimeout(() => {
-          msg.classList.toggle('tw-hidden');
-          msg.toggleAttribute('aria-hidden');
-          el.classList.toggle('tw-hidden');
-        }, 1000);
-      };
-      navigator.clipboard
-        .writeText(perma.href)
-        .then(() => fn(false))
-        .catch(() => fn(true));
-      break;
-    }
-    case '/':
       document.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
       e.preventDefault();
       break;
+    case 't': {
+      const findFileUrl = document.querySelector<HTMLElement>(
+        '[data-find-file-url]',
+      )?.dataset.findFileUrl;
+      if (findFileUrl) window.location.assign(findFileUrl);
+      break;
+    }
     case 'ArrowUp': {
       const dialog = document.querySelector<HTMLDialogElement>('#shortcuts');
       if (!dialog.open || dialog.querySelector('.visible')) return;
@@ -372,23 +85,12 @@ function onKeydown(e: KeyboardEvent) {
       )?.click();
       break;
     }
-    case 'Tab': {
-      setTimeout(() => {
-        const ks = document.querySelector('.keyboard-selected');
-        if (!ks || ks.contains(document.activeElement)) return;
-        // FIX: highlight first item on `Tab+Shift` for repo issues and pulls
-        // page on Firefox 152.0.1
-        keyboardSelector(/* WTF*/ e.shiftKey, true);
-      }, 50);
-    }
   }
-  goto_state = false;
 }
 
 export function initUserShortcuts() {
   initPopupTabs();
   initEnableCheckbox();
-  initLineJump();
   if (
     document.querySelector<HTMLInputElement>('#shortcuts [type="checkbox"]')
       ?.checked
@@ -399,23 +101,5 @@ export function initUserShortcuts() {
     if (e.key === '?') {
       document.querySelector<HTMLDialogElement>('#shortcuts')?.showModal();
     }
-    if (
-      !document.querySelector<HTMLInputElement>('#shortcuts [type="checkbox"]')
-        ?.checked
-    ) return;
-    if (e.key === 'Tab' && e.shiftKey) {
-      setTimeout(() => {
-        const ks = document.querySelector('.keyboard-selected');
-        if (!ks || ks.contains(document.activeElement)) return;
-        keyboardSelector(true, true);
-      }, 50);
-    }
   });
-  if (document.querySelector('#repo-code-tab.active')) {
-    where = Page.Code;
-  } else if (document.querySelector('#repo-issues-tab.active')) {
-    where = Page.Issues;
-  } else if (document.querySelector('#repo-pull-requests-tab.active')) {
-    where = Page.Pulls;
-  }
 }

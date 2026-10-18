@@ -20,14 +20,6 @@
 						<input hidden type="radio" name="tab" value="repo">
 						{{ctx.Locale.Tr "shortcuts.button.repo"}}
 					</label>
-					<label class="item" role="option">
-						<input hidden type="radio" name="tab" value="code">
-						{{ctx.Locale.Tr "shortcuts.button.code"}}
-					</label>
-					<label class="item" role="option">
-						<input hidden type="radio" name="tab" value="issue">
-						{{ctx.Locale.Tr "shortcuts.button.issue"}}
-					</label>
 			</div>
 		</div>
 		<div class="tw-mt-4 tw-flex tw-justify-center">
@@ -38,32 +30,8 @@
 		<div class="tw-items-start tw-grid tw-grid-cols-1">
 			<ul data-tab="global">
 				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.global.down"}}</div>
-					<kbd>j</kbd>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.global.up"}}</div>
-					<kbd>k</kbd>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.global.home"}}</div>
-					<div>
-						<kbd>g</kbd> <kbd>h</kbd>
-					</div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.global.notifications"}}</div>
-					<div>
-						<kbd>g</kbd> <kbd>n</kbd>
-					</div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.global.toggle"}}</div>
-					<div><kbd>x</kbd></div>
-				</li>
-				<li>
 					<div>{{ctx.Locale.Tr "shortcuts.global.search"}}</div>
-					<div><kbd>/</kbd></div>
+					<div><kbd>s</kbd></div>
 				</li>
 				<li>
 					<div>{{ctx.Locale.Tr "shortcuts.global.popup"}}</div>
@@ -76,106 +44,8 @@
 			</ul>
 			<ul data-tab="repo" class="tw-invisible" aria-hidden="true">
 				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.repo.create"}}</div>
-					<div><kbd>c</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.repo.action"}}</div>
-					<div>
-						<kbd>g</kbd> <kbd>a</kbd>
-					</div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.repo.code"}}</div>
-					<div>
-						<kbd>g</kbd> <kbd>c</kbd>
-					</div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.repo.issue"}}</div>
-					<div>
-						<kbd>g</kbd> <kbd>i</kbd>
-					</div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.repo.project"}}</div>
-					<div>
-						<kbd>g</kbd> <kbd>o</kbd>
-					</div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.repo.pr"}}</div>
-					<div>
-						<kbd>g</kbd> <kbd>p</kbd>
-					</div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.repo.release"}}</div>
-					<div>
-						<kbd>g</kbd> <kbd>r</kbd>
-					</div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.repo.wiki"}}</div>
-					<div>
-						<kbd>g</kbd> <kbd>w</kbd>
-					</div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.repo.switch"}}</div>
-					<div><kbd>w</kbd></div>
-				</li>
-			</ul>
-			<ul data-tab="code" class="tw-invisible" aria-hidden="true">
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.code.blame"}}</div>
-					<div><kbd>b</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.code.history"}}</div>
-					<div><kbd>h</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.code.line"}}</div>
-					<div><kbd>l</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.code.raw"}}</div>
-					<div><kbd>r</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.code.permalink"}}</div>
-					<div><kbd>y</kbd></div>
-				</li>
-			</ul>
-			<ul data-tab="issue" class="tw-invisible" aria-hidden="true">
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.issue.assignee"}}</div>
-					<div><kbd>a</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.issue.label"}}</div>
-					<div><kbd>l</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.issue.milestone"}}</div>
-					<div><kbd>m</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.issue.project"}}</div>
-					<div><kbd>p</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.issue.sort"}}</div>
-					<div><kbd>s</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.issue.type"}}</div>
+					<div>{{ctx.Locale.Tr "repo.find_file.go_to_file"}}</div>
 					<div><kbd>t</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.issue.author"}}</div>
-					<div><kbd>u</kbd></div>
 				</li>
 			</ul>
 		</div>

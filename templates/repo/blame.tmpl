@@ -1,4 +1,3 @@
-{{template "repo/line_jump" .}}
 {{if or .UsesIgnoreRevs .FaultyIgnoreRevsFile}}
 	{{$revsFileLink := URLJoin .RepoLink "src" .BranchNameSubURL "/.git-blame-ignore-revs"}}
 	{{if .UsesIgnoreRevs}}

@@ -1,10 +1,4 @@
-.keyboard-selected {
-  background-color: var(--color-hover) !important;
-  box-shadow: inset 2px 0 0 var(--color-primary);
-}
-
-#shortcuts[open],
-#line-jump[open] {
+#shortcuts[open] {
   display: block;
 }
 
@@ -16,8 +10,7 @@
   width: 100%;
 }
 
-#shortcuts header,
-#line-jump header {
+#shortcuts header {
   display: flex;
   justify-content: space-between;
   padding: 1rem;
