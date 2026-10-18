@@ -180,21 +180,34 @@ func testWorkerPoolQueuePersistence(t *testing.T, queueSetting setting.QueueSett
 func TestWorkerPoolQueueActiveWorkers(t *testing.T) {
 	defer test.MockVariableValue(&workerIdleDuration, 300*time.Millisecond)()
 
+	chGoroutineIDs := make(chan string)
 	handler := func(items ...int) (unhandled []int) {
 		time.Sleep(100 * time.Millisecond)
+		chGoroutineIDs <- goroutineID() // hacky way to identify a worker
 		return nil
 	}
 
 	q, _ := newWorkerPoolQueueForTest("test-workpoolqueue", setting.QueueSettings{Type: "channel", BatchLength: 1, MaxWorkers: 1, Length: 100}, handler, false)
 	stop := runWorkerPoolQueue(q)
-	for i := range 5 {
+
+	// Push work to the queue
+	workloadSize := 5
+	for i := range workloadSize {
 		require.NoError(t, q.Push(i))
 	}
 
+	// Wait a small amount of time to give the queue time to start work
 	time.Sleep(50 * time.Millisecond)
 	assert.Equal(t, 1, q.GetWorkerNumber())
 	assert.Equal(t, 1, q.GetWorkerActiveNumber())
-	time.Sleep(500 * time.Millisecond)
+
+	// Wait for all tasks in the queue to finish
+	for range workloadSize {
+		<-chGoroutineIDs
+	}
+	// Wait a small amount of time to give the queue time to get done
+	// This amount of time plus the previous time should be well below the idle duration
+	time.Sleep(50 * time.Millisecond)
 	assert.Equal(t, 1, q.GetWorkerNumber())
 	assert.Equal(t, 0, q.GetWorkerActiveNumber())
 	time.Sleep(workerIdleDuration)
@@ -203,19 +216,27 @@ func TestWorkerPoolQueueActiveWorkers(t *testing.T) {
 
 	q, _ = newWorkerPoolQueueForTest("test-workpoolqueue", setting.QueueSettings{Type: "channel", BatchLength: 1, MaxWorkers: 3, Length: 100}, handler, false)
 	stop = runWorkerPoolQueue(q)
-	for i := range 15 {
+
+	workloadSize = 15
+	for i := range workloadSize {
 		require.NoError(t, q.Push(i))
 	}
 
 	time.Sleep(50 * time.Millisecond)
 	assert.Equal(t, 3, q.GetWorkerNumber())
 	assert.Equal(t, 3, q.GetWorkerActiveNumber())
-	time.Sleep(500 * time.Millisecond)
+
+	// Wait for all tasks in the queue to finish
+	for range workloadSize {
+		<-chGoroutineIDs
+	}
+	time.Sleep(50 * time.Millisecond)
 	assert.Equal(t, 3, q.GetWorkerNumber())
 	assert.Equal(t, 0, q.GetWorkerActiveNumber())
 	time.Sleep(workerIdleDuration)
 	assert.Equal(t, 1, q.GetWorkerNumber()) // there is at least one worker after the queue begins working
 	stop()
+	close(chGoroutineIDs)
 }
 
 func TestWorkerPoolQueueShutdown(t *testing.T) {
