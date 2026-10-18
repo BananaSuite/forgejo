@@ -79,7 +79,7 @@ import {initRepositoryActionView} from './features/repo-action-view.ts';
 import {initGlobalTooltips} from './modules/tippy.js';
 import {initDropdowns} from './modules/dropdown.ts';
 import {initGiteaFomantic} from './modules/fomantic.js';
-import {onDomReady} from './utils/dom.js';
+import {onDomReady} from './utils/dom.ts';
 import {initRepoIssueList} from './features/repo-issue-list.js';
 import {initCommonIssueListQuickGoto} from './features/common-issue-list.js';
 import {initRepoContributors} from './features/contributors.js';
@@ -92,6 +92,11 @@ import {initColorPickers} from './features/colorpicker.js';
 import {initRepoMilestoneEditor} from './features/repo-milestone.js';
 import {initModalClose} from './modules/modal.ts';
 import {initAuthorizedIntegrationClaimRuleEditor} from './features/authorized-integration.js';
+import {
+  initModalServiceMessageForm,
+  initPreviewServiceMessageButton,
+  initDeleteServiceMessageButton,
+} from './features/service-message.ts';
 
 // Init Gitea's Fomantic settings
 initGiteaFomantic();
@@ -199,6 +204,9 @@ onDomReady(() => {
   initColorPickers();
   initModalClose();
   initAuthorizedIntegrationClaimRuleEditor();
+  initModalServiceMessageForm();
+  initPreviewServiceMessageButton();
+  initDeleteServiceMessageButton();
 
   // no-js helper class is currently unused by UI components in Forgejo, but it is left for compatibility
   document.body.classList.remove('no-js');

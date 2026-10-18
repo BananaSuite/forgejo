@@ -9,7 +9,6 @@ import (
 	"forgejo.org/modules/validation"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_FollowingRepoInbox(t *testing.T) {
@@ -24,16 +23,14 @@ func Test_FollowingRepoValidation(t *testing.T) {
 		FederationHostID: 1,
 		URI:              "http://localhost:3000/api/v1/activitypub/repo-id/1",
 	}
-	res, err := validation.IsValid(sut)
-	require.NoError(t, err)
-	assert.True(t, res, "sut should be valid")
+	valid, err := validation.IsValid(sut)
+	assert.True(t, valid, "sut '%v' should be valid: %v", sut, err)
 
 	sut = FollowingRepo{
 		ExternalID:       "12",
 		FederationHostID: 1,
 		URI:              "http://localhost:3000/api/v1/activitypub/repo-id/1",
 	}
-	res, err = validation.IsValid(sut)
-	require.Error(t, err)
-	assert.False(t, res, "sut should be invalid")
+	valid, _ = validation.IsValid(sut)
+	assert.False(t, valid, "sut should be invalid")
 }

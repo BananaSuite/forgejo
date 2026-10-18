@@ -26,7 +26,10 @@ func Test_NewForgeLike(t *testing.T) {
 	startTime, _ := time.Parse("2006-Jan-02", "2024-Mar-07")
 
 	sut, err := forgefed.NewForgeLike(actorIRI, objectIRI, startTime)
-	require.NoError(t, err)
+	require.NoError(t, err, "unexpected error: %v", err)
+
+	valid, err := validation.IsValid(sut)
+	assert.True(t, valid, "sut '%v' should be valid: %v", sut, err)
 
 	got, err := sut.MarshalJSON()
 	require.NoError(t, err, "MarshalJSON() error = %q", err)
@@ -114,8 +117,7 @@ func Test_ForgeLikeValidation(t *testing.T) {
 		"object":"https://codeberg.org/api/activitypub/repository-id/1",
 		"startTime": "2014-12-31T23:00:00-08:00"}`))
 		valid, err := validation.IsValid(sut)
-		require.NoError(t, err)
-		assert.True(t, valid, "sut expected to be valid: %v\n", sut.Validate())
+		assert.True(t, valid, "sut '%v' should be valid: %v", sut, err)
 	})
 
 	t.Run("Empty type", func(t *testing.T) {

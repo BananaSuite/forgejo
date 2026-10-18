@@ -2,8 +2,8 @@
 import {SvgIcon} from '../svg.ts';
 import ActionRunStatus from './ActionRunStatus.vue';
 import ActionJobStepList from './ActionJobStepList.vue';
-import {toggleElem} from '../utils/dom.js';
-import {GET, POST, DELETE} from '../modules/fetch.js';
+import {toggleElem} from '../utils/dom.ts';
+import {GET, POST, DELETE} from '../modules/fetch.ts';
 import {initMarkupContent} from '../markup/content.js';
 import {showErrorToast} from '../modules/toast.js';
 
@@ -511,7 +511,7 @@ export default {
             :size="20"
           />
           <!-- eslint-disable-next-line vue/no-v-html -->
-          <h2 class="action-info-summary-title-text" v-html="run.titleHTML"/>
+          <h1 class="action-info-summary-title-text" v-html="run.titleHTML"/>
         </div>
         <button class="ui basic small compact button primary" @click="approveRun()" v-if="canApprove">
           {{ locale.approve }}

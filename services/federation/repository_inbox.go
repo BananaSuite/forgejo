@@ -24,6 +24,10 @@ func SendRepositoryActivities(ctx context.Context, activity ap.Activity, doer us
 		return err
 	}
 
+	if len(followingRepos) == 0 {
+		return nil
+	}
+
 	hosts := make([]*url.URL, 0, len(followingRepos))
 	for _, followingRepo := range followingRepos {
 		log.Trace("Found following repo: %#v", followingRepo)

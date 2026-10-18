@@ -243,8 +243,8 @@ func getFileReader(ctx gocontext.Context, repoID int64, blob *git.Blob) ([]byte,
 		return buf, dataRc, &fileInfo{isTextFile, false, blob.Size(), nil, st}, nil
 	}
 
-	pointer, _ := lfs.ReadPointerFromBuffer(buf)
-	if !pointer.IsValid() { // fallback to plain file
+	pointer, err := lfs.ReadPointerFromBuffer(buf)
+	if err != nil { // fallback to plain file
 		return buf, dataRc, &fileInfo{isTextFile, false, blob.Size(), nil, st}, nil
 	}
 
@@ -1086,8 +1086,23 @@ func renderHomeCode(ctx *context.Context) {
 		link := ctx.Link
 		if ctx.Req.URL.RawQuery != "" {
 			link += "?" + ctx.Req.URL.RawQuery
+			ctx.Redirect(link)
+			return
 		}
-		ctx.Redirect(link)
+
+		var tags []*git.Tag
+		var totalTags int
+		if tags, totalTags, err = ctx.Repo.GitRepo.GetTagInfos(0, 1); err != nil {
+			ctx.ServerError("GetTagInfos", err)
+			return
+		}
+		if totalTags == 0 {
+			ctx.NotFound("GetTagInfos: no tags in the repository", err)
+			return
+		}
+
+		log.Trace("Tag with latest commit: \"%s\" - redirecting", tags[0].Name)
+		ctx.Redirect(ctx.Link + "/src/tag/" + tags[0].Name)
 		return
 	}
 
