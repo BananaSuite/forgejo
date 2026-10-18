@@ -31,7 +31,7 @@ type Toast = ReturnType<typeof Toastify>;
 
 /** See https://github.com/apvarun/toastify-js#api for options */
 function showToast(message: string, level: keyof typeof levels, {gravity, position, duration, useHtmlBody, ...other}: ToastOptions = {}): Toast {
-  const {icon, background, duration: levelDuration} = levels[level ?? 'info'];
+  const {icon, background, duration: levelDuration} = levels[level];
   const toast = Toastify({
     text: `
       <div class='toast-icon'>${svg(icon)}</div>
