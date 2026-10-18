@@ -3,7 +3,7 @@
 
 // @watch start
 // templates/projects/view.tmpl
-// web_src/js/features/repo-projects.js
+// web_src/js/features/repo-projects.ts
 // @watch end
 
 import {expect} from '@playwright/test';
