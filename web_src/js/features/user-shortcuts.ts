@@ -46,6 +46,16 @@ function initEnableCheckbox() {
 
 function onKeydown(e: KeyboardEvent) {
   if (
+    e.key === 'Escape' &&
+    e.target instanceof HTMLInputElement &&
+    e.target.type === 'search' &&
+    e.target.value === ''
+  ) {
+    e.target.blur();
+    return;
+  }
+
+  if (
     (e.altKey ||
       e.ctrlKey ||
       e.metaKey ||

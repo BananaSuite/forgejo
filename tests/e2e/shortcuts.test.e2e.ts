@@ -23,8 +23,15 @@ test('Code shortcuts', async ({browser}, workerInfo) => {
   await expect(page.locator('#repo-file-find-input')).toBeFocused();
 
   expect((await page.goto('/user2/repo1/issues'))?.status()).toBe(200);
+  const search = page.locator('input[type="search"]').first();
   await page.keyboard.press('s');
-  await expect(page.locator('input[type="search"]').first()).toBeFocused();
+  await expect(search).toBeFocused();
+  await search.fill('query');
+  await page.keyboard.press('Escape');
+  await expect(search).toBeFocused();
+  await search.fill('');
+  await page.keyboard.press('Escape');
+  await expect(search).not.toBeFocused();
 });
 
 test('Open dialog and persist enable setting', async ({
