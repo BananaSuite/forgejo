@@ -249,8 +249,11 @@ func GetListenerUnix(network string, address *net.UnixAddr) (*net.UnixListener, 
 	err = f.Chmod(fileMode)
 	f.Close()
 	if err != nil {
-		l.Close()
-		return nil, fmt.Errorf("Failed to set permission of unix socket to %s: %w", fileMode.String(), err)
+		// try with os.Chmod
+		if err := os.Chmod(address.Name, fileMode); err != nil {
+			l.Close()
+			return nil, fmt.Errorf("Failed to set permission of unix socket to %s: %w", fileMode.String(), err)
+		}
 	}
 
 	activeListeners = append(activeListeners, l)
