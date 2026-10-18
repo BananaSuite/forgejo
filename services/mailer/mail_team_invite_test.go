@@ -1,3 +1,6 @@
+// Copyright 2026 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: MIT
+
 package mailer
 
 import (
@@ -17,8 +20,8 @@ import (
 
 func TestTeamNotificationMail_test(t *testing.T) {
 	defer test.MockVariableValue(&setting.Admin.DisableRegularOrgCreation, false)()
+	defer test.MockVariableValue(&setting.Admin.SendNotificationEmailOnNewUser, true)()
 	require.NoError(t, unittest.PrepareTestDatabase())
-
 	inviter := new(user_model.User)
 	inviter.Name = "new_user"
 	inviter.Language = "en_US"
@@ -34,31 +37,49 @@ func TestTeamNotificationMail_test(t *testing.T) {
 	require.NoError(t, org_model.CreateOrganization(t.Context(), org, inviter))
 	o, _ := org_model.GetOrgByName(t.Context(), org.Name)
 	team, _ := o.GetOwnerTeam(t.Context())
+	t.Run("with invitee", func(t *testing.T) {
+		invitedUser := new(user_model.User)
+		invitedUser.Name = "invited_user"
+		invitedUser.Language = "de-DE"
+		invitedUser.IsAdmin = false
+		invitedUser.Email = "invited_user@example.com"
+		invitedUser.LastLoginUnix = 1693648327
+		invitedUser.CreatedUnix = 1693648027
+		require.NoError(t, user_model.CreateUser(t.Context(), invitedUser))
+		invite, _ := org_model.CreateTeamInviteForUser(t.Context(), inviter, invitedUser, team)
 
-	invitedUser := new(user_model.User)
-	invitedUser.Name = "invited_user"
-	invitedUser.Language = "de-DE"
-	invitedUser.IsAdmin = false
-	invitedUser.Email = "invited_user@example.com"
-	invitedUser.LastLoginUnix = 1693648327
-	invitedUser.CreatedUnix = 1693648027
-	require.NoError(t, user_model.CreateUser(t.Context(), invitedUser))
-	invite, _ := org_model.CreateTeamInviteForUser(t.Context(), inviter, invitedUser, team)
+		called := false
+		defer MockMailSettings(func(msgs ...*Message) {
+			assert.Len(t, msgs, 1, "Test provides only one user, so only one email must be sent")
+			assert.Equal(t, invitedUser.Email, msgs[0].To, "checks if the recipient is invited user")
+			locale := translation.NewLocale(invite.InvitedUser.Language)
+			subject := locale.TrString("mail.team_invite.subject", inviter.DisplayName(), org.DisplayName())
+			assert.Equal(t, msgs[0].Subject, subject)
+			AssertTranslatedLocale(t, msgs[0].Subject, "mail.team_invite.subject")
+			called = true
+		})()
 
-	defer test.MockVariableValue(&setting.Admin.SendNotificationEmailOnNewUser, true)()
+		MailTeamInvite(t.Context(), inviter, team, invite)
 
-	called := false
-	defer MockMailSettings(func(msgs ...*Message) {
-		assert.Len(t, msgs, 1, "Test provides only one user, so only one email must be sent")
-		assert.Equal(t, invitedUser.Email, msgs[0].To, "checks if the recipient is invited user")
-		locale := translation.NewLocale(invite.InvitedUser.Language)
-		subject := locale.TrString("mail.team_invite.subject", inviter.DisplayName(), org.DisplayName())
-		assert.Equal(t, msgs[0].Subject, subject)
-		AssertTranslatedLocale(t, msgs[0].Subject, "mail.team_invite.subject")
-		called = true
-	})()
+		assert.True(t, called)
+	})
 
-	MailTeamInvite(t.Context(), inviter, team, invite)
+	t.Run("without invitee", func(t *testing.T) {
+		invite, _ := org_model.CreateTeamInviteByEmail(t.Context(), inviter, team, "non-user@example.com")
 
-	assert.True(t, called)
+		called := false
+		defer MockMailSettings(func(msgs ...*Message) {
+			assert.Len(t, msgs, 1, "Test provides only one user, so only one email must be sent")
+			assert.Equal(t, "non-user@example.com", msgs[0].To, "checks if the recipient is invited user")
+			locale := translation.NewLocale(inviter.Language)
+			subject := locale.TrString("mail.team_invite.subject", inviter.DisplayName(), org.DisplayName())
+			assert.Equal(t, msgs[0].Subject, subject)
+			AssertTranslatedLocale(t, msgs[0].Subject, "mail.team_invite.subject")
+			called = true
+		})()
+
+		MailTeamInvite(t.Context(), inviter, team, invite)
+
+		assert.True(t, called)
+	})
 }

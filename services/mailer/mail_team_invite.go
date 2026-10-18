@@ -33,7 +33,10 @@ func MailTeamInvite(ctx context.Context, inviter *user_model.User, team *org_mod
 		return err
 	}
 
-	locale := translation.NewLocale(invite.InvitedUser.Language)
+	locale := translation.NewLocale(inviter.Language)
+	if invite.InvitedUser != nil {
+		locale = translation.NewLocale(invite.InvitedUser.Language)
+	}
 
 	// check if a user with this email already exists
 	user, err := user_model.GetUserByEmail(ctx, invite.Email)
