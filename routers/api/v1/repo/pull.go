@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -752,7 +753,7 @@ func EditPullRequest(ctx *context.APIContext) {
 		}
 		isClosed := api.StateClosed == api.StateType(*form.State)
 		if issue.IsClosed != isClosed {
-			if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer(), "", isClosed); err != nil {
+			if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer(), &issues_model.PRNotificationInfo{MergedCommitID: ""}, isClosed); err != nil {
 				if issues_model.IsErrDependenciesLeft(err) {
 					ctx.Error(http.StatusPreconditionFailed, "DependenciesLeft", "cannot close this pull request because it still has open dependencies")
 					return
@@ -1213,6 +1214,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	headIsBranch := headGitRepo.IsBranchExist(headBranch)
 	headIsTag := headGitRepo.IsTagExist(headBranch)
 	if !headIsCommit && !headIsBranch && !headIsTag {
+		headGitRepo.Close()
 		ctx.NotFound(fmt.Errorf("could not find '%s' to be a commit, branch or tag in the head repository %s/%s", headBranch, headRepo.Owner.Name, headRepo.Name))
 		return nil, nil, nil, "", ""
 	}
@@ -1311,9 +1313,20 @@ func UpdatePullRequest(ctx *context.APIContext) {
 		return
 	}
 
+	headRepoPerm, err := access_model.GetUserRepoPermissionWithReducer(ctx, pr.HeadRepo, ctx.Doer(), ctx.Reducer())
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer head repo", err)
+		return
+	}
+	baseRepoPerm, err := access_model.GetUserRepoPermissionWithReducer(ctx, pr.BaseRepo, ctx.Doer(), ctx.Reducer())
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer base repo", err)
+		return
+	}
+
 	rebase := ctx.FormString("style") == "rebase"
 
-	allowedUpdateByMerge, allowedUpdateByRebase, err := pull_service.IsUserAllowedToUpdate(ctx, pr, ctx.Doer())
+	allowedUpdateByMerge, allowedUpdateByRebase, err := pull_service.IsUserAllowedToUpdate(ctx, pr, ctx.Doer(), headRepoPerm, baseRepoPerm)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "IsUserAllowedToMerge", err)
 		return
@@ -1333,6 +1346,10 @@ func UpdatePullRequest(ctx *context.APIContext) {
 			return
 		} else if models.IsErrRebaseConflicts(err) {
 			ctx.Error(http.StatusConflict, "Update", "rebase failed because of conflict")
+			return
+		} else if errors.Is(err, pull_service.ErrPullRequestIsUpdateToDate) {
+			// No need to report an error -- the update operation didn't do anything, but there was nothing to be done.
+			ctx.Status(http.StatusOK)
 			return
 		}
 		ctx.Error(http.StatusInternalServerError, "pull_service.Update", err)
@@ -1610,37 +1627,47 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 
 	maxLines := setting.Git.MaxGitDiffLines
 
-	// FIXME: If there are too many files in the repo, may cause some unpredictable issues.
-	diff, _, err := gitdiff.GetDiffSimple(ctx, baseGitRepo,
-		&gitdiff.DiffOptions{
-			BeforeCommitID:     startCommitID,
-			AfterCommitID:      endCommitID,
-			SkipTo:             ctx.FormString("skip-to"),
-			MaxLines:           maxLines,
-			MaxLineCharacters:  setting.Git.MaxGitDiffLineCharacters,
-			MaxFiles:           -1, // GetDiff() will return all files
-			WhitespaceBehavior: gitdiff.GetWhitespaceFlag(ctx.FormString("whitespace")),
-		})
+	listOptions := utils.GetListOptions(ctx)
+	start, end := listOptions.GetSkipTake()
+	end += start
+
+	diffFileMetadata, err := gitdiff.GetDiffNameStatus(ctx, baseGitRepo, startCommitID, endCommitID, listOptions.PageSize)
 	if err != nil {
-		ctx.ServerError("GetDiff", err)
+		ctx.ServerError("GetDiffNameStatus", err)
 		return
 	}
 
-	listOptions := utils.GetListOptions(ctx)
-
-	totalNumberOfFiles := diff.NumFiles
-	totalNumberOfPages := int(math.Ceil(float64(totalNumberOfFiles) / float64(listOptions.PageSize)))
-
-	start, limit := listOptions.GetSkipTake()
-
-	limit = min(limit, totalNumberOfFiles-start)
-
-	limit = max(limit, 0)
-
-	apiFiles := make([]*api.ChangedFile, 0, limit)
-	for i := start; i < start+limit; i++ {
-		apiFiles = append(apiFiles, convert.ToChangedFile(diff.Files[i], pr.HeadRepo, endCommitID))
+	skipTo := ctx.FormString("skip-to")
+	if skipTo != "" {
+		diffFileMetadata = skipFilesTo(diffFileMetadata, skipTo)
 	}
+
+	if end > len(diffFileMetadata) {
+		end = len(diffFileMetadata)
+	}
+
+	var apiFiles []*api.ChangedFile
+	if start < len(diffFileMetadata) {
+		diff, _, err := gitdiff.GetDiffSimple(ctx, baseGitRepo,
+			&gitdiff.DiffOptions{
+				BeforeCommitID:     startCommitID,
+				AfterCommitID:      endCommitID,
+				MaxLines:           maxLines,
+				MaxLineCharacters:  setting.Git.MaxGitDiffLineCharacters,
+				WhitespaceBehavior: gitdiff.GetWhitespaceFlag(ctx.FormString("whitespace")),
+			}, gitdiff.GetFileNames(diffFileMetadata[start:end])...)
+		if err != nil {
+			ctx.ServerError("GetDiff", err)
+			return
+		}
+		apiFiles = make([]*api.ChangedFile, len(diff.Files))
+		for i, diffFile := range diff.Files {
+			apiFiles[i] = convert.ToChangedFile(diffFile, pr.HeadRepo, endCommitID)
+		}
+	}
+
+	totalNumberOfFiles := len(diffFileMetadata)
+	totalNumberOfPages := int(math.Ceil(float64(totalNumberOfFiles) / float64(listOptions.PageSize)))
 
 	ctx.SetLinkHeader(totalNumberOfFiles, listOptions.PageSize)
 	ctx.SetTotalCountHeader(int64(totalNumberOfFiles))
@@ -1652,4 +1679,14 @@ func GetPullRequestFiles(ctx *context.APIContext) {
 	ctx.AppendAccessControlExposeHeaders("X-Page", "X-PerPage", "X-PageCount", "X-HasMore")
 
 	ctx.JSON(http.StatusOK, &apiFiles)
+}
+
+func skipFilesTo(list []*gitdiff.DiffFileMetadata, target string) []*gitdiff.DiffFileMetadata {
+	i := slices.IndexFunc(list, func(diff *gitdiff.DiffFileMetadata) bool {
+		return diff.Name == target
+	})
+	if i != -1 {
+		return list[i:]
+	}
+	return []*gitdiff.DiffFileMetadata{}
 }

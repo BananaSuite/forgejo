@@ -11,26 +11,30 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqToken, functionTest{
-	fulfillNeeds: func(t *testing.T, data *fixtureData) {
-		t.Helper()
-		data.SetDefault("doer", "doerregular")
-	},
-	fixtures: []*fixtureType{
+	testCases: []*testCase{
 		{
-			data: newFixtureData(map[string]string{
-				"doer": "doerregular",
-			}),
+			// pass because the doer is authenticated with a token
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoer(),
+			),
 		},
 		{
-			data: newFixtureData(map[string]string{
-				"doer": user_model.ActionsUserName,
-			}),
+			// pass because the Forgejo Actions doer is authenticated with a token
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoer().SetDoerName(user_model.ActionsUserName).
+				SetDoerActions(true),
+			),
 		},
 		{
-			data: newFixtureData(map[string]string{
-				"doer": "anonymous",
-			}),
+			// fail because an anonymous visitor is not authenticated with a token
+			data: newTestData(map[string]string{}, newSharedData().
+				SetAnonymous(true),
+			),
 			error: "token is required",
 		},
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.shared.SetDoerDefault()
 	},
 })

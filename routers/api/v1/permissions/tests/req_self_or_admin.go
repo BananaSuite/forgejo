@@ -11,38 +11,49 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqSelfOrAdmin, functionTest{
-	fulfillNeeds: func(t *testing.T, data *fixtureData) {
-		t.Helper()
-		data.SetDefault("doer", "doeradmin")
-	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
-		if data.Has("user") && data.Get("user") != "anonymous" {
-			name := data.Get("user")
-			user := permissions.User()
-			if user == nil {
-				fixtureCreateUser(t, &user_model.User{Name: name})
-				permissions.SetUser(fixtureGetUser(t, name))
-			}
-		}
-	},
-	fixtures: []*fixtureType{
+	testCases: []*testCase{
 		{
-			data: newFixtureData(map[string]string{
-				"doer": "doeradmin",
-			}),
+			// pass because the doer is an admin user
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoer().
+				SetDoerAdmin(true)),
 		},
 		{
-			data: newFixtureData(map[string]string{
-				"doer": "regularuser",
-				"user": "regularuser",
-			}),
+			// pass because the context user "someuser" is the same as the doer
+			data: newTestData(map[string]string{
+				"user": "someuser",
+			}, newSharedData().
+				SetDoer().
+				SetDoerName("someuser"),
+			),
 		},
 		{
-			data: newFixtureData(map[string]string{
-				"doer": "regularuser",
+			// fail because the doer is neither an admin nor is it equal to
+			// the context user
+			data: newTestData(map[string]string{
 				"user": "otheruser",
-			}),
+			}, newSharedData().
+				SetDoer(),
+			),
 			error: "doer should be the site admin or be same as the contextUser",
 		},
+	},
+	sequenceFilter: []string{
+		"APIAuthorization",
+		"ReqSelfOrAdmin",
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		if !data.shared.HasDoerName() {
+			data.shared.SetDoer()
+			data.shared.SetDoerAdmin(true)
+		}
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		if data.Has("user") {
+			name := data.Get("user")
+			fixtureCreateUser(t, &user_model.User{Name: name})
+			permissions.SetUser(fixtureGetUser(t, name))
+		}
 	},
 })

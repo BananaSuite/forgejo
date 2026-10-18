@@ -44,10 +44,8 @@ forgejo.org/models/issues
 	IsErrUnknownDependencyType
 	IsErrIssueWasClosed
 
-forgejo.org/models/organization
-	SearchMembersOptions.ToConds
-
 forgejo.org/models/perm/access
+	AccessLevel
 	GetRepoWriters
 
 forgejo.org/models/user
@@ -74,7 +72,7 @@ forgejo.org/modules/auth/password/pwn
 	WithHTTP
 
 forgejo.org/modules/base
-	SetupGiteaRoot
+	SetupProjectRoot
 
 forgejo.org/modules/cache
 	WithNoCacheContext
@@ -131,6 +129,11 @@ forgejo.org/modules/json
 	StdJSON.NewDecoder
 	StdJSON.Indent
 
+forgejo.org/modules/jwtx
+	savePublicKey
+	NewVerifier
+	Verifier.Parse
+
 forgejo.org/modules/log
 	eventWriterBuffer.Close
 	eventWriterBuffer.Write
@@ -175,8 +178,26 @@ forgejo.org/modules/queue/lqinternal
 
 forgejo.org/modules/setting
 	NewConfigProviderFromData
+	NewVolatileConfigProvider
+	volatileConfig.WriteTo
+	volatileConfig.String
+	volatileConfig.Save
+	volatileConfig.SaveTo
+	volatileConfig.GetFile
+	volatileConfig.DisableSaving
+	volatileConfig.PrepareSaving
+	volatileConfig.Section
+	volatileConfig.Sections
+	volatileConfig.NewSection
+	volatileConfig.GetSection
 	GitConfigType.GetOption
 	InitLoggersForTest
+	checkSigningOnlySymmetric
+	checkValidationOnlySymmetric
+	onlySymmetric
+	checkSigningOnlyHS256
+	checkValidationOnlyHS256
+	onlyHS256
 
 forgejo.org/modules/sync
 	StatusTable.Start

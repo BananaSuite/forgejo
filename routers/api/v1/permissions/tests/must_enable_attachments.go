@@ -11,21 +11,23 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.MustEnableAttachments, functionTest{
+	testCases: []*testCase{
+		{
+			// pass if attachments are enabled in settings
+			data: newTestData(map[string]string{}, newSharedData()),
+		},
+		{
+			// fail if attachments are disabled in settings
+			data: newTestData(map[string]string{
+				"Attachment.Enabled": "false",
+			}, newSharedData()),
+			error: "Not Found",
+		},
+	},
 	protectSettingsBool: []*bool{
 		&setting.Attachment.Enabled,
 	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		setting.Attachment.Enabled = data.Get("Attachment.Enabled") != "false"
-	},
-	fixtures: []*fixtureType{
-		{
-			data: newFixtureData(map[string]string{}),
-		},
-		{
-			data: newFixtureData(map[string]string{
-				"Attachment.Enabled": "false",
-			}),
-			error: "Not Found",
-		},
 	},
 })

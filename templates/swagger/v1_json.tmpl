@@ -5810,11 +5810,63 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/actions/jobs/{job_id}": {
+      "get": {
+        "description": "Returns the workflow job plus the ordered list of steps that make up its execution. The `number` field on each step is the value accepted by the `?step=` filter on the job-logs endpoint; `number=0` is always \"Set up job\" and the last index is always \"Complete job\", with the workflow's real steps in between. A job that has never been picked up by a runner returns the job metadata with `steps` omitted.\n",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Get a single workflow run job, including its step list",
+        "operationId": "repoGetActionJob",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID of the workflow job",
+            "name": "job_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ActionRunJob"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/actions/jobs/{job_id}/logs": {
       "get": {
-        "description": "Returns the plaintext log for the job. By default the log for the most recent attempt is returned (ActionRunJob.TaskID tracks the latest task). Pass `?attempt=N` to fetch the log for a specific historical attempt; the value matches the `attempt` field returned by the job listing endpoints.\n",
+        "description": "Returns the plaintext log for the job. By default the log for the most recent attempt is returned (ActionRunJob.TaskID tracks the latest task). Pass `?attempt=N` to fetch the log for a specific historical attempt; the value matches the `attempt` field returned by the job listing endpoints. Pass `?step=N` to narrow to a single step (using the `number` field from `GET /actions/jobs/{job_id}`), `?q=` to substring-filter lines, and `?format=ndjson` for NDJSON output (one `{time, content}` object per line). When `q` or `format=ndjson` is set the response drops `Accept-Ranges` and does not support `Range:` since the total length isn't known until the scan finishes.\n",
         "produces": [
-          "text/plain"
+          "text/plain",
+          "application/x-ndjson"
         ],
         "tags": [
           "repository"
@@ -5850,23 +5902,102 @@
             "description": "1-based attempt number matching the value of `attempt` in the job listing; omit to fetch the latest attempt of the job",
             "name": "attempt",
             "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "Step number to filter to. Use the `number` field from `GET /repos/{owner}/{repo}/actions/jobs/{job_id}` — 0 is the \"Set up job\" entry, the last index is the \"Complete job\" entry, real steps are in between. Returns only that step's slice of the log. Range requests still work over the slice.\n",
+            "name": "step",
+            "in": "query"
+          },
+          {
+            "type": "string",
+            "description": "Substring filter applied to each line's content (the part after the timestamp prefix). Plain string match — regex is not supported. Setting `q` drops `Accept-Ranges` and disables `Range:` support; the full filtered body is always returned.\n",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "type": "boolean",
+            "description": "Case-insensitive substring match (only meaningful when `q` is set).",
+            "name": "qi",
+            "in": "query"
+          },
+          {
+            "enum": [
+              "text",
+              "ndjson"
+            ],
+            "type": "string",
+            "description": "Response shape. `text` (default) returns log content as plaintext lines. `ndjson` returns one `{\"time\":\"...\",\"content\":\"...\"}` object per emitted line, separated by `\\n` (content-type `application/x-ndjson`). `format=ndjson` drops `Accept-Ranges` and disables `Range:` support.\n",
+            "name": "format",
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Plaintext log content",
+            "description": "Plaintext log content (or NDJSON when `format=ndjson`)",
             "schema": {
               "type": "string"
             }
           },
           "206": {
-            "description": "Partial log content (Range request)",
+            "description": "Partial log content (Range request; not returned when `q` or `format=ndjson` is set)",
             "schema": {
               "type": "string"
             }
           },
           "401": {
             "$ref": "#/responses/unauthorized"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/actions/jobs/{job_id}/rerun": {
+      "post": {
+        "description": "Rerun a particular workflow job and all jobs that depend on it. The workflow job must have completed (succeeded, failed, cancelled or skipped) for the operation to succeed. Otherwise, an error is returned.\n",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Rerun a completed workflow job and its dependent jobs",
+        "operationId": "repoRerunActionJob",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID of the workflow job",
+            "name": "job_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Workflow job rerun has been started"
+          },
+          "400": {
+            "$ref": "#/responses/error"
           },
           "403": {
             "$ref": "#/responses/forbidden"
@@ -6574,6 +6705,57 @@
         }
       }
     },
+    "/repos/{owner}/{repo}/actions/runs/{run_id}/rerun": {
+      "post": {
+        "description": "Rerun a particular workflow run. The workflow run must have completed (succeeded, failed, cancelled or skipped) for the operation to succeed. Otherwise, an error is returned.\n",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "repository"
+        ],
+        "summary": "Rerun a finished (succeeded, failed, cancelled or skipped) workflow run.",
+        "operationId": "RerunActionRun",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID of the workflow run",
+            "name": "run_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Workflow rerun has been started"
+          },
+          "400": {
+            "$ref": "#/responses/error"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/repos/{owner}/{repo}/actions/secrets": {
       "get": {
         "produces": [
@@ -7102,6 +7284,9 @@
           },
           "204": {
             "$ref": "#/responses/empty"
+          },
+          "400": {
+            "$ref": "#/responses/error"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -8339,6 +8524,20 @@
             "name": "basehead",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "boolean",
+            "default": true,
+            "description": "include verification status for each commit",
+            "name": "verification",
+            "in": "query"
+          },
+          {
+            "type": "boolean",
+            "default": true,
+            "description": "include which files changed by a commit",
+            "name": "files",
+            "in": "query"
           }
         ],
         "responses": {
@@ -12543,6 +12742,105 @@
           },
           "422": {
             "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/issues/{index}/lock": {
+      "put": {
+        "tags": [
+          "issue"
+        ],
+        "summary": "Lock an issue",
+        "operationId": "lockIssue",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "index of the issue to lock",
+            "name": "index",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/IssueLockOption"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "409": {
+            "$ref": "#/responses/conflict"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "issue"
+        ],
+        "summary": "Unlock an issue",
+        "operationId": "unlockIssue",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "index of the issue to unlock",
+            "name": "index",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "409": {
+            "$ref": "#/responses/conflict"
           }
         }
       }
@@ -19428,6 +19726,9 @@
           },
           "404": {
             "$ref": "#/responses/notFound"
+          },
+          "409": {
+            "$ref": "#/responses/forbidden"
           }
         }
       },
@@ -19637,6 +19938,131 @@
           },
           "403": {
             "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/teams/{teamid}/invitations": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "List the invitations to a team",
+        "operationId": "orgListTeamInvitations",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the team",
+            "name": "teamid",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/TeamInviteList"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/teams/{teamid}/invitations/{inviteid}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Get an invitation to a team",
+        "operationId": "orgGetTeamInvitation",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the team",
+            "name": "teamid",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the invitation",
+            "name": "inviteid",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/TeamInvite"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      },
+      "delete": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Remove a team invitation",
+        "operationId": "orgRemoveTeamInvitation",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the team",
+            "name": "teamid",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the invitation",
+            "name": "inviteid",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -19919,6 +20345,43 @@
           },
           "400": {
             "$ref": "#/responses/error"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/user/actions/secrets": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "user"
+        ],
+        "summary": "List actions secrets of the current user",
+        "operationId": "userListActionsSecrets",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/SecretList"
           },
           "401": {
             "$ref": "#/responses/unauthorized"
@@ -21977,6 +22440,161 @@
         }
       }
     },
+    "/user/team_invitations": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "List the current user's team invitations",
+        "operationId": "orgListCurrentUserTeamInvitations",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/TeamInviteList"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/user/team_invitations/{inviteid}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Get an invitation to a team for the current user",
+        "operationId": "orgGetMyTeamInvitation",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the invitation",
+            "name": "inviteid",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/TeamInvite"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
+    "/user/team_invitations/{inviteid}/accept": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Accept an invitation to a team for the current user",
+        "operationId": "orgAcceptMyTeamInvitation",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the invitation",
+            "name": "inviteid",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/AcceptTeamInviteOptions"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/TeamInvite"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
+    "/user/team_invitations/{inviteid}/decline": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "organization"
+        ],
+        "summary": "Decline an invitation to a team for the current user",
+        "operationId": "orgDeclineMyTeamInvitation",
+        "parameters": [
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "id of the invitation",
+            "name": "inviteid",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/TeamInvite"
+          },
+          "401": {
+            "$ref": "#/responses/unauthorized"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          }
+        }
+      }
+    },
     "/user/teams": {
       "get": {
         "produces": [
@@ -22975,9 +23593,21 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
-    "AccessToken": {
+    "AcceptTeamInviteOptions": {
+      "description": "AcceptTeamInviteOptions options for accepting an invitation",
       "type": "object",
-      "title": "AccessToken represents an API access token.",
+      "properties": {
+        "hide_membership": {
+          "description": "Whether to hide the membership to the organization containing this team.",
+          "type": "boolean",
+          "x-go-name": "HideMembership"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "AccessToken": {
+      "description": "AccessToken represents an API access token",
+      "type": "object",
       "properties": {
         "created_at": {
           "type": "string",
@@ -23212,6 +23842,11 @@
           "type": "string",
           "x-go-name": "Handle"
         },
+        "html_url": {
+          "description": "HTMLURL is the URL where a user can view the job using their browser.",
+          "type": "string",
+          "x-go-name": "HTMLURL"
+        },
         "id": {
           "description": "Identifier of this job.",
           "type": "integer",
@@ -23262,11 +23897,54 @@
           "type": "string",
           "x-go-name": "Status"
         },
+        "steps": {
+          "description": "the steps that make up this workflow job's execution, including the\n\"Set up job\" entry (number=0) and \"Complete job\" tail. Only populated by\nendpoints that return a single job (e.g. GET /repos/{owner}/{repo}/actions/jobs/{job_id}).",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionRunJobStep"
+          },
+          "x-go-name": "Steps"
+        },
         "task_id": {
           "description": "the action run job latest task id",
           "type": "integer",
           "format": "int64",
           "x-go-name": "TaskID"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "ActionRunJobStep": {
+      "description": "ActionRunJobStep is a step in a workflow job's execution. The slice on\nActionRunJob.Steps always includes a \"Set up job\" entry at number=0 and a\n\"Complete job\" entry as the last element; the entries in between are the\nworkflow's real steps in declaration order. The Number field is the value\naccepted by the job-logs endpoint's `?step=` filter.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "step name (workflow YAML `name:` for real steps; \"Set up job\" and\n\"Complete job\" for the head and tail respectively)",
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "number": {
+          "description": "position in the job's step list. 0 is the \"Set up job\" entry; the last\nindex is the \"Complete job\" entry; real steps are numbered 1..N in\ndeclaration order.",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Number"
+        },
+        "started": {
+          "description": "when the step started",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Started"
+        },
+        "status": {
+          "description": "step status (success, failure, running, waiting, skipped, cancelled, ...)",
+          "type": "string",
+          "x-go-name": "Status"
+        },
+        "stopped": {
+          "description": "when the step stopped",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Stopped"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -23697,8 +24375,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "BlockedUser": {
+      "description": "BlockedUser represents a blocked user",
       "type": "object",
-      "title": "BlockedUser represents a blocked user.",
       "properties": {
         "block_id": {
           "type": "integer",
@@ -23794,8 +24472,8 @@
           "x-go-name": "BlockOnRejectedReviews"
         },
         "branch_name": {
-          "description": "Deprecated: true",
           "type": "string",
+          "x-deprecated": true,
           "x-go-name": "BranchName"
         },
         "created_at": {
@@ -24143,8 +24821,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "Commit": {
+      "description": "Commit contains information generated from a Git commit",
       "type": "object",
-      "title": "Commit contains information generated from a Git commit.",
       "properties": {
         "author": {
           "$ref": "#/definitions/User"
@@ -24225,8 +24903,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CommitMeta": {
+      "description": "CommitMeta contains meta information of a commit in terms of API",
       "type": "object",
-      "title": "CommitMeta contains meta information of a commit in terms of API.",
       "properties": {
         "created": {
           "type": "string",
@@ -24316,8 +24994,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CommitUser": {
+      "description": "CommitUser contains information of a user in the context of a commit",
       "type": "object",
-      "title": "CommitUser contains information of a user in the context of a commit.",
       "properties": {
         "date": {
           "type": "string",
@@ -24336,8 +25014,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "Compare": {
+      "description": "Compare represents a comparison between two commits",
       "type": "object",
-      "title": "Compare represents a comparison between two commits.",
       "properties": {
         "commits": {
           "type": "array",
@@ -24513,8 +25191,8 @@
           "x-go-name": "BlockOnRejectedReviews"
         },
         "branch_name": {
-          "description": "Deprecated: true",
           "type": "string",
+          "x-deprecated": true,
           "x-go-name": "BranchName"
         },
         "dismiss_stale_approvals": {
@@ -24622,9 +25300,10 @@
           "x-go-name": "BranchName"
         },
         "old_branch_name": {
-          "description": "Deprecated: true\nName of the old branch to create from",
+          "description": "Name of the old branch to create from",
           "type": "string",
           "uniqueItems": true,
+          "x-deprecated": true,
           "x-go-name": "OldBranchName"
         },
         "old_ref_name": {
@@ -24988,8 +25667,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CreateOrUpdateSecretOption": {
+      "description": "CreateOrUpdateSecretOption defines the properties of the secret to create or update",
       "type": "object",
-      "title": "CreateOrUpdateSecretOption defines the properties of the secret to create or update.",
       "required": [
         "data"
       ],
@@ -25165,8 +25844,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CreatePushMirrorOption": {
+      "description": "CreatePushMirrorOption represents need information to create a push mirror of a repository",
       "type": "object",
-      "title": "CreatePushMirrorOption represents need information to create a push mirror of a repository.",
       "properties": {
         "branch_filter": {
           "type": "string",
@@ -25466,10 +26145,12 @@
           "x-go-name": "Permission"
         },
         "units": {
+          "description": "\nDeprecated: This variable should be replaced by UnitsMap and will be dropped in later versions.",
           "type": "array",
           "items": {
             "type": "string"
           },
+          "x-deprecated": true,
           "x-go-name": "Units",
           "example": [
             "repo.actions",
@@ -25510,8 +26191,7 @@
       "description": "CreateUserOption create user options",
       "type": "object",
       "required": [
-        "username",
-        "email"
+        "username"
       ],
       "properties": {
         "created_at": {
@@ -25566,8 +26246,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CreateVariableOption": {
+      "description": "CreateVariableOption defines the properties of the variable to create",
       "type": "object",
-      "title": "CreateVariableOption defines the properties of the variable to create.",
       "required": [
         "value"
       ],
@@ -25970,9 +26650,6 @@
     "EditDeadlineOption": {
       "description": "EditDeadlineOption options for creating a deadline",
       "type": "object",
-      "required": [
-        "due_date"
-      ],
       "properties": {
         "due_date": {
           "type": "string",
@@ -26553,10 +27230,12 @@
           "x-go-name": "Permission"
         },
         "units": {
+          "description": "\nDeprecated: This variable should be replaced by UnitsMap and will be dropped in later versions.",
           "type": "array",
           "items": {
             "type": "string"
           },
+          "x-deprecated": true,
           "x-go-name": "Units",
           "example": [
             "repo.code",
@@ -26750,8 +27429,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "FileCommitResponse": {
+      "description": "FileCommitResponse contains information generated from a Git commit for a repo's file",
       "type": "object",
-      "title": "FileCommitResponse contains information generated from a Git commit for a repo's file.",
       "properties": {
         "author": {
           "$ref": "#/definitions/CommitUser"
@@ -27221,8 +27900,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "GitObject": {
+      "description": "GitObject represents a Git object",
       "type": "object",
-      "title": "GitObject represents a Git object.",
       "properties": {
         "sha": {
           "type": "string",
@@ -27312,6 +27991,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "x-deprecated": true,
           "x-go-name": "Config"
         },
         "content_type": {
@@ -27604,8 +28284,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "IssueFormFieldType": {
+      "description": "IssueFormFieldType defines issue form field type, can be `markdown`, `textarea`, `input`, `dropdown` or `checkboxes`",
       "type": "string",
-      "title": "IssueFormFieldType defines issue form field type, can be \"markdown\", \"textarea\", \"input\", \"dropdown\" or \"checkboxes\"",
       "x-go-package": "forgejo.org/modules/structs"
     },
     "IssueFormFieldVisible": {
@@ -27631,9 +28311,24 @@
       },
       "x-go-package": "forgejo.org/modules/structs"
     },
+    "IssueLockOption": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "x-go-name": "Reason"
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
     "IssueMeta": {
       "description": "IssueMeta basic issue information",
       "type": "object",
+      "required": [
+        "index",
+        "owner",
+        "repo"
+      ],
       "properties": {
         "index": {
           "type": "integer",
@@ -28016,7 +28711,10 @@
             "gogs",
             "onedev",
             "gitbucket",
-            "codebase"
+            "codebase",
+            "forgejo",
+            "pagure",
+            "bitbucketdc"
           ],
           "x-go-name": "Service"
         },
@@ -28332,8 +29030,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "OAuth2Application": {
+      "description": "OAuth2Application represents an OAuth2 application",
       "type": "object",
-      "title": "OAuth2Application represents an OAuth2 application.",
       "properties": {
         "client_id": {
           "type": "string",
@@ -29464,8 +30162,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "Reference": {
+      "description": "Reference represents a Git reference",
       "type": "object",
-      "title": "Reference represents a Git reference.",
       "properties": {
         "object": {
           "$ref": "#/definitions/GitObject"
@@ -29482,8 +30180,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "RegisterRunnerOptions": {
+      "description": "RegisterRunnerOptions declares the accepted options for registering runners",
       "type": "object",
-      "title": "RegisterRunnerOptions declares the accepted options for registering runners.",
       "required": [
         "name"
       ],
@@ -29494,7 +30192,7 @@
           "x-go-name": "Description"
         },
         "ephemeral": {
-          "description": "Register as ephemeral runner https://forgejo.org/docs/latest/admin/actions/security/#ephemeral-runner",
+          "description": "Register as ephemeral runner https://forgejo.org/docs/latest/admin/actions/security/#ephemeral-runners",
           "type": "boolean",
           "x-go-name": "Ephemeral"
         },
@@ -29507,8 +30205,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "RegisterRunnerResponse": {
+      "description": "RegisterRunnerResponse contains the details of the just registered runner",
       "type": "object",
-      "title": "RegisterRunnerResponse contains the details of the just registered runner.",
       "properties": {
         "id": {
           "type": "integer",
@@ -29685,8 +30383,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "RepoCommit": {
+      "description": "RepoCommit contains information of a commit in the context of a repository",
       "type": "object",
-      "title": "RepoCommit contains information of a commit in the context of a repository.",
       "properties": {
         "author": {
           "$ref": "#/definitions/CommitUser"
@@ -30356,10 +31054,12 @@
           "x-go-name": "Permission"
         },
         "units": {
+          "description": "\nDeprecated: This variable should be replaced by UnitsMap and will be dropped in later versions.",
           "type": "array",
           "items": {
             "type": "string"
           },
+          "x-deprecated": true,
           "x-go-name": "Units",
           "example": [
             "repo.code",
@@ -30390,6 +31090,67 @@
             "repo.releases": "none",
             "repo.wiki": "admin"
           }
+        }
+      },
+      "x-go-package": "forgejo.org/modules/structs"
+    },
+    "TeamInvite": {
+      "description": "TeamInvite represents an invitation of a user to a team",
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "description": "when this invitation was created",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "CreatedAt"
+        },
+        "email": {
+          "description": "the email of the invited person, if they don't have an account yet",
+          "type": "string",
+          "x-go-name": "Email"
+        },
+        "expires_at": {
+          "description": "when this invitation will expire (if at all)",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "x-go-name": "ExpiresAt"
+        },
+        "id": {
+          "description": "the identifier of the invitation",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "ID"
+        },
+        "invited": {
+          "$ref": "#/definitions/User"
+        },
+        "inviter": {
+          "$ref": "#/definitions/User"
+        },
+        "is_expired": {
+          "description": "whether this invitation has already expired",
+          "type": "boolean",
+          "x-go-name": "IsExpired"
+        },
+        "org_id": {
+          "description": "the identifier of the organization the invitation is issued for",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "OrgID"
+        },
+        "team_id": {
+          "description": "the identifier of the team the invitation is issued for",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TeamID"
+        },
+        "token": {
+          "description": "a token that the invited user can use to accept the invitation",
+          "type": "string",
+          "x-go-name": "Token"
         }
       },
       "x-go-package": "forgejo.org/modules/structs"
@@ -30731,8 +31492,8 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "UpdateVariableOption": {
+      "description": "UpdateVariableOption defines the properties of the variable to update",
       "type": "object",
-      "title": "UpdateVariableOption defines the properties of the variable to update.",
       "required": [
         "value"
       ],
@@ -31166,9 +31927,39 @@
   },
   "responses": {
     "AccessToken": {
-      "description": "AccessToken represents an API access token.",
-      "schema": {
-        "$ref": "#/definitions/AccessToken"
+      "description": "AccessToken represents an API access token",
+      "headers": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "repositories": {
+          "type": "array",
+          "items": {
+            "x-go-type": "forgejo.org/modules/structs.RepositoryMeta",
+            "type": "string"
+          },
+          "description": "Indicates that an access token only has access to the specified repositories.  Will be null if the access token\nis not limited to a set of specified repositories."
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sha1": {
+          "type": "string"
+        },
+        "token_last_eight": {
+          "type": "string"
+        }
       }
     },
     "AccessTokenList": {
@@ -31206,6 +31997,12 @@
       "description": "ActionRun",
       "schema": {
         "$ref": "#/definitions/ActionRun"
+      }
+    },
+    "ActionRunJob": {
+      "description": "ActionRunJob is a single workflow run job",
+      "schema": {
+        "$ref": "#/definitions/ActionRunJob"
       }
     },
     "ActionRunJobList": {
@@ -31889,24 +32686,42 @@
       }
     },
     "OAuth2Application": {
-      "description": "OAuth2Application",
-      "schema": {
-        "$ref": "#/definitions/OAuth2Application"
+      "description": "OAuth2Application represents an OAuth2 application",
+      "headers": {
+        "client_id": {
+          "type": "string"
+        },
+        "client_secret": {
+          "type": "string"
+        },
+        "confidential_client": {
+          "type": "boolean"
+        },
+        "created": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "redirect_uris": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "OAuth2ApplicationList": {
-      "description": "OAuth2ApplicationList",
+      "description": "OAuth2ApplicationList represents a list of OAuth2 applications.",
       "schema": {
         "type": "array",
         "items": {
           "$ref": "#/definitions/OAuth2Application"
-        }
-      },
-      "headers": {
-        "X-Total-Count": {
-          "type": "integer",
-          "format": "int64",
-          "description": "The total number of OAuth2 applications"
         }
       }
     },
@@ -32397,6 +33212,28 @@
         "$ref": "#/definitions/Team"
       }
     },
+    "TeamInvite": {
+      "description": "TeamInvite",
+      "schema": {
+        "$ref": "#/definitions/TeamInvite"
+      }
+    },
+    "TeamInviteList": {
+      "description": "TeamInviteList",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/TeamInvite"
+        }
+      },
+      "headers": {
+        "X-Total-Count": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The total number of team invites"
+        }
+      }
+    },
     "TeamList": {
       "description": "TeamList",
       "schema": {
@@ -32572,7 +33409,10 @@
       }
     },
     "boolean": {
-      "description": "Boolean"
+      "description": "Boolean",
+      "schema": {
+        "type": "boolean"
+      }
     },
     "conflict": {
       "description": "APIConflict is a conflict empty response"

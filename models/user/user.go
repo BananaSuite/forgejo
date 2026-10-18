@@ -32,6 +32,7 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/optional"
+	service_message "forgejo.org/modules/service_message"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
 	"forgejo.org/modules/timeutil"
@@ -113,6 +114,7 @@ type User struct {
 	CreatedUnix   timeutil.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix   timeutil.TimeStamp `xorm:"INDEX updated"`
 	LastLoginUnix timeutil.TimeStamp `xorm:"INDEX"`
+	Confirms      service_message.ConfirmTimestamps
 
 	// Remember visibility choice for convenience, true for private
 	LastRepoVisibility bool
@@ -373,6 +375,25 @@ func (u *User) GenerateEmailAuthorizationCode(ctx context.Context, purpose auth.
 		return "", err
 	}
 	return lookup + ":" + validator, nil
+}
+
+// SetConfirm sets the Confirms field in the user struct
+func (u *User) SetConfirm(smType service_message.SMType, userTimestamp timeutil.TimeStamp) error {
+	if u.Confirms == nil {
+		confirm := make(map[service_message.SMType]timeutil.TimeStamp)
+		u.Confirms = confirm
+	}
+	u.Confirms[smType] = userTimestamp
+	return nil
+}
+
+// MustShowServiceMessage compares the creation time stamps and the confirm time stamps, returns true if confirm is out of date
+func (u *User) MustShowServiceMessage(smType service_message.SMType, smTimestamp timeutil.TimeStamp) bool {
+	if u.Confirms == nil {
+		return true
+	}
+	userConfirmed := u.Confirms[smType]
+	return smTimestamp > userConfirmed // is service message newer than user confirmation
 }
 
 // GetUserFollowers returns range of user's followers.
@@ -678,6 +699,7 @@ var (
 		"ghost",           // reserved name for deleted users (id: -1)
 		"gitea-actions",   // gitea builtin user (id: -2)
 		"forgejo-actions", // forgejo builtin user (id: -2)
+		"actor",           // user for activitypub / federation (id: -3)
 	}
 
 	// These names are reserved for user accounts: user's keys, user's rss feed, user's avatar, etc.
@@ -729,6 +751,11 @@ func AdminCreateUser(ctx context.Context, u *User, overwriteDefault ...*CreateUs
 // createUser creates record of a new user.
 func createUser(ctx context.Context, u *User, createdByAdmin bool, overwriteDefault ...*CreateUserOverwriteOptions) (err error) {
 	overwriteDefaultPresent := len(overwriteDefault) != 0 && overwriteDefault[0] != nil
+
+	// Apply username prefix for non-admin user creation if configured.
+	if !createdByAdmin && setting.Service.UsernamePrefix != "" && !strings.HasPrefix(u.Name, setting.Service.UsernamePrefix) {
+		u.Name = setting.Service.UsernamePrefix + u.Name
+	}
 
 	// If a username is invalid as-is, check whether the username is meant
 	// for an ActivityPub account. Username constraints that belong to "foreign"
@@ -1359,14 +1386,20 @@ func isUserVisibleToViewerCond(viewer *User) builder.Cond {
 			builder.
 				Select("`team_user`.uid").
 				From("team_user").
-				Join("INNER", "`team_user` AS t2", "`team_user`.org_id = `t2`.org_id").
-				Where(builder.Eq{"`t2`.uid": viewer.ID})),
+				// Explicitly don't self-join, two seperate queries are much faster for
+				// a lot of rows
+				Where(builder.In("`team_user`.org_id",
+					builder.
+						Select("`team_user`.org_id").
+						From("team_user").
+						Where(builder.Eq{"`team_user`.uid": viewer.ID})))),
 		// viewer's org
 		builder.In("`user`.id",
 			builder.
 				Select("`team_user`.org_id").
 				From("team_user").
-				Where(builder.Eq{"`team_user`.uid": viewer.ID})))
+				Where(builder.Eq{"`team_user`.uid": viewer.ID})),
+	)
 }
 
 // IsUserVisibleToViewer check if viewer is able to see user profile
@@ -1404,7 +1437,10 @@ func IsUserVisibleToViewer(ctx context.Context, u, viewer *User) bool {
 						builder.In("org_id",
 							builder.Select("org_id").
 								From("team_user", "t2").
-								Where(builder.Eq{"uid": u.ID}))))).
+								Where(builder.Eq{"uid": u.ID})),
+					),
+				),
+			).
 			Count()
 		if err != nil {
 			return false

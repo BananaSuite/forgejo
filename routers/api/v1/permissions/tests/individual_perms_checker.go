@@ -11,35 +11,40 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.IndividualPermsChecker, functionTest{
-	fulfillNeeds: func(t *testing.T, data *fixtureData) {
-		t.Helper()
-		data.SetDefault("user", data.Get("doer"))
+	testCases: []*testCase{
+		{
+			// pass if a public context user exists
+			data: newTestData(map[string]string{
+				"user": "IndividualPermsChecker",
+			}, newSharedData()),
+		},
+		{
+			// fail if a private context user exists
+			data: newTestData(map[string]string{
+				"user":           "IndividualPermsCheckerOne",
+				"userVisibility": "private",
+			}, newSharedData()),
+			error: "Visit Project",
+		},
+		{
+			// fail if a limited context user exists
+			data: newTestData(map[string]string{
+				"user":           "IndividualPermsCheckerTwo",
+				"userVisibility": "limited",
+			}, newSharedData().SetAnonymous(true)),
+			error: "Visit Project",
+		},
 	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
-		if data.Has("user") && data.Get("user") != "anonymous" {
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.SetDefault("user", data.shared.DoerName())
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		if data.Has("user") {
 			name := data.Get("user")
-			fixtureCreateUser(t, &user_model.User{Name: name})
+			visibility := data.Get("userVisibility")
+			fixtureCreateUser(t, &user_model.User{Name: name, Visibility: stringToVisibility(visibility)})
 			permissions.SetUser(fixtureGetUser(t, name))
 		}
-	},
-	fixtures: []*fixtureType{
-		{
-			data: newFixtureData(map[string]string{
-				"user": "IndividualPermsChecker",
-			}),
-		},
-		{
-			data: newFixtureData(map[string]string{
-				"user": "IndividualPermsCheckerprivate",
-			}),
-			error: "Visit Project",
-		},
-		{
-			data: newFixtureData(map[string]string{
-				"doer": "anonymous",
-				"user": "IndividualPermsCheckerlimited",
-			}),
-			error: "Visit Project",
-		},
 	},
 })

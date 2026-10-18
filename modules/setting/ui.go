@@ -11,6 +11,7 @@ import (
 
 // UI settings
 var UI = struct {
+	DiffPagingNum         int
 	ExplorePagingNum      int
 	SitemapPagingNum      int
 	IssuePagingNum        int
@@ -24,6 +25,8 @@ var UI = struct {
 	MaxCodeCommentLines   int
 	ReactionMaxUserNum    int
 	MaxDisplayFileSize    int64
+	FontPreviewEnabled    bool
+	FontPreviewPangram    string
 	ShowUserEmail         bool
 	DefaultShowFullName   bool
 	DefaultTheme          string
@@ -75,6 +78,7 @@ var UI = struct {
 	ExplorePagingNum:    20,
 	SitemapPagingNum:    20,
 	IssuePagingNum:      20,
+	DiffPagingNum:       20,
 	RepoSearchPagingNum: 20,
 	MembersPagingNum:    20,
 	FeedMaxCommitNum:    5,
@@ -85,6 +89,8 @@ var UI = struct {
 	MaxCodeCommentLines: 50,
 	ReactionMaxUserNum:  10,
 	MaxDisplayFileSize:  8388608,
+	FontPreviewEnabled:  true,
+	FontPreviewPangram:  "The quick brown fox jumps over the lazy dog",
 	DefaultTheme:        `forgejo-auto`,
 	Themes:              []string{`forgejo-auto`, `forgejo-light`, `forgejo-dark`, `gitea-auto`, `gitea-light`, `gitea-dark`, `forgejo-auto-deuteranopia-protanopia`, `forgejo-light-deuteranopia-protanopia`, `forgejo-dark-deuteranopia-protanopia`, `forgejo-auto-tritanopia`, `forgejo-light-tritanopia`, `forgejo-dark-tritanopia`},
 	Reactions:           []string{`+1`, `-1`, `laugh`, `hooray`, `confused`, `heart`, `rocket`, `eyes`},

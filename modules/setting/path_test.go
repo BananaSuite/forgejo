@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type envVars map[string]string
@@ -108,13 +109,18 @@ func TestInitWorkPathAndCommonConfig(t *testing.T) {
 		assert.Equal(t, fp(dirFoo, "custom2/conf/app.ini"), CustomConf)
 	})
 
-	t.Run("CustomConf", func(t *testing.T) {
+	t.Run("CustomConfInCwd", func(t *testing.T) {
+		err := os.MkdirAll(dirXxx, 0o700)
+		require.NoError(t, err)
+		t.Chdir(dirXxx)
 		testInit(dirFoo, "", "")
 		InitWorkPathAndCommonConfig(envVars{}.Getenv, ArgWorkPathAndCustomConf{CustomConf: "app1.ini"})
 		assert.Equal(t, dirFoo, AppWorkPath)
 		cwd, _ := os.Getwd()
 		assert.Equal(t, fp(cwd, "app1.ini"), CustomConf)
+	})
 
+	t.Run("CustomConfInCustomDir", func(t *testing.T) {
 		testInit(dirFoo, "", "")
 		InitWorkPathAndCommonConfig(envVars{}.Getenv, ArgWorkPathAndCustomConf{CustomConf: fp(dirBar, "app1.ini")})
 		assert.Equal(t, dirFoo, AppWorkPath)
@@ -173,13 +179,14 @@ func TestInitWorkPathAndCommonConfig(t *testing.T) {
 		assert.True(t, AppWorkPathMismatch)
 	})
 
-	t.Run("Builtin", func(t *testing.T) {
-		testInit(dirFoo, dirBar, dirXxx)
-		InitWorkPathAndCommonConfig(envVars{}.Getenv, ArgWorkPathAndCustomConf{})
-		assert.Equal(t, dirFoo, AppWorkPath)
-		assert.Equal(t, dirBar, CustomPath)
-		assert.Equal(t, dirXxx, CustomConf)
+	t.Run("DirectoryAsConfig", func(t *testing.T) {
+		require.NoError(t, os.MkdirAll(dirXxx, os.ModePerm))
+		cfg, err := NewConfigProviderFromFile(dirXxx)
+		require.Error(t, err)
+		assert.Nil(t, cfg)
+	})
 
+	t.Run("Builtin", func(t *testing.T) {
 		testInit(dirFoo, "custom1", "cfg.ini")
 		InitWorkPathAndCommonConfig(envVars{}.Getenv, ArgWorkPathAndCustomConf{})
 		assert.Equal(t, dirFoo, AppWorkPath)
@@ -208,12 +215,6 @@ func TestInitWorkPathAndCommonConfig(t *testing.T) {
 	})
 
 	t.Run("Builtin", func(t *testing.T) {
-		testInit(dirFoo, dirBar, dirXxx)
-		InitWorkPathAndCommonConfig(envVars{}.Getenv, ArgWorkPathAndCustomConf{})
-		assert.Equal(t, dirFoo, AppWorkPath)
-		assert.Equal(t, dirBar, CustomPath)
-		assert.Equal(t, dirXxx, CustomConf)
-
 		testInit(dirFoo, "custom1", "cfg.ini")
 		InitWorkPathAndCommonConfig(envVars{}.Getenv, ArgWorkPathAndCustomConf{})
 		assert.Equal(t, dirFoo, AppWorkPath)

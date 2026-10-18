@@ -12,7 +12,7 @@ import (
 	secret_model "forgejo.org/models/secret"
 	actions_module "forgejo.org/modules/actions"
 
-	"code.forgejo.org/forgejo/runner/v12/act/jobparser"
+	"code.forgejo.org/forgejo/runner/v13/act/jobparser"
 )
 
 func getSecretsOfTask(ctx context.Context, task *actions_model.ActionTask) (map[string]string, error) {
@@ -38,10 +38,11 @@ func getSecretsOfJob(ctx context.Context, job *actions_model.ActionRunJob) (map[
 		return getSecretsOfInnerWorkflowCall(ctx, job)
 	}
 
-	if job.Run.IsForkPullRequest && job.Run.TriggerEvent != actions_module.GithubEventPullRequestTarget {
-		// ignore secrets for fork pull request, except GITHUB_TOKEN, GITEA_TOKEN and FORGEJO_TOKEN which are automatically generated.
-		// for the tasks triggered by pull_request_target event, they could access the secrets because they will run in the context of the base branch
-		// see the documentation: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
+	if canAccessSecrets, err := job.CanAccessSecrets(ctx); err != nil {
+		return nil, fmt.Errorf("failed evaluating CanAccessSecrets: %w", err)
+	} else if !canAccessSecrets {
+		// Ignore secrets for this run, (except the automatic GITHUB_TOKEN, GITEA_TOKEN and FORGEJO_TOKEN, which aren't
+		// `getSecretsOfJob`'s responsibility)
 		return map[string]string{}, nil
 	}
 
@@ -103,9 +104,10 @@ func getSecretsOfInnerWorkflowCall(ctx context.Context, job *actions_model.Actio
 	jobResults := make(map[string]string, len(taskNeeds))
 	jobOutputs := make(map[string]map[string]string, len(taskNeeds))
 	for jobID, n := range taskNeeds {
-		needs = append(needs, jobID)
-		jobResults[jobID] = n.Result.String()
-		jobOutputs[jobID] = n.Outputs
+		qualified := string(jobID.ToLocal(job.JobNamespace))
+		needs = append(needs, qualified)
+		jobResults[qualified] = n.Result.String()
+		jobOutputs[qualified] = n.Outputs
 	}
 	vars, err := actions_model.GetVariablesOfRun(ctx, job.Run)
 	if err != nil {

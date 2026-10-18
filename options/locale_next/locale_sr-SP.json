@@ -1,4 +1,20 @@
 {
+	"mirror_settings.header": "Подешавања огледала",
+	"file_editor.preview_changes": "Преглед промена",
+	"counters.n_following": {
+		"one": "%d пратим",
+		"many": "%d пратим"
+	},
+	"counters.n_followers": {
+		"one": "%d пратилац",
+		"many": "%d пратиоца"
+	},
+	"issues.search.sort.leastcomment": "Најмање коментара",
+	"issues.search.sort.mostcomment": "Највише коментара",
+	"issues.search.sort.leastupdate": "Давно ажуриано",
+	"issues.search.sort.recentupdate": "Недавно ажурирано",
+	"issues.search.sort.oldest": "Најстарије",
+	"issues.search.sort.latest": "Најновије",
 	"admin.config.db.path": "Пут",
 	"admin.config.db.name": "Име",
 	"admin.config.db.host": "Хост",
@@ -13,7 +29,6 @@
 	"admin.config.git.mirror_timeout": "Време до отазање синхронизацији огледала",
 	"admin.config.git.migrate_timeout": "Време до отказања миграције",
 	"admin.config.git.gc_args": "Аргументи cкупљања смећа (GC)",
-	"admin.config.git.diff.max_files": "Максималан број измењених датотека (приказаних)",
 	"admin.config.git.diff.max_line_characters": "Максималан број карактера с разликама по реду",
 	"admin.config.git.diff.max_lines": "Максималан број редова с разликама по фајлу",
 	"admin.config.git.disable_diff_highlight": "Онемогући бојење синтаксе када гледате разлике",

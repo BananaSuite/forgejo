@@ -11,38 +11,41 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqExploreSignIn, functionTest{
-	fulfillNeeds: func(t *testing.T, data *fixtureData) {
+	testCases: []*testCase{
+		{
+			// pass if the doer is signed in
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoer(),
+			),
+		},
+		{
+			// fail for anonymous visitors when the viewing pages requires
+			// sign in
+			data: newTestData(map[string]string{
+				"Service.RequireSignInView": "true",
+			}, newSharedData().SetAnonymous(true)),
+			error: "you must be signed in",
+		},
+		{
+			// fail for anonymous visitors when visiting the explore page
+			// requires sign in
+			data: newTestData(map[string]string{
+				"Service.Explore.RequireSigninView": "true",
+			}, newSharedData().SetAnonymous(true)),
+			error: "you must be signed in",
+		},
+	},
+	fulfillNeeds: func(t *testing.T, data *testData) {
 		t.Helper()
-		data.SetDefault("doer", "regularuser")
+		data.shared.SetDoerDefault()
 	},
 	protectSettingsBool: []*bool{
 		&setting.Service.RequireSignInView,
 		&setting.Service.Explore.RequireSigninView,
 	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		fixtureSetDoer(t, permissions, data)
 		setting.Service.RequireSignInView = data.Get("Service.RequireSignInView") == "true"
 		setting.Service.Explore.RequireSigninView = data.Get("Service.Explore.RequireSigninView") == "true"
-	},
-	fixtures: []*fixtureType{
-		{
-			data: newFixtureData(map[string]string{
-				"doer": "regularuser",
-			}),
-		},
-		{
-			data: newFixtureData(map[string]string{
-				"doer":                      "anonymous",
-				"Service.RequireSignInView": "true",
-			}),
-			error: "you must be signed in",
-		},
-		{
-			data: newFixtureData(map[string]string{
-				"doer":                              "anonymous",
-				"Service.Explore.RequireSigninView": "true",
-			}),
-			error: "you must be signed in",
-		},
 	},
 })

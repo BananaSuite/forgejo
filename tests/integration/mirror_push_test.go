@@ -89,6 +89,7 @@ func TestMirrorPush(t *testing.T) {
 
 func testMirrorPush(t *testing.T, u *url.URL) {
 	defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+	defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 
 	require.NoError(t, migrations_allowlist.Init())
 
@@ -109,8 +110,16 @@ func testMirrorPush(t *testing.T, u *url.URL) {
 	require.NoError(t, err)
 	assert.Len(t, mirrors, 2)
 
+	_, _, err = git.NewCommand(t.Context(), "config", "--get-all").AddDynamicArguments("remote." + mirrors[0].RemoteName + ".fetch").RunStdString(&git.RunOpts{Dir: srcRepo.RepoPath()})
+	require.True(t, git.IsErrorExitCode(err, 1), "push mirror remote must not have a fetch refspec")
+
+	_, _, err = git.NewCommand(t.Context(), "config", "--add").AddDynamicArguments("remote."+mirrors[0].RemoteName+".fetch", "+refs/*:refs/*").RunStdString(&git.RunOpts{Dir: srcRepo.RepoPath()})
+	require.NoError(t, err)
+
 	ok := mirror_service.SyncPushMirror(t.Context(), mirrors[0].ID)
 	assert.True(t, ok)
+	_, _, err = git.NewCommand(t.Context(), "config", "--get-all").AddDynamicArguments("remote." + mirrors[0].RemoteName + ".fetch").RunStdString(&git.RunOpts{Dir: srcRepo.RepoPath()})
+	require.True(t, git.IsErrorExitCode(err, 1), "sync must remove legacy fetch refspecs")
 
 	srcGitRepo, err := gitrepo.OpenRepository(git.DefaultContext, srcRepo)
 	require.NoError(t, err)
@@ -388,6 +397,7 @@ func TestSSHPushMirror(t *testing.T) {
 func TestPushMirrorBranchFilterWebUI(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+		defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		require.NoError(t, migrations_allowlist.Init())
 
@@ -488,6 +498,7 @@ func TestPushMirrorBranchFilterWebUI(t *testing.T) {
 func TestPushMirrorBranchFilterIntegration(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+		defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		require.NoError(t, migrations_allowlist.Init())
 
@@ -577,6 +588,7 @@ func TestPushMirrorBranchFilterIntegration(t *testing.T) {
 func TestPushMirrorSettings(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+		defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		require.NoError(t, migrations_allowlist.Init())
 
@@ -648,6 +660,7 @@ func TestPushMirrorSettings(t *testing.T) {
 func TestPushMirrorBranchFilterSyncOperations(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+		defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		require.NoError(t, migrations_allowlist.Init())
 
@@ -882,6 +895,7 @@ func TestPushMirrorBranchFilterSyncOperations(t *testing.T) {
 func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+		defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 		defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 		require.NoError(t, migrations_allowlist.Init())
 
@@ -1097,6 +1111,8 @@ func TestPushMirrorWebUIToAPIIntegration(t *testing.T) {
 }
 
 func TestMirrorPushFailOnRedirect(t *testing.T) {
+	defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
+
 	// Not using MockVariableValue due to need to undo `migrations_allowlist.Init()`
 	prev := setting.Migrations.AllowedDomains
 	setting.Migrations.AllowedDomains = "127.0.0.1"
@@ -1152,6 +1168,8 @@ func TestMirrorPushFailOnRedirect(t *testing.T) {
 // Verifies that a push mirror which was created while the remote address was permitted will fail to sync if the
 // AllowedDomains configuration later changes such that the remote URL is no longer permitted.
 func TestMirrorPushAddressCheck(t *testing.T) {
+	defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
+
 	// Not using MockVariableValue due to need to undo `migrations_allowlist.Init()`
 	prev := setting.Migrations.AllowedDomains
 	setting.Migrations.AllowedDomains = "127.0.0.1"

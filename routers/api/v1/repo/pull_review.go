@@ -257,12 +257,17 @@ func GetPullReviewComment(ctx *context.APIContext) {
 		return
 	}
 
-	if err := ctx.Comment().LoadPoster(ctx); err != nil {
+	comment := ctx.LoadComment("comment")
+	if ctx.Written() {
+		return
+	}
+
+	if err := comment.LoadPoster(ctx); err != nil {
 		ctx.InternalServerError(err)
 		return
 	}
 
-	apiComment, err := convert.ToPullReviewComment(ctx, review, ctx.Comment(), ctx.Doer())
+	apiComment, err := convert.ToPullReviewComment(ctx, review, comment, ctx.Doer())
 	if err != nil {
 		ctx.InternalServerError(err)
 		return
@@ -333,6 +338,11 @@ func CreatePullReviewComment(ctx *context.APIContext) {
 
 	if err := pull_service.ValidateCodeCommentLineRange(opts.ExtraLinesCount); err != nil {
 		ctx.Error(http.StatusUnprocessableEntity, "invalid extra_lines_count", err)
+		return
+	}
+
+	if err := pull_service.ValidateCodeCommentSuggestions(opts.Body); err != nil {
+		ctx.Error(http.StatusUnprocessableEntity, "invalid suggestion", err)
 		return
 	}
 
@@ -504,6 +514,11 @@ func CreatePullReview(ctx *context.APIContext) {
 	for _, c := range opts.Comments {
 		if err := pull_service.ValidateCodeCommentLineRange(c.ExtraLinesCount); err != nil {
 			ctx.Error(http.StatusUnprocessableEntity, "invalid extra_lines_count", err)
+			return
+		}
+
+		if err := pull_service.ValidateCodeCommentSuggestions(c.Body); err != nil {
+			ctx.Error(http.StatusUnprocessableEntity, "invalid suggestion", err)
 			return
 		}
 
@@ -1091,7 +1106,7 @@ func DeletePullReviewComment(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	deleteIssueComment(ctx, issues_model.CommentTypeCode)
+	deleteIssueComment(ctx, "comment", issues_model.CommentTypeCode)
 }
 
 func dismissReview(ctx *context.APIContext, msg string, isDismiss, dismissPriors bool) {

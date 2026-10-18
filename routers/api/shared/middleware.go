@@ -41,7 +41,7 @@ func Middlewares() (stack []any) {
 		apiAuthentication(buildAuthGroup()),
 		apiAuthorization(),
 		verifyAuthWithOptions(&common.VerifyOptions{
-			SignInRequired: setting.Service.RequireSignInView,
+			SignInRequired: func() bool { return setting.Service.RequireSignInView },
 		}),
 	)
 }
@@ -50,7 +50,6 @@ func buildAuthGroup() *auth_method.Group {
 	group := auth_method.NewGroup(
 		&auth_method.OAuth2{},
 		&auth_method.HTTPSign{},
-		&auth_method.Basic{}, // FIXME: this should be removed once we don't allow basic auth in API
 		&auth_method.AccessToken{
 			PermitBasic:  true,
 			PermitBearer: true,
@@ -61,6 +60,7 @@ func buildAuthGroup() *auth_method.Group {
 			PermitBearer: true,
 		},
 		&auth_method.AuthorizedIntegration{},
+		&auth_method.Basic{}, // FIXME: this should be removed once we don't allow basic auth in API
 	)
 	if setting.Service.EnableReverseProxyAuthAPI {
 		group.Add(&auth_method.ReverseProxy{})
@@ -159,7 +159,7 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.APIC
 			return
 		}
 
-		if options.SignInRequired {
+		if options.SignInRequired != nil && options.SignInRequired() {
 			if !ctx.IsSigned() {
 				// Restrict API calls with error message.
 				ctx.JSON(http.StatusForbidden, map[string]string{

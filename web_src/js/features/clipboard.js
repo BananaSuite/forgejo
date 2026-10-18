@@ -1,5 +1,5 @@
 import {showTemporaryTooltip} from '../modules/tippy.js';
-import {toAbsoluteUrl} from '../utils.js';
+import {toAbsoluteUrl} from '../utils.ts';
 import {clippie} from 'clippie';
 
 const {copy_success, copy_error} = window.config.i18n;
@@ -28,7 +28,16 @@ export function initGlobalCopyToClipboardListener() {
 
     if (text) {
       const success = await clippie(text);
-      showTemporaryTooltip(target, success ? copy_success : copy_error);
+      let tippyTarget = target;
+
+      // If successful, auto-close parent dropdown, change tippy target to opener
+      const dropdownParent = target.closest('.dialog-dropdown');
+      if (success && dropdownParent) {
+        dropdownParent.querySelector('dialog').hidePopover();
+        tippyTarget = dropdownParent.querySelector('.opener');
+      }
+
+      showTemporaryTooltip(tippyTarget, success ? copy_success : copy_error);
     }
   });
 }

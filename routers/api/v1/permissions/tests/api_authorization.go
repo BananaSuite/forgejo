@@ -6,36 +6,36 @@ package tests
 import (
 	"testing"
 
-	user_model "forgejo.org/models/user"
 	apiv1_permissions "forgejo.org/routers/api/v1/permissions"
 )
 
 var _ = registerFunctionTest(apiv1_permissions.APIAuthorization, functionTest{
-	fulfillNeeds: func(t *testing.T, data *fixtureData) {
-		t.Helper()
-		data.SetDefault("doer", "doerregular")
-		if data.Get("doer") == user_model.ActionsUserName {
-			data.SetDefault("repository", "userowner/repositorypublic")
-		}
-		data.SetDefault("scope", "read:repository")
-		data.SetDefault("level", "read")
+	testCases: []*testCase{
+		{
+			data: newTestData(map[string]string{}, newSharedData().
+				SetAnonymous(true),
+			),
+		},
+		{
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoer(),
+			),
+		},
 	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
-		if data.Has("repository") && data.Get("doer") == user_model.ActionsUserName {
-			fixtureSetRepository(t, permissions, data)
+	fulfillNeeds: func(t *testing.T, data *testData) {
+		t.Helper()
+		data.shared.SetDoerDefault()
+		if data.shared.DoerActions() {
+			data.shared.SetRepositoryDefault()
+		}
+		data.shared.SetDoerCanCreateOrganizationDefault(true)
+		data.shared.SetDoerScopeDefault("read:repository")
+		data.shared.SetTokenLevelDefault("read")
+	},
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
+		if data.shared.HasRepositoryName() && data.shared.DoerActions() {
+			fixtureSetRepository(t, permissions, data.shared.RepositoryName(), data.shared.RepositoryInit(), data.shared.RepositoryPrivate(), data.shared.RepositoryArchived(), data.shared.RepositoryCollaborator())
 		}
 		fixtureSetDoer(t, permissions, data)
-	},
-	fixtures: []*fixtureType{
-		{
-			data: newFixtureData(map[string]string{
-				"doer": "anonymous",
-			}),
-		},
-		{
-			data: newFixtureData(map[string]string{
-				"doer": "doerregular",
-			}),
-		},
 	},
 })

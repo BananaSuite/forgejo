@@ -8,33 +8,38 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqAnyRepoReader, functionTest{
-	sequenceFilter: []string{
-		"APIAuthorization",
-		"RepoAccess",
-		"ReqAnyRepoReader",
-	},
-	fixtures: []*fixtureType{
+	testCases: []*testCase{
 		{
-			data: newFixtureData(map[string]string{
-				"doer":       "doerregular",
-				"repository": "userowner/repositorypublic",
-			}),
+			// pass if the repository is public
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoer().
+				SetRepository(),
+			),
 		},
 		{
-			data: newFixtureData(map[string]string{
-				"doer":       "doeradmin",
-				"repository": "userowner/repositoryprivate",
-			}),
+			// pass if the repository is private and the doer is admin
+			data: newTestData(map[string]string{}, newSharedData().
+				SetDoer().
+				SetDoerAdmin(true).
+				SetRepository().
+				SetRepositoryPrivate(true),
+			),
 		},
 		// This fixture is unreachable because this permissions function is always used after
 		// a RepoAccess that enforces the same restriction for non admin users
 		// {
-		// 	data: newFixtureData(map[string]string{
-		// 		"doer":       "doerregular",
-		// 		"repository": "userowner/repositoryprivate",
-		// 	}),
+		// 	data: newTestData(map[string]string{}, newSharedData().
+		// 		SetDoer().
+		// 		SetRepository().
+		// 		SetRepositoryPrivate(true),
+		// 	),
 		// 	error: "Denied",
 		// },
+	},
+	sequenceFilter: []string{
+		"APIAuthorization",
+		"RepoAccess",
+		"ReqAnyRepoReader",
 	},
 },
 )

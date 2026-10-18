@@ -22,7 +22,6 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
-	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
@@ -45,6 +44,7 @@ func TestAPIPushMirror(t *testing.T) {
 
 func testAPIPushMirror(t *testing.T, u *url.URL) {
 	defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+	defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 	defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 	defer test.MockProtect(&mirror_service.AddPushMirrorRemote)()
 	defer test.MockProtect(&repo_model.DeletePushMirrors)()
@@ -138,6 +138,9 @@ func testAPIPushMirror(t *testing.T, u *url.URL) {
 				repo_model.DeletePushMirrors = deletePushMirrors
 				req = NewRequest(t, "DELETE", fmt.Sprintf("%s/%s", urlStr, pushMirror.RemoteName)).AddTokenAuth(token)
 				MakeRequest(t, req, http.StatusNoContent)
+
+				_, _, err := git.NewCommand(t.Context(), "remote", "get-url").AddDynamicArguments(pushMirror.RemoteName).RunStdString(&git.RunOpts{Dir: srcRepo.RepoPath()})
+				require.True(t, git.IsErrorExitCode(err, 2), "API deletion must remove the Git remote")
 			}
 		})
 	}
@@ -149,6 +152,7 @@ func TestAPIPushMirrorBranchFilter(t *testing.T) {
 
 func testAPIPushMirrorBranchFilter(t *testing.T, u *url.URL) {
 	defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+	defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
 	defer test.MockVariableValue(&setting.Mirror.Enabled, true)()
 	defer test.MockProtect(&mirror_service.AddPushMirrorRemote)()
 	defer test.MockProtect(&repo_model.DeletePushMirrors)()
@@ -162,8 +166,8 @@ func testAPIPushMirrorBranchFilter(t *testing.T, u *url.URL) {
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeAll)
 	urlStr := fmt.Sprintf("/api/v1/repos/%s/%s/push_mirrors", owner.Name, srcRepo.Name)
 
-	mirrorRepo, _, f := tests.CreateDeclarativeRepo(t, user, "", []unit.Type{unit.TypeCode}, nil, nil)
-	defer f()
+	mirrorRepo := forgery.CreateRepository(t, user, nil)
+
 	remoteAddress := fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(user.Name), url.PathEscape(mirrorRepo.Name))
 
 	t.Run("Create push mirror with branch filter", func(t *testing.T) {
@@ -244,15 +248,8 @@ func testAPIPushMirrorBranchFilter(t *testing.T, u *url.URL) {
 		}
 
 		// Create mirrors
-		mirrorCleanups := []func(){}
-		defer func() {
-			for _, mirror := range mirrorCleanups {
-				mirror()
-			}
-		}()
 		for _, tc := range testCases {
-			mirrorRepo, _, f := tests.CreateDeclarativeRepo(t, user, tc.name, []unit.Type{unit.TypeCode}, nil, nil)
-			mirrorCleanups = append(mirrorCleanups, f)
+			mirrorRepo := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{Name: tc.name})
 
 			remoteAddr := fmt.Sprintf("%s%s/%s", u.String(), url.PathEscape(user.Name), url.PathEscape(mirrorRepo.Name))
 			req := NewRequestWithJSON(t, "POST", urlStr, &api.CreatePushMirrorOption{

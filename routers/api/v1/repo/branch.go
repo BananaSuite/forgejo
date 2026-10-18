@@ -149,11 +149,6 @@ func DeleteBranch(ctx *context.APIContext) {
 		}
 	}
 
-	if ctx.Repo().Repository.IsMirror {
-		ctx.Error(http.StatusForbidden, "IsMirrored", errors.New("can not delete branch of an mirror repository"))
-		return
-	}
-
 	if err := repo_service.DeleteBranch(ctx, ctx.Doer(), ctx.Repo().Repository, ctx.Repo().GitRepo, branchName); err != nil {
 		switch {
 		case git.IsErrBranchNotExist(err):
@@ -385,6 +380,8 @@ func ListBranches(ctx *context.APIContext) {
 			}
 			apiBranches = append(apiBranches, apiBranch)
 		}
+	} else {
+		apiBranches = make([]*api.Branch, 0)
 	}
 
 	ctx.SetLinkHeader(int(totalNumOfBranches), listOptions.PageSize)

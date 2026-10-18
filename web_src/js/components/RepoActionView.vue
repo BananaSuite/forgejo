@@ -1,10 +1,11 @@
 <script>
-import {SvgIcon} from '../svg.js';
+import {SvgIcon} from '../svg.ts';
 import ActionRunStatus from './ActionRunStatus.vue';
 import ActionJobStepList from './ActionJobStepList.vue';
-import {toggleElem} from '../utils/dom.js';
-import {GET, POST, DELETE} from '../modules/fetch.js';
-import {showErrorToast} from '../modules/toast.js';
+import {toggleElem} from '../utils/dom.ts';
+import {GET, POST, DELETE} from '../modules/fetch.ts';
+import {initMarkupContent} from '../markup/content.js';
+import {showErrorToast} from '../modules/toast.ts';
 
 export default {
   name: 'RepoActionView',
@@ -64,6 +65,7 @@ export default {
     return {
       // internal state
       loading: false,
+      renderedSummaries: '',
       initialLoadComplete: false,
       needLoadingWithLogCursors: null,
       intervalID: null,
@@ -83,6 +85,7 @@ export default {
         title: '',
         titleHTML: '',
         status: '',
+        estimatedOutcome: '',
         description: '',
         canCancel: false,
         canApprove: false,
@@ -131,6 +134,7 @@ export default {
         // initial render (before `loadJob`'s first execution is complete) doesn't display "You are viewing an
         // out-of-date run..."
         allAttempts: [],
+        summaries: [],
       },
     };
   },
@@ -194,14 +198,14 @@ export default {
 
     statusDiagnostics() {
       if (!this.currentJob.allAttempts) {
-        return this.currentJob.details;
+        return [];
       }
 
       const useAttempt = this.currentJob.allAttempts.some((attempt) => attempt.number === this.viewingAttemptNumber);
       if (useAttempt) {
         return this.viewingAttempt.status_diagnostics;
       }
-      return this.currentJob.details;
+      return [];
     },
 
     hasWarnings() {
@@ -270,8 +274,8 @@ export default {
       window.location.href = url;
     },
 
-    appendLogs(stepIndex, logLines, startTime) {
-      this.$refs.stepList.appendLogs(stepIndex, logLines, startTime);
+    async appendLogs(stepIndex, logLines, startTime) {
+      await this.$refs.stepList.appendLogs(stepIndex, logLines, startTime);
     },
 
     async fetchArtifacts() {
@@ -359,6 +363,12 @@ export default {
         this.run = job.state.run;
         this.currentJob = job.state.currentJob;
 
+        const summaries = this.currentJob.summaries?.join(' ') ?? '';
+        if (summaries && summaries !== this.renderedSummaries) {
+          this.renderedSummaries = summaries;
+          this.$nextTick(() => initMarkupContent());
+        }
+
         // sync the currentJobStepsStates to store the job step states
         for (let i = 0; i < this.currentJob.steps.length; i++) {
           if (!this.currentJobStepsStates[i]) {
@@ -371,7 +381,7 @@ export default {
           // save the cursor, it will be passed to backend next time
           this.lineNumberOffset[logs.step] = 0;
           this.currentJobStepsStates[logs.step].cursor = logs.cursor;
-          this.appendLogs(logs.step, logs.lines, logs.started);
+          await this.appendLogs(logs.step, logs.lines, logs.started);
         }
 
         if (this.run.done) {
@@ -405,6 +415,13 @@ export default {
 
     isExpandable(status) {
       return ['success', 'running', 'failure', 'cancelled'].includes(status);
+    },
+
+    failFastStatus(status, estimatedOutcome) {
+      if (this.isDone(estimatedOutcome)) {
+        return estimatedOutcome;
+      }
+      return status;
     },
 
     toggleAttemptDropdown() {
@@ -488,9 +505,13 @@ export default {
     <div class="action-view-header">
       <div class="action-info-summary">
         <div class="action-info-summary-title">
-          <ActionRunStatus :locale-status="locale.status[run.status]" :status="run.status" :size="20"/>
+          <ActionRunStatus
+            :locale-status="locale.status[failFastStatus(run.status, run.estimatedOutcome)]"
+            :status="failFastStatus(run.status, run.estimatedOutcome)"
+            :size="20"
+          />
           <!-- eslint-disable-next-line vue/no-v-html -->
-          <h2 class="action-info-summary-title-text" v-html="run.titleHTML"/>
+          <h1 class="action-info-summary-title-text" v-html="run.titleHTML"/>
         </div>
         <button class="ui basic small compact button primary" @click="approveRun()" v-if="canApprove">
           {{ locale.approve }}
@@ -578,9 +599,8 @@ export default {
               {{ currentJob.title }}
             </h3>
             <ul class="job-info-header-detail">
-              <li v-for="detail in statusDiagnostics" :key="detail">
-                {{ detail }}
-              </li>
+              <!-- eslint-disable-next-line vue/no-v-html -->
+              <li v-for="detail in statusDiagnostics" :key="detail" v-html="detail"/>
             </ul>
           </div>
           <div class="job-info-header-right job-attempt-dropdown tw-mr-8" v-if="shouldShowAttemptDropdown" v-cloak>
@@ -626,6 +646,10 @@ export default {
               </div>
             </div>
           </div>
+        </div>
+        <div v-if="currentJob.summaries?.length" class="job-summary markup">
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <div v-for="(stepSummary, index) in currentJob.summaries" :key="index" class="step-summary" v-html="stepSummary"/>
         </div>
         <ActionJobStepList
           ref="stepList"
@@ -694,13 +718,6 @@ export default {
   flex-wrap: wrap;
   gap: 5px;
   margin-inline-start: 28px;
-}
-
-@media (max-width: 767.98px) {
-  .action-commit-summary {
-    margin-inline-start: 0;
-    margin-top: 8px;
-  }
 }
 
 /* ================ */
@@ -822,6 +839,19 @@ export default {
   align-self: flex-start;
 }
 
+.action-view-right .job-summary {
+  margin: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-console-border);
+  border-radius: var(--border-radius);
+  background: var(--color-box-body);
+  color: var(--color-text);
+}
+
+.action-view-right .job-summary .step-summary + .step-summary {
+  margin-top: 16px;
+}
+
 /* begin fomantic button overrides */
 
 .action-view-right .ui.button,
@@ -878,10 +908,9 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 12px;
+  padding: 12px;
   position: sticky;
   top: 0;
-  height: 60px;
   z-index: 1; /* above .job-step-container */
   background: var(--color-console-bg);
   border-radius: 3px;

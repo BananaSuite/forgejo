@@ -301,7 +301,7 @@ func (s slackConvertor) Review(p *api.PullRequestPayload, event webhook_module.H
 			return SlackPayload{}, err
 		}
 
-		text = fmt.Sprintf("[%s] Pull request review %s: [%s](%s) by %s", p.Repository.FullName, action, title, titleLink, SlackNameFormatter(p.Sender.UserName))
+		text = fmt.Sprintf("[%s] Pull request review %s: %s by %s", p.Repository.FullName, action, SlackLinkFormatter(titleLink, title), SlackNameFormatter(p.Sender.UserName))
 	}
 
 	return s.createPayload(text, nil), nil
@@ -326,6 +326,56 @@ func (s slackConvertor) Action(p *api.ActionPayload) (SlackPayload, error) {
 	text, _ := slackPayloadFormatter.getActionPayloadInfo(p)
 
 	return s.createPayload(text, nil), nil
+}
+
+func (s slackConvertor) WorkflowRun(p *api.WorkflowRunPayload) (SlackPayload, error) {
+	title, body, colour := slackPayloadFormatter.getWorkflowRunPayloadInfo(p)
+
+	var attachmentTitle string
+	switch p.Action {
+	case api.HookNewWorkflowRunAttempt:
+		attachmentTitle = fmt.Sprintf("New attempt of run %q with status %s", p.Run.Title, p.Run.Status)
+	case api.HookWorkflowRunStatusChanged:
+		attachmentTitle = fmt.Sprintf("The status of run %q is now %s", p.Run.Title, p.Run.Status)
+	case api.HookWorkflowRunCompleted:
+		attachmentTitle = fmt.Sprintf("The run %q has completed with status %s", p.Run.Title, p.Run.Status)
+	}
+
+	attachments := []SlackAttachment{
+		{
+			Color:     fmt.Sprintf("%x", colour),
+			Text:      SlackTextFormatter(body),
+			Title:     attachmentTitle,
+			TitleLink: p.Run.HTMLURL,
+		},
+	}
+
+	return s.createPayload(title, attachments), nil
+}
+
+func (s slackConvertor) WorkflowJob(p *api.WorkflowJobPayload) (SlackPayload, error) {
+	title, body, colour := slackPayloadFormatter.getWorkflowJobPayloadInfo(p)
+
+	var attachmentTitle string
+	switch p.Action {
+	case api.HookNewWorkflowJobAttempt:
+		attachmentTitle = fmt.Sprintf("New attempt of job %q with status %s", p.Job.Name, p.Job.Status)
+	case api.HookWorkflowJobStatusChanged:
+		attachmentTitle = fmt.Sprintf("The status of job %q is now %s", p.Job.Name, p.Job.Status)
+	case api.HookWorkflowJobCompleted:
+		attachmentTitle = fmt.Sprintf("The job %q has completed with status %s", p.Job.Name, p.Job.Status)
+	}
+
+	attachments := []SlackAttachment{
+		{
+			Color:     fmt.Sprintf("%x", colour),
+			Text:      SlackTextFormatter(body),
+			Title:     attachmentTitle,
+			TitleLink: p.Job.HTMLURL,
+		},
+	}
+
+	return s.createPayload(title, attachments), nil
 }
 
 func (s slackConvertor) createPayload(text string, attachments []SlackAttachment) SlackPayload {

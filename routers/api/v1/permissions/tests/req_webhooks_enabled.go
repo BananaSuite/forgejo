@@ -11,21 +11,23 @@ import (
 )
 
 var _ = registerFunctionTest(apiv1_permissions.ReqWebhooksEnabled, functionTest{
+	testCases: []*testCase{
+		{
+			// pass because the DisableWebhooks setting is false by default
+			data: newTestData(map[string]string{}, newSharedData()),
+		},
+		{
+			// fail because the DisableWebhooks setting is set to true
+			data: newTestData(map[string]string{
+				"DisableWebhooks": "true",
+			}, newSharedData()),
+			error: "webhooks disabled by administrator",
+		},
+	},
 	protectSettingsBool: []*bool{
 		&setting.DisableWebhooks,
 	},
-	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *fixtureData) {
+	interpret: func(t *testing.T, permissions *apiv1_permissions.Permissions, data *testData) {
 		setting.DisableWebhooks = data.Get("DisableWebhooks") == "true"
-	},
-	fixtures: []*fixtureType{
-		{
-			data: newFixtureData(map[string]string{}),
-		},
-		{
-			data: newFixtureData(map[string]string{
-				"DisableWebhooks": "true",
-			}),
-			error: "webhooks disabled by administrator",
-		},
 	},
 })

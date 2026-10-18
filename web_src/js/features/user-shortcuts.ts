@@ -1,4 +1,4 @@
-import {POST} from '../modules/fetch.js';
+import {POST} from '../modules/fetch.ts';
 
 function initPopupTabs() {
   const dialog = document.querySelector<HTMLDialogElement>('#shortcuts');

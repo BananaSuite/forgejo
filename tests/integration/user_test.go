@@ -44,6 +44,14 @@ func TestViewUser(t *testing.T) {
 
 	req := NewRequest(t, "GET", "/user2")
 	MakeRequest(t, req, http.StatusOK)
+
+	t.Run("REQUIRE_SIGNIN_VIEW", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+		defer test.MockVariableValue(&setting.Service.RequireSignInView, true)()
+		req := NewRequest(t, "GET", "/user2")
+		resp := MakeRequest(t, req, http.StatusSeeOther)
+		assert.Equal(t, "/user/login", resp.Header().Get("Location"))
+	})
 }
 
 func TestRenameUsername(t *testing.T) {
@@ -477,7 +485,7 @@ func TestUserHints(t *testing.T) {
 			assert.Equal(t, enabled, hintChecked)
 
 			link, _ := htmlDoc.Find("form[action='/user/settings/appearance/language'] a").Attr("href")
-			assert.Equal(t, "https://forgejo.org/docs/next/contributor/localization/", link)
+			assert.Equal(t, "https://forgejo.org/docs/next/contributor/localization/", link) // NOT derived from setting.AppDocsVer (contrib docs aren't tied to the present version!)
 		}
 
 		t.Run("view", func(t *testing.T) {

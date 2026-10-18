@@ -14,6 +14,7 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/perm"
 	quota_model "forgejo.org/models/quota"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	"forgejo.org/modules/avatar"
 	"forgejo.org/modules/log"
@@ -54,6 +55,7 @@ import (
 	"forgejo.org/services/context"
 	"forgejo.org/services/forms"
 	"forgejo.org/services/lfs"
+	service_message_service "forgejo.org/services/service_message"
 
 	_ "forgejo.org/modules/session" // to registers all internal adapters
 
@@ -120,7 +122,6 @@ func buildAuthGroup() *auth_method.Group {
 func buildMixedAuthGroup() *auth_method.Group {
 	group := auth_method.NewGroup()
 	group.Add(&auth_method.OAuth2{})
-	group.Add(&auth_method.Basic{})
 	group.Add(&auth_method.AccessToken{
 		PermitBasic:  true,
 		PermitBearer: true,
@@ -135,6 +136,7 @@ func buildMixedAuthGroup() *auth_method.Group {
 		group.Add(&auth_method.ReverseProxy{}) // reverseproxy should before Session, otherwise the header will be ignored if user has login
 	}
 	group.Add(&auth_method.Session{})
+	group.Add(&auth_method.Basic{})
 	return group
 }
 
@@ -143,7 +145,7 @@ func buildMixedAuthGroup() *auth_method.Group {
 func buildGitLfsAuthGroup() *auth_method.Group {
 	group := auth_method.NewGroup()
 	group.Add(&auth_method.LFSToken{})
-	group.Add(&auth_method.Basic{})
+	group.Add(&auth_method.OAuth2{})
 	group.Add(&auth_method.AccessToken{
 		PermitBasic: true,
 		// PermitBearer is left at default `false`.  This behaviour is maintained from when one auth method performed
@@ -160,6 +162,13 @@ func buildGitLfsAuthGroup() *auth_method.Group {
 		// is enabled for Authorized Integrations as well:
 		PermitBasic: true,
 	})
+	if setting.Service.EnableReverseProxyAuth {
+		// reverseproxy should before Session, otherwise the header will be ignored if user has login
+		group.Add(&auth_method.ReverseProxy{
+			CreateSession: true,
+		})
+	}
+	group.Add(&auth_method.Basic{})
 	return group
 }
 
@@ -168,7 +177,6 @@ func buildGitLfsAuthGroup() *auth_method.Group {
 func buildGitAuthGroup() *auth_method.Group {
 	group := auth_method.NewGroup()
 	group.Add(&auth_method.OAuth2{})
-	group.Add(&auth_method.Basic{})
 	group.Add(&auth_method.AccessToken{
 		PermitBasic:  true,
 		PermitBearer: true,
@@ -183,6 +191,13 @@ func buildGitAuthGroup() *auth_method.Group {
 		// is enabled for Authorized Integrations as well:
 		PermitBasic: true,
 	})
+	if setting.Service.EnableReverseProxyAuth {
+		// reverseproxy should before Session, otherwise the header will be ignored if user has login
+		group.Add(&auth_method.ReverseProxy{
+			CreateSession: true,
+		})
+	}
+	group.Add(&auth_method.Basic{})
 	return group
 }
 
@@ -215,9 +230,34 @@ func webAuth(authMethod auth_service.Method) func(*context.Context) {
 		ctx.Doer = ar.User()
 		ctx.IsSigned = ar.User() != nil
 		ctx.Authentication = ar
-		if ctx.Doer == nil {
-			// ensure the session uid is deleted
+		if ctx.Doer == nil && ctx.InteractiveReauthenticationPossible {
+			// The request is not authenticated, and session authentication was attempted. Clear "uid" from the session.
+			// The purpose of this behaviour isn't clear as it is retained through multiple refactorings, originally
+			// introduced in https://codeberg.org/forgejo/forgejo/commit/17c5c654a57ecf51c8c7c8ecfc6c86ae313d4000; it
+			// may not be meaningful with separated auth methods on different HTTP routes.  It is retained here as it
+			// seems like a reasonable security precaution.
+			//
+			// Session value is only removed when InteractiveReauthenticationPossible is set, which indicates session
+			// auth was attempted on this request.  Without this check, an in-browser extension using git http w/ basic
+			// auth (example: Floccus) will clear the session every time it receives a 401 response (example: starting
+			// an auth workflow).
 			_ = ctx.Session.Delete("uid")
+		}
+	}
+}
+
+func smMiddleware(ctx *context.Context) {
+	// TODO: If more ServiceMessage Types come up, this needs to be generalized
+	if ctx.IsSigned {
+		sm, _ := service_message_service.GetServiceMessage(ctx, service_message_service.SMTypeModal)
+		if sm != nil {
+			log.Debug("Got Service Message of type %s", sm.Type)
+			if sm.Text != "" && ctx.Doer.MustShowServiceMessage(sm.Type, sm.UpdatedUnix) {
+				log.Debug("Setting service message %s in context", sm.Type)
+				ctx.Data["ShowModalServiceMessage"] = true
+				ctx.Data["ModalServiceMessageTitle"] = sm.Title
+				ctx.Data["RenderedContent"] = templates.RenderMarkdownToHtml(ctx, sm.Text)
+			}
 		}
 	}
 }
@@ -289,7 +329,7 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 			}
 		}
 
-		if options.SignInRequired {
+		if options.SignInRequired != nil && options.SignInRequired() {
 			if !ctx.IsSigned {
 				if ctx.Req.URL.Path != "/user/events" {
 					middleware.SetRedirectToCookie(ctx.Resp, setting.AppSubURL+ctx.Req.URL.RequestURI())
@@ -304,7 +344,7 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 		}
 
 		// Redirect to log in page if auto-signin info is provided and has not signed in.
-		if !options.SignOutRequired && !ctx.IsSigned &&
+		if !options.SignOutRequired && !ctx.IsSigned && ctx.InteractiveReauthenticationPossible &&
 			ctx.GetSiteCookie(setting.CookieRememberName) != "" {
 			if ctx.Req.URL.Path != "/user/events" {
 				middleware.SetRedirectToCookie(ctx.Resp, setting.AppSubURL+ctx.Req.URL.RequestURI())
@@ -379,39 +419,43 @@ func Routes() *web.Route {
 		}, gzipMid, context.Contexter())
 	}
 
+	// When the session provider is "memory", the session middleware contains its in-memory storage -- don't create
+	// multiple instances of the middleware for the different routing groups or else they'll have independent session
+	// storage, preventing user sessions from working across them.
+	sessioner := common.Sessioner()
+
 	routes.Group("",
 		func() {
 			registerRoutes(routes)
 		},
-		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildAuthGroup()),
+		gzipMid, sessioner, context.Contexter(), webAuth(buildAuthGroup()),
 		// TODO: GetNotificationCount & GetActiveStopwatch really seem like things that could be folded into Contexter or as helper functions
-		user.GetNotificationCount, repo.GetActiveStopwatch,
-		goGet)
+		user.GetNotificationCount, repo.GetActiveStopwatch, goGet, smMiddleware)
 	routes.Group("",
 		func() {
 			registerMixedRoutes(routes)
-		},
-		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildMixedAuthGroup()), goGet)
+		}, gzipMid, sessioner, context.Contexter(), webAuth(buildMixedAuthGroup()), goGet)
 	routes.Group("",
 		func() {
 			registerGitLFSRoutes(routes)
-		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitLfsAuthGroup()), goGet)
+		}, gzipMid, sessioner, context.Contexter(), webAuth(buildGitLfsAuthGroup()), goGet)
 	routes.Group("",
 		func() {
 			registerGitRoutes(routes)
-		}, gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildGitAuthGroup()), goGet)
+		}, gzipMid, sessioner, context.Contexter(), webAuth(buildGitAuthGroup()), goGet)
 
 	// The only endpoint which can only be accessed with the OAuth2 authentication method is /userinfo, extracted here
 	// so that other auth methods can't be applied to it
 	routes.Methods(
 		"GET, POST, OPTIONS",
 		"/login/oauth/userinfo",
-		gzipMid, common.Sessioner(), context.Contexter(),
+		gzipMid, sessioner, context.Contexter(),
 		oauth2Enabled, optionsCorsHandler(), ignoreCSRF, webAuth(&auth_method.OAuth2{}),
-		auth.InfoOAuth)
+		auth.InfoOAuth,
+	)
 
 	routes.NotFound(
-		gzipMid, common.Sessioner(), context.Contexter(), webAuth(buildAuthGroup()),
+		gzipMid, sessioner, context.Contexter(), webAuth(buildAuthGroup()),
 		// TODO: GetNotificationCount & GetActiveStopwatch really seem like things that could be folded into Contexter or as helper functions
 		user.GetNotificationCount, repo.GetActiveStopwatch,
 		goGet,
@@ -421,18 +465,27 @@ func Routes() *web.Route {
 				panic("missing middleware context.Contexter()")
 			}
 			ctx.NotFound("", nil)
-		})
+		},
+	)
 
 	return routes
 }
 
 var (
 	ignoreCSRF = verifyAuthWithOptions(&common.VerifyOptions{DisableCSRF: true})
-	reqSignIn  = verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: true})
+	reqSignIn  = verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: func() bool { return true }})
 	reqSignOut = verifyAuthWithOptions(&common.VerifyOptions{SignOutRequired: true})
 	// TODO: rename them to "optSignIn", which means that the "sign-in" could be optional, depends on the VerifyOptions (RequireSignInView)
-	ignSignIn        = verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: setting.Service.RequireSignInView})
-	ignExploreSignIn = verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: setting.Service.RequireSignInView || setting.Service.Explore.RequireSigninView})
+	ignSignIn = verifyAuthWithOptions(&common.VerifyOptions{
+		SignInRequired: func() bool {
+			return setting.Service.RequireSignInView
+		},
+	})
+	ignExploreSignIn = verifyAuthWithOptions(&common.VerifyOptions{
+		SignInRequired: func() bool {
+			return setting.Service.RequireSignInView || setting.Service.Explore.RequireSigninView
+		},
+	})
 
 	reqRepoAdmin               = context.RequireRepoAdmin()
 	reqRepoCodeWriter          = context.RequireRepoWriter(unit.TypeCode)
@@ -842,6 +895,7 @@ func registerRoutes(m *web.Route) {
 		m.Post("/forgot_password", auth.ForgotPasswdPost)
 		m.Post("/logout", auth.SignOut)
 		m.Get("/task/{task}", reqSignIn, user.TaskStatus)
+		m.Post("/confirm", reqSignIn, user.SetConfirm)
 		m.Get("/stopwatches", reqSignIn, user.GetStopwatches)
 		m.Get("/search_candidates", ignExploreSignIn, user.SearchCandidates)
 		m.Group("/oauth2", func() {
@@ -853,7 +907,7 @@ func registerRoutes(m *web.Route) {
 
 	m.Get("/avatar/{hash}", user.AvatarByEmailHash)
 
-	adminReq := verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: true, AdminRequired: true})
+	adminReq := verifyAuthWithOptions(&common.VerifyOptions{SignInRequired: func() bool { return true }, AdminRequired: true})
 
 	// ***** START: Admin *****
 	m.Group("/admin", func() {
@@ -871,6 +925,14 @@ func registerRoutes(m *web.Route) {
 			m.Post("/test_mail", admin.SendTestMail)
 			m.Post("/test_cache", admin.TestCache)
 			m.Get("/settings", admin.ConfigSettings)
+		})
+
+		m.Group("/service_message", func() {
+			m.Get("", admin.GetServiceMessage)
+			m.Post("", web.Bind(forms.ServiceMessageForm{}), admin.CreateOrUpdateServiceMessage)
+			m.Post("/delete", admin.DeleteServiceMessage)
+			m.Post("/preview", web.Bind(forms.ServiceMessageForm{}), admin.PreviewServiceMessage)
+			m.Post("/markup", web.Bind(structs.MarkupOption{}), misc.Markup)
 		})
 
 		m.Group("/monitor", func() {
@@ -997,26 +1059,9 @@ func registerRoutes(m *web.Route) {
 	}
 
 	reqRepoOrOwnerProjectReader := func(ctx *context.Context) {
-		unitType := unit.TypeProjects
-		if ctx.ContextUser == nil || ctx.Doer == nil {
-			ctx.NotFound(unitType.String(), nil)
-			return
+		if projectID := ctx.FormInt64("id"); projectID > 0 {
+			context.ReqProjectIDAssignableToIssue(ctx, projectID)
 		}
-
-		switch {
-		case ctx.ContextUser.IsIndividual():
-			if ctx.Doer.ID == ctx.ContextUser.ID || ctx.Doer.IsAdmin {
-				return
-			}
-		case ctx.ContextUser.IsOrganization():
-			if ctx.Org.Organization.UnitPermission(ctx, ctx.Doer, unitType) >= perm.AccessModeRead {
-				return
-			}
-		default:
-			ctx.NotFound(unitType.String(), nil)
-			return
-		}
-		reqRepoProjectsReader(ctx)
 	}
 
 	individualPermsChecker := func(ctx *context.Context) {
@@ -1053,6 +1098,7 @@ func registerRoutes(m *web.Route) {
 		m.Group("/invite/{token}", func() {
 			m.Get("", org.TeamInvite)
 			m.Post("", org.TeamInvitePost)
+			m.Post("/decline", org.DeclineTeamInvite)
 		})
 
 		m.Group("/{org}", func() {
@@ -1122,6 +1168,8 @@ func registerRoutes(m *web.Route) {
 					m.Post("/delete", org.DeleteLabel)
 					m.Post("/initialize", web.Bind(forms.InitializeLabelsForm{}), org.InitializeLabels)
 				})
+
+				m.Get("/repos", org_setting.Repos)
 
 				m.Group("/actions", func() {
 					m.Get("", org_setting.RedirectToDefaultSetting)
@@ -1200,9 +1248,9 @@ func registerRoutes(m *web.Route) {
 			}, reqUnitAccess(unit.TypeProjects, perm.AccessModeRead, true))
 			m.Group("", func() { //nolint:dupl
 				m.Get("/new", org.RenderNewProject)
-				m.Post("/new", web.Bind(forms.CreateProjectForm{}), org.NewProjectPost)
+				m.Post("/new", web.Bind(forms.CreateProjectForm{}), org.CreateProject)
 				m.Group("/{id}", func() {
-					m.Post("", web.Bind(forms.EditProjectColumnForm{}), org.AddColumnToProjectPost)
+					m.Post("", web.Bind(forms.EditProjectColumnForm{}), org.CreateColumnInProject)
 					m.Post("/move", project.MoveColumns)
 					m.Post("/delete", org.DeleteProject)
 
@@ -1326,8 +1374,9 @@ func registerRoutes(m *web.Route) {
 	}, reqSignIn, context.RepoAssignment, context.UnitTypes(), reqRepoAdmin, context.RepoRef())
 
 	m.Group("/{username}/{reponame}/action", func() {
-		m.Post("/watch", repo.ActionWatch(true))
-		m.Post("/unwatch", repo.ActionWatch(false))
+		m.Post("/watch/select", repo.ActionWatch)
+		m.Post("/watch", repo.ActionWatchConst(repo_model.WatchAllSelection))
+		m.Post("/unwatch", repo.ActionWatchConst(repo_model.WatchNoneSelection))
 		m.Post("/accept_transfer", repo.ActionTransfer(true))
 		m.Post("/reject_transfer", repo.ActionTransfer(false))
 		if !setting.Repository.DisableStars {
@@ -1357,6 +1406,14 @@ func registerRoutes(m *web.Route) {
 				m.Get("/summary-card", repo.DrawIssueSummaryCard)
 			})
 		})
+		m.Group("/pulls/{index}", func() {
+			m.Get(".rss", feedEnabled, repo.IssueFeedRSS)
+			m.Get(".atom", feedEnabled, repo.IssueFeedAtom)
+		}, ctxDataSet("EnableFeed", setting.Other.EnableFeed))
+		m.Group("/issues/{index}", func() {
+			m.Get(".rss", feedEnabled, repo.IssueFeedRSS)
+			m.Get(".atom", feedEnabled, repo.IssueFeedAtom)
+		}, ctxDataSet("EnableFeed", setting.Other.EnableFeed))
 		m.Get("/-/summary-card", repo.DrawRepoSummaryCard)
 	}, ignSignIn, context.RepoAssignment, context.UnitTypes()) // for "/{username}/{reponame}" which doesn't require authentication
 
@@ -1542,6 +1599,7 @@ func registerRoutes(m *web.Route) {
 			})
 			m.Get("/labels", reqRepoIssuesOrPullsReader, repo.RetrieveLabels, repo.Labels)
 			m.Get("/milestones", reqRepoIssuesOrPullsReader, repo.Milestones)
+			m.Get("/issues/suggestions", reqRepoIssuesOrPullsReader, repo.IssueSuggestions)
 		}, context.RepoRef())
 
 		if setting.Packages.Enabled {
@@ -1573,9 +1631,9 @@ func registerRoutes(m *web.Route) {
 			m.Get("/{id}", repo.ViewProject)
 			m.Group("", func() { //nolint:dupl
 				m.Get("/new", repo.RenderNewProject)
-				m.Post("/new", web.Bind(forms.CreateProjectForm{}), repo.NewProjectPost)
+				m.Post("/new", web.Bind(forms.CreateProjectForm{}), repo.CreateProject)
 				m.Group("/{id}", func() {
-					m.Post("", web.Bind(forms.EditProjectColumnForm{}), repo.AddColumnToProjectPost)
+					m.Post("", web.Bind(forms.EditProjectColumnForm{}), repo.CreateColumnInProject)
 					m.Post("/move", project.MoveColumns)
 					m.Post("/delete", repo.DeleteProject)
 
@@ -1733,6 +1791,7 @@ func registerRoutes(m *web.Route) {
 					m.Get("/new_comment", repo.RenderNewCodeCommentForm)
 					m.Post("/comments", web.Bind(forms.CodeCommentForm{}), repo.SetShowOutdatedComments, repo.CreateCodeComment)
 					m.Post("/submit", web.Bind(forms.SubmitReviewForm{}), repo.SubmitReview)
+					m.Post("/apply_suggestion", reqSignIn, repo.ApplySuggestion)
 				}, context.RepoMustNotBeArchived())
 			})
 		}, repo.MustAllowPulls)

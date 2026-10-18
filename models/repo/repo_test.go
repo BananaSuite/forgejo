@@ -69,12 +69,12 @@ func TestWatchRepo(t *testing.T) {
 	const repoID = 3
 	const userID = 2
 
-	require.NoError(t, repo_model.WatchRepo(db.DefaultContext, userID, repoID, true))
+	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, userID, repoID, repo_model.WatchAllSelection))
 	unittest.AssertExistsAndLoadBean(t, &repo_model.Watch{RepoID: repoID, UserID: userID})
 	unittest.CheckConsistencyFor(t, &repo_model.Repository{ID: repoID})
 
-	require.NoError(t, repo_model.WatchRepo(db.DefaultContext, userID, repoID, false))
-	unittest.AssertNotExistsBean(t, &repo_model.Watch{RepoID: repoID, UserID: userID})
+	require.NoError(t, repo_model.WatchRepoExplicitly(db.DefaultContext, userID, repoID, repo_model.WatchNoneSelection))
+	assert.Equal(t, 1, unittest.GetCount(t, &repo_model.Watch{UserID: userID, RepoID: repoID}, "source = false AND watch_selection_issues = false AND watch_selection_pull_requests = false AND watch_selection_releases = false"))
 	unittest.CheckConsistencyFor(t, &repo_model.Repository{ID: repoID})
 }
 
@@ -224,7 +224,5 @@ func TestAPActorID(t *testing.T) {
 	repo := repo_model.Repository{ID: 1}
 	url := repo.APActorID()
 	expected := "https://try.gitea.io/api/v1/activitypub/repository-id/1"
-	if url != expected {
-		t.Errorf("unexpected APActorID, expected: %q, actual: %q", expected, url)
-	}
+	assert.Equal(t, expected, url, "unexpected APActorID")
 }

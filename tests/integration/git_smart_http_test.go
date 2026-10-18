@@ -18,6 +18,7 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -172,8 +173,8 @@ func TestGitHTTPSameStatusCodeForGetAndHeadRequests(t *testing.T) {
 		)
 	}
 
-	repo, _, f := tests.CreateDeclarativeRepo(t, owner, "get-and-head-requests", []unit_model.Type{unit_model.TypeCode}, nil, nil)
-	defer f()
+	repo := forgery.CreateRepository(t, owner, &forgery.CreateRepositoryOptions{Name: "get-and-head-requests"})
+	forgery.EnableRepoUnit(t, repo, unit_model.TypeCode, nil)
 
 	for _, c := range cases {
 		t.Run(caseToTestName(c), func(t *testing.T) {
@@ -203,4 +204,26 @@ func TestGitHTTPSameStatusCodeForGetAndHeadRequests(t *testing.T) {
 			require.Equal(t, c.ExpectedStatusCode, headResp.Result().StatusCode)
 		})
 	}
+}
+
+func TestGitHTTPSends401(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// Public repo
+	getReq := NewRequest(t, "GET", "/user2/repo1.git/info/refs")
+	MakeRequest(t, getReq, http.StatusOK)
+
+	// Private repo
+	getReq = NewRequest(t, "GET", "/user2/repo2.git/info/refs")
+	MakeRequest(t, getReq, http.StatusUnauthorized)
+
+	// Simulating a rare case here where a web browser extension is performing git operations on behalf of a user, which
+	// was reported with the extension Floccus.  When Floccus is configured with auth token access to Forgejo, it must
+	// receive a 401 response before it switches over to ending the "Authorization" header.  Session authentication
+	// isn't permitted to git endpoints, but because Floccus operates in a browser it also may send the
+	// CookieRememberName, which previously caused this request to 303 over to /user/login rather than 401'ing.  The
+	// `InteractiveReauthenticationPossible` prevents this from being a redirect to "/user/login".
+	sess := loginUserWithPasswordRemember(t, "user2", userPassword, true)
+	getReq = NewRequest(t, "GET", "/user2/repo2.git/info/refs")
+	sess.MakeRequest(t, getReq, http.StatusUnauthorized)
 }
