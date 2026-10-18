@@ -125,7 +125,7 @@
 				{{end}}
 				{{if and (not $isHomepage) (not .IsViewFile) (not .IsBlame)}}{{/* IsViewDirectory (not home), TODO: split the templates, avoid using "if" tricks */}}
 					<div class="button-sequence folder-actions">
-						<a id="history-btn" class="ui button" href="{{.RepoLink}}/commits/{{.BranchNameSubURL}}/{{.TreePath | PathEscapeSegments}}">
+						<a class="ui button" href="{{.RepoLink}}/commits/{{.BranchNameSubURL}}/{{.TreePath | PathEscapeSegments}}">
 							{{svg "octicon-history" 16 "tw-mr-2"}}{{ctx.Locale.Tr "repo.file_history"}}
 						</a>
 						{{if not $.DisableDownloadSourceArchives}}
@@ -148,10 +148,8 @@
 		{{end}}
 
 		{{if .IsViewFile}}
-			{{template "repo/permalink-message" .}}
 			{{template "repo/view_file" .}}
 		{{else if .IsBlame}}
-			{{template "repo/permalink-message" .}}
 			{{template "repo/blame" .}}
 		{{else}}{{/* IsViewDirectory */}}
 			{{/* display the search bar only if */}}

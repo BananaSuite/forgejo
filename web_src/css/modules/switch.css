@@ -34,7 +34,6 @@
   border-radius: var(--border-radius);
   text-wrap: nowrap;
   transition: background-color 0.1s ease;
-  justify-content: center;
 
   &:hover {
     background: var(--color-hover);
