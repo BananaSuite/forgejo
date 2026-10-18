@@ -13,6 +13,16 @@ export function renderCodeCopy() {
 
   for (const el of els) {
     if (!el.textContent) continue;
+    if (el.parentElement.classList?.contains('trim-empty-lines')) {
+      for (let i = el.childNodes.length; i > 0; --i) {
+        const n = el.childNodes[i - 1];
+        if (n.nodeType === Node.TEXT_NODE && !n.textContent.trim()) {
+          n.remove();
+        } else {
+          n.textContent += '\n';
+        }
+      }
+    }
     // suggestion blocks are replaced by a rendered before/after diff (see markup/suggestion.js),
     // so they must not get a copy button.
     if (/(?:^|\s)language-suggestion(?:\s|$)/i.test(el.className)) continue;
