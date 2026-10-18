@@ -10,8 +10,8 @@ async function loadBranchesAndTags(area, btn) {
     const data = await res.json();
     addTags(area, data.tags);
     addBranches(area, data.branches, data.default_branch);
+    btn.nextElementSibling?.classList.remove('is-loading');
   } finally {
-    btn.textContent = btn.getAttribute('data-text');
     btn.setAttribute('data-state', 'fetched');
   }
 }

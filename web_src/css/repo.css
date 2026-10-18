@@ -2506,8 +2506,11 @@ details.commit-body-toggle > summary.ellipsis-button {
   height: 100%;
 }
 
-.diff .load-branches-and-tags {
-  user-select: none;
+.diff .branch-and-tag-detail.is-loading {
+  min-height: 2rem;
+  > div {
+    display: none !important;
+  }
 }
 
 .ui.form .right .ui.button {
