@@ -35,7 +35,8 @@ func TestTeamNotificationMail_test(t *testing.T) {
 	org.Name = "new_org"
 	org.IsActive = true
 	require.NoError(t, org_model.CreateOrganization(t.Context(), org, inviter))
-	o, _ := org_model.GetOrgByName(t.Context(), org.Name)
+	o, err := org_model.GetOrgByName(t.Context(), org.Name)
+	require.NoError(t, err)
 	team, _ := o.GetOwnerTeam(t.Context())
 	t.Run("with invitee", func(t *testing.T) {
 		invitedUser := new(user_model.User)
@@ -46,7 +47,8 @@ func TestTeamNotificationMail_test(t *testing.T) {
 		invitedUser.LastLoginUnix = 1693648327
 		invitedUser.CreatedUnix = 1693648027
 		require.NoError(t, user_model.CreateUser(t.Context(), invitedUser))
-		invite, _ := org_model.CreateTeamInviteForUser(t.Context(), inviter, invitedUser, team)
+		invite, err := org_model.CreateTeamInviteForUser(t.Context(), inviter, invitedUser, team)
+		require.NoError(t, err)
 
 		called := false
 		defer MockMailSettings(func(msgs ...*Message) {
