@@ -109,7 +109,6 @@ export function initRepoProject() {
     const projectColorInput = modal.querySelector<HTMLInputElement>('#new_project_column_color');
     const boardColumn = modal.closest<HTMLDivElement>('.project-column');
     modal.querySelector<HTMLButtonElement>('.edit-project-column-button')?.addEventListener('click', async function (e) {
-      // TODO: can this function move outside this loop?
       e.preventDefault();
       try {
         await PUT(this.getAttribute('data-url'), {
@@ -145,51 +144,52 @@ export function initRepoProject() {
   }
 
   for (const dialog of document.getElementsByClassName('default-project-column-modal')) {
-    const boardColumn = dialog.closest('.project-column');
-    const showButton = boardColumn.querySelector('.default-project-column-show');
-    const commitButton = dialog.querySelector('.actions > .ok.button');
-
-    commitButton.addEventListener('click', async (e) => {
-      // TODO: move data-url to deleteColumnButton and then get this addEventListener function out of this loop!
-      e.preventDefault();
-
-      try {
-        await POST(showButton.getAttribute('data-url'));
-        window.location.reload();
-      } catch (error) {
-        console.error(error);
-        showErrorToast(i18n.network_error);
-      }
-    });
+    const commitButton = dialog.querySelector<HTMLButtonElement>('button[data-confirm]');
+    commitButton.addEventListener('click', confirmDefaultProjectColumn);
   }
 
   for (const link of document.getElementsByClassName('show-delete-project-column-modal')) {
     const deleteColumnModal = document.querySelector(link.getAttribute('data-modal'));
-    const deleteColumnButton = deleteColumnModal.querySelector('.actions > .ok.button');
-    const deleteUrl = link.getAttribute('data-url');
-
-    deleteColumnButton.addEventListener('click', async (e) => {
-      // TODO: move data-url to deleteColumnButton and then get this addEventListener function out of this loop!
-      e.preventDefault();
-
-      try {
-        await DELETE(deleteUrl);
-        window.location.reload();
-      } catch (error) {
-        console.error(error);
-        showErrorToast(i18n.network_error);
-      }
-    });
+    const confirmDeleteButton = deleteColumnModal.querySelector<HTMLButtonElement>('button[data-confirm]');
+    confirmDeleteButton.addEventListener('click', confirmDeleteProjectColumn);
   }
 
-  document.getElementById('new_project_column_submit')?.addEventListener('click', function (e) {
-    e.preventDefault();
-    const columnTitle = document.querySelector<HTMLInputElement>('input#new_project_column');
-    const projectColorInput = document.querySelector<HTMLInputElement>('input#new_project_column_color_picker');
-    if (!columnTitle.value) {
-      return;
-    }
-    const url = this.getAttribute('data-url');
-    createNewColumn(url, columnTitle, projectColorInput);
-  });
+  document.getElementById('new_project_column_submit')?.addEventListener('click', confirmNewProjectColumn);
+}
+
+async function confirmDefaultProjectColumn(this: HTMLButtonElement, e: PointerEvent) {
+  e.preventDefault();
+  const postUrl = this.getAttribute('data-url');
+
+  try {
+    await POST(postUrl);
+    window.location.reload();
+  } catch (error) {
+    console.error(error);
+    showErrorToast(i18n.network_error);
+  }
+}
+
+async function confirmDeleteProjectColumn(this: HTMLButtonElement, e: PointerEvent) {
+  e.preventDefault();
+  const deleteUrl = this.getAttribute('data-url');
+
+  try {
+    await DELETE(deleteUrl);
+    window.location.reload();
+  } catch (error) {
+    console.error(error);
+    showErrorToast(i18n.network_error);
+  }
+}
+
+function confirmNewProjectColumn(this: HTMLElement, e: PointerEvent) {
+  e.preventDefault();
+  const columnTitle = document.querySelector<HTMLInputElement>('input#new_project_column');
+  const projectColorInput = document.querySelector<HTMLInputElement>('input#new_project_column_color_picker');
+  if (!columnTitle.value) {
+    return;
+  }
+  const url = this.getAttribute('data-url');
+  createNewColumn(url, columnTitle, projectColorInput);
 }

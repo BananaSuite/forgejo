@@ -47,10 +47,10 @@
 								</div>
 							</div>
 						</div>
-						<div class="actions">
-							<button type="button" class="ui cancel button">{{ctx.Locale.Tr "settings.cancel"}}</button>
-							<button data-url="{{$.Link}}" class="ui primary button" id="new_project_column_submit">{{ctx.Locale.Tr "repo.projects.column.new_submit"}}</button>
-						</div>
+						<footer class="actions">
+							<button type="button" class="secondary button" command="close" commandfor="new-project-column-item">{{ctx.Locale.Tr "settings.cancel"}}</button>
+							<button type="button" class="primary button" data-url="{{$.Link}}" id="new_project_column_submit">{{ctx.Locale.Tr "repo.projects.column.new_submit"}}</button>
+						</footer>
 					</form>
 				</article>
 			</dialog>
@@ -85,16 +85,12 @@
 								</a>
 								{{if not .Default}}
 									<a class="item show-modal button default-project-column-show"
-										data-modal="#default-project-column-modal-{{.ID}}"
-										data-modal-default-project-column-header="{{ctx.Locale.Tr "repo.projects.column.set_default"}}"
-										data-modal-default-project-column-content="{{ctx.Locale.Tr "repo.projects.column.set_default_desc"}}"
-										data-url="{{$.Link}}/{{.ID}}/default">
+										data-modal="#default-project-column-modal-{{.ID}}">
 										{{svg "octicon-pin"}}
 										{{ctx.Locale.Tr "repo.projects.column.set_default"}}
 									</a>
 									<a class="item show-modal button show-delete-project-column-modal"
-										data-modal="#delete-project-column-modal-{{.ID}}"
-										data-url="{{$.Link}}/{{.ID}}">
+										data-modal="#delete-project-column-modal-{{.ID}}">
 										{{svg "octicon-trash"}}
 										{{ctx.Locale.Tr "repo.projects.column.delete"}}
 									</a>
@@ -119,21 +115,24 @@
 												</div>
 
 											</div>
-											<div class="actions">
-												<button type="button" class="ui cancel button">{{ctx.Locale.Tr "settings.cancel"}}</button>
-												<button data-url="{{$.Link}}/{{.ID}}" class="ui primary button edit-project-column-button">{{ctx.Locale.Tr "repo.projects.column.edit"}}</button>
-											</div>
+											<footer class="actions">
+												<button type="button" class="secondary button" command="close" commandfor="edit-project-column-modal-{{.ID}}">{{ctx.Locale.Tr "settings.cancel"}}</button>
+												<button type="button" data-url="{{$.Link}}/{{.ID}}" class="primary button edit-project-column-button">{{ctx.Locale.Tr "repo.projects.column.edit"}}</button>
+											</footer>
 										</form>
 									</article>
 								</dialog>
 
 								<dialog class="modal default-project-column-modal" id="default-project-column-modal-{{.ID}}">
 									<article>
-										<header><span id="default-project-column-header"></span></header>
+										<header>{{ctx.Locale.Tr "repo.projects.column.set_default"}}</header>
 										<div class="content">
-											<label id="default-project-column-content"></label>
+											<p>{{ctx.Locale.Tr "repo.projects.column.set_default_desc"}}</p>
 										</div>
-										{{template "base/modal_actions_confirm" (dict "ModalButtonTypes" "confirm")}}
+										<footer class="actions">
+											<button type="button" class="secondary button" command="close" commandfor="default-project-column-modal-{{.ID}}">{{svg "octicon-x"}} {{ctx.Locale.Tr "modal.cancel"}}</button>
+											<button type="button" class="primary button" data-confirm data-url="{{$.Link}}/{{.ID}}/default">{{svg "octicon-check"}} {{ctx.Locale.Tr "modal.confirm"}}</button>
+										</footer>
 									</article>
 								</dialog>
 
@@ -141,11 +140,12 @@
 									<article>
 										<header>{{ctx.Locale.Tr "repo.projects.column.delete"}}</header>
 										<div class="content">
-											<label>
-												{{ctx.Locale.Tr "repo.projects.column.deletion_desc"}}
-											</label>
+											<p>{{ctx.Locale.Tr "repo.projects.column.deletion_desc"}}</p>
 										</div>
-										{{template "base/modal_actions_confirm" (dict "ModalButtonTypes" "confirm")}}
+										<footer class="actions">
+											<button type="button" class="secondary button" command="close" commandfor="delete-project-column-modal-{{.ID}}">{{svg "octicon-x"}} {{ctx.Locale.Tr "modal.cancel"}}</button>
+											<button type="button" class="primary button" data-confirm data-url="{{$.Link}}/{{.ID}}">{{svg "octicon-check"}} {{ctx.Locale.Tr "modal.confirm"}}</button>
+										</footer>
 									</article>
 								</dialog>
 							</div>

@@ -47,6 +47,20 @@ test.describe('project columns', () => {
     await expect(page.locator('.toast-body')).toBeHidden();
   });
 
+  test('cancel create closes modal', async ({page}) => {
+    await expect(page.locator('.project-column')).toBeHidden();
+    const createModal = page.locator('dialog#new-project-column-item');
+    await expect(createModal).toBeHidden();
+    await page.getByRole('button', {name: 'New column'}).click();
+    await expect(createModal).toBeVisible();
+    await createModal.getByRole('textbox', {name: 'Name'}).fill('Test column');
+    await createModal.getByRole('button', {name: 'Cancel'}).click();
+
+    // create did not occur
+    await expect(createModal).toBeHidden();
+    await expect(page.locator('.project-column')).toBeHidden();
+  });
+
   test('create failure displays toast', async ({page}) => {
     const pathname = await page.evaluate(() => window.location.pathname);
     await page.route(pathname, (route) => route.abort('internetdisconnected'));
@@ -78,6 +92,29 @@ test.describe('project columns', () => {
     await expect(testColumnTitle).not.toHaveText('Test column');
     await expect(testColumnTitle).toHaveText('Different test column');
     await expect(page.locator('.toast-body')).toBeHidden();
+  });
+
+  test('cancel edit closes modal', async ({page}) => {
+    await expect(page.locator('.project-column')).toBeHidden();
+    await tryCreateColumn(page);
+    const testColumn = page.locator('.project-column').first();
+    const testColumnTitle = testColumn.locator('span.project-column-title-label'); // TODO: heading level 3 or 4
+    await expect(testColumn).toBeVisible();
+    await expect(testColumnTitle).toHaveText('Test column');
+    await expect(testColumnTitle).not.toHaveText('Different test column');
+
+    const editModal = page.locator('dialog[id^="edit-project-column-modal-"]');
+    await expect(editModal).toBeHidden();
+    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByRole('option', {name: 'Edit column'}).click();
+    await expect(editModal).toBeVisible();
+    await editModal.getByRole('textbox', {name: 'Name'}).fill('Different test column');
+    await editModal.getByRole('button', {name: 'Cancel'}).click();
+
+    // edit did not occur
+    await expect(editModal).toBeHidden();
+    await expect(testColumnTitle).toHaveText('Test column');
+    await expect(testColumnTitle).not.toHaveText('Different test column');
   });
 
   test('edit failure displays toast', async ({page}) => {
@@ -126,6 +163,23 @@ test.describe('project columns', () => {
     // TODO: test that a specific column was deleted, not just any column
   });
 
+  test('cancel delete closes modal', async ({page}) => {
+    await expect(page.locator('.project-column')).toBeHidden();
+    await tryCreateColumn(page);
+    await tryCreateColumn(page);
+    await expect(page.locator('.project-column')).toHaveCount(2);
+    const extraColumn = page.locator('.project-column').last();
+    await extraColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await extraColumn.getByRole('option', {name: 'Delete column'}).click();
+    const deleteModal = page.locator('dialog[id^="delete-project-column-modal-"]:modal');
+    await expect(deleteModal).toBeVisible();
+    await deleteModal.getByRole('button', {name: 'Cancel'}).click();
+
+    // delete did not occur
+    await expect(deleteModal).toBeHidden();
+    await expect(page.locator('.project-column')).toHaveCount(2);
+  });
+
   test('delete failure displays toast', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
     await tryCreateColumn(page);
@@ -168,6 +222,25 @@ test.describe('project columns', () => {
     // TODO: test that a specific column was defaulted
   });
 
+  test('cancel set default closes modal', async ({page}) => {
+    await expect(page.locator('.project-column')).toBeHidden();
+    await tryCreateColumn(page);
+    await tryCreateColumn(page);
+    await expect(page.locator('.project-column')).toHaveCount(2);
+    const testColumn = page.locator('.project-column').last();
+
+    const makeDefaultModal = page.locator('dialog[id^="default-project-column-modal-"]').last();
+    await expect(makeDefaultModal).toBeHidden();
+    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByRole('option', {name: 'Set default'}).click();
+    await expect(makeDefaultModal).toBeVisible();
+    await makeDefaultModal.getByRole('button', {name: 'Cancel'}).click();
+
+    // default unchanged
+    await expect(makeDefaultModal).toBeHidden();
+    // TODO: test that no default was set
+  });
+
   test('set default failure displays toast', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
     await tryCreateColumn(page);
@@ -190,5 +263,6 @@ test.describe('project columns', () => {
     await expect(page.locator('.toast-body', {hasText: 'Network error'})).toBeVisible();
   });
 
+  // TODO: project delete behaves
   // TODO: toast when response goes through but it's 4xx or 5xx
 });
