@@ -6,6 +6,7 @@
 package graceful
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -250,9 +251,9 @@ func GetListenerUnix(network string, address *net.UnixAddr) (*net.UnixListener, 
 	f.Close()
 	if err != nil {
 		// try with os.Chmod
-		if err := os.Chmod(address.Name, fileMode); err != nil {
+		if err2 := os.Chmod(address.Name, fileMode); err2 != nil {
 			l.Close()
-			return nil, fmt.Errorf("Failed to set permission of unix socket to %s: %w", fileMode.String(), err)
+			return nil, fmt.Errorf("Failed to set permission of unix socket to %s: %w", fileMode.String(), errors.Join(err, fmt.Errorf("fallback chmod also failed: %w", err2)))
 		}
 	}
 
