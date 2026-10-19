@@ -46,6 +46,7 @@ function showToast(message: string, level: keyof typeof levels, {gravity, positi
     ...other,
   });
 
+  // FIXME: toast does not display over dialog backdrop. Maybe this should call showPopover() internally?
   toast.showToast();
   toast.toastElement.querySelector('.toast-close').addEventListener('click', () => toast.hideToast());
   return toast;

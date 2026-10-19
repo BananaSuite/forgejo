@@ -3,6 +3,9 @@ import {contrastColor} from '../utils/color.ts';
 import {createSortable} from '../modules/sortable.ts';
 import {POST, DELETE, PUT} from '../modules/fetch.ts';
 import {type SortableEvent} from 'sortablejs';
+import {showErrorToast} from '../modules/toast.ts';
+
+const {i18n} = window.config;
 
 function updateIssueCount(cards: Element) {
   const parent = cards.parentElement;
@@ -10,19 +13,20 @@ function updateIssueCount(cards: Element) {
   parent.getElementsByClassName('project-column-issue-count')[0].textContent = cnt.toString();
 }
 
-async function createNewColumn(url: string, columnTitle: JQuery, projectColorInput: JQuery) {
+async function createNewColumn(url: string, columnTitle: HTMLInputElement, projectColorInput: HTMLInputElement) {
   try {
     await POST(url, {
       data: {
-        title: columnTitle.val(),
-        color: projectColorInput.val(),
+        title: columnTitle.value,
+        color: projectColorInput.value,
       },
     });
+
+    columnTitle.closest('form').classList.remove('dirty');
+    window.location.reload();
   } catch (error) {
     console.error(error);
-  } finally {
-    columnTitle.closest('form').removeClass('dirty');
-    window.location.reload();
+    showErrorToast(i18n.network_error);
   }
 }
 
@@ -114,9 +118,7 @@ export function initRepoProject() {
             color: projectColorInput?.value,
           },
         });
-      } catch (error) {
-        console.error(error);
-      } finally {
+
         projectTitleLabel.textContent = projectTitleInput?.value;
         projectTitleInput.closest('form')?.classList.remove('dirty');
         const dividers = boardColumn.querySelectorAll<HTMLDivElement>(':scope > .divider');
@@ -135,6 +137,9 @@ export function initRepoProject() {
           }
         }
         modal.close();
+      } catch (error) {
+        console.error(error);
+        showErrorToast(i18n.network_error);
       }
     });
   }
@@ -175,14 +180,14 @@ export function initRepoProject() {
     });
   });
 
-  $('#new_project_column_submit').on('click', (e) => {
+  document.getElementById('new_project_column_submit')?.addEventListener('click', function (e) {
     e.preventDefault();
-    const $columnTitle = $('#new_project_column');
-    const $projectColorInput = $('#new_project_column_color_picker');
-    if (!$columnTitle.val()) {
+    const columnTitle = document.querySelector<HTMLInputElement>('input#new_project_column');
+    const projectColorInput = document.querySelector<HTMLInputElement>('input#new_project_column_color_picker');
+    if (!columnTitle.value) {
       return;
     }
-    const url = e.target.getAttribute('data-url');
-    createNewColumn(url, $columnTitle, $projectColorInput);
+    const url = this.getAttribute('data-url');
+    createNewColumn(url, columnTitle, projectColorInput);
   });
 }
