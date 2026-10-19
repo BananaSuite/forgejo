@@ -8,8 +8,8 @@ const {i18n} = window.config;
 
 function updateIssueCount(cards: Element) {
   const parent = cards.parentElement;
-  const cnt = parent.getElementsByClassName('issue-card').length;
-  parent.getElementsByClassName('project-column-issue-count')[0].textContent = cnt.toString();
+  const cnt = parent.querySelectorAll('.issue-card').length;
+  parent.querySelector('.project-column-issue-count').textContent = cnt.toString();
 }
 
 async function createNewColumn(url: string, columnTitle: HTMLInputElement, projectColorInput: HTMLInputElement) {
@@ -30,7 +30,7 @@ async function createNewColumn(url: string, columnTitle: HTMLInputElement, proje
 }
 
 async function moveIssue({item, from, to, oldIndex}: SortableEvent) {
-  const columnCards = to.getElementsByClassName('issue-card');
+  const columnCards = to.querySelectorAll('.issue-card');
   updateIssueCount(from);
   updateIssueCount(to);
 
@@ -56,7 +56,7 @@ async function initRepoProjectSortable() {
   if (!mainBoard) return;
 
   // the HTML layout is: #project-board > .board > .project-column .cards > .issue-card
-  let boardColumns = mainBoard.getElementsByClassName('project-column');
+  let boardColumns = mainBoard.querySelectorAll('.project-column');
   createSortable(mainBoard, {
     group: 'project-column',
     draggable: '.project-column',
@@ -64,7 +64,7 @@ async function initRepoProjectSortable() {
     delayOnTouchOnly: true,
     delay: 500,
     onSort: async () => {
-      boardColumns = mainBoard.getElementsByClassName('project-column');
+      boardColumns = mainBoard.querySelectorAll('.project-column');
 
       const columnSorting = {
         columns: Array.from(boardColumns, (column, i) => ({
@@ -84,7 +84,7 @@ async function initRepoProjectSortable() {
   });
 
   for (const boardColumn of boardColumns) {
-    const boardCardList = boardColumn.getElementsByClassName('cards')[0] as HTMLDivElement;
+    const boardCardList = boardColumn.querySelector<HTMLDivElement>('.cards');
     createSortable(boardCardList, {
       group: 'shared',
       onAdd: moveIssue,
@@ -143,12 +143,12 @@ export function initRepoProject() {
     });
   }
 
-  for (const dialog of document.getElementsByClassName('default-project-column-modal')) {
+  for (const dialog of document.querySelectorAll('.default-project-column-modal')) {
     const commitButton = dialog.querySelector<HTMLButtonElement>('button[data-confirm]');
     commitButton.addEventListener('click', confirmDefaultProjectColumn);
   }
 
-  for (const link of document.getElementsByClassName('show-delete-project-column-modal')) {
+  for (const link of document.querySelectorAll('.show-delete-project-column-modal')) {
     const deleteColumnModal = document.querySelector(link.getAttribute('data-modal'));
     const confirmDeleteButton = deleteColumnModal.querySelector<HTMLButtonElement>('button[data-confirm]');
     confirmDeleteButton.addEventListener('click', confirmDeleteProjectColumn);
@@ -163,7 +163,7 @@ async function confirmDefaultProjectColumn(this: HTMLButtonElement, e: PointerEv
 
   try {
     await POST(postUrl);
-    window.location.reload();
+    window.location.reload(); // TODO: couldn't POST-then-reload flows like this be done in HTML?
   } catch (error) {
     console.error(error);
     showErrorToast(i18n.network_error);
