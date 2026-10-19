@@ -688,6 +688,8 @@
 	"og.repo.summary_card.alt_description": "Summary card of repository %[1]s, described as: %[2]s",
 	"repo.commit": "Commit",
 	"repo.commit.load_tags_failed": "Load tags failed because of internal error",
+	"repo.commit.contained_in_default_branch": "This commit is part of the default branch",
+	"repo.commit.contained_in_branches_and_tags": "Branches and tags referencing this commit",
 	"compare.branches.title": "Compare branches",
 	"migrate.pagure.description": "Migrate data from pagure.io or other Pagure instances.",
 	"migrate.pagure.incorrect_url": "Incorrect source repository URL has been provided",
