@@ -16,7 +16,7 @@ sudo apt update</code></pre></div>
 				</div>
 			</div>
 			<div class="field">
-				<label>{{ctx.Locale.Tr "packages.registry.documentation" "Debian" "https://forgejo.org/docs/latest/user/packages/debian/"}}</label>
+				<label>{{ctx.Locale.Tr "packages.registry.documentation" "Debian" (AppDocsURL "user/packages/debian/")}}</label>
 			</div>
 		</div>
 	</div>
@@ -44,7 +44,7 @@ sudo apt update</code></pre></div>
 	{{if .PackageDescriptor.Metadata.Description}}
 		<h4 class="ui top attached header">{{ctx.Locale.Tr "packages.about"}}</h4>
 		<div class="ui attached segment">
-			{{.PackageDescriptor.Metadata.Description}}
+			<span class="tw-whitespace-pre-line">{{.PackageDescriptor.Metadata.Description}}</span>
 		</div>
 	{{end}}
 

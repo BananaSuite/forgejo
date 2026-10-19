@@ -41,6 +41,9 @@ func TestTeamInvite(t *testing.T) {
 		// user 4 already added to team 2, should result in error
 		_, err := organization.CreateTeamInviteForUser(db.DefaultContext, user2, user4, team)
 		require.Error(t, err)
+		invited, err := organization.IsInvitedToOrganization(db.DefaultContext, team.OrgID, user4.ID)
+		require.NoError(t, err)
+		require.False(t, invited)
 	})
 
 	t.Run("CreateAndRemoveByUser", func(t *testing.T) {
@@ -54,6 +57,9 @@ func TestTeamInvite(t *testing.T) {
 		assert.True(t, hasExpiration)
 		assert.Greater(t, expirationDate, timeutil.TimeStampNow().AddDuration(13*24*time.Hour))
 		assert.Less(t, expirationDate, timeutil.TimeStampNow().AddDuration(15*24*time.Hour))
+		invited, err := organization.IsInvitedToOrganization(db.DefaultContext, team.OrgID, user5.ID)
+		require.NoError(t, err)
+		require.True(t, invited)
 
 		// Shouldn't allow duplicate invite by email
 		_, err = organization.CreateTeamInviteByEmail(db.DefaultContext, user1, team, user5.Email)
@@ -147,6 +153,11 @@ func TestTeamInvite(t *testing.T) {
 		)
 		require.NoError(t, err)
 
+		// The user is not considered invited anymore
+		invited, err := organization.IsInvitedToOrganization(db.DefaultContext, team.OrgID, user12.ID)
+		require.NoError(t, err)
+		require.False(t, invited)
+
 		// Creating the invite again succeeds
 		newInvite, err := organization.CreateTeamInviteForUser(db.DefaultContext, user1, user12, team)
 		require.NoError(t, err)
@@ -181,5 +192,33 @@ func TestTeamInvite(t *testing.T) {
 		oldInviteExists, err := db.GetEngine(t.Context()).Exist(&organization.TeamInvite{ID: invite.ID})
 		require.NoError(t, err)
 		assert.False(t, oldInviteExists)
+	})
+
+	t.Run("ListAndLoadUsers", func(t *testing.T) {
+		user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+		user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+		user8 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 8})
+
+		invite5, err := organization.CreateTeamInviteForUser(t.Context(), user1, user5, team)
+		assert.NotNil(t, invite5)
+		require.NoError(t, err)
+		invite8, err := organization.CreateTeamInviteForUser(t.Context(), user1, user8, team)
+		assert.NotNil(t, invite8)
+		require.NoError(t, err)
+
+		invites, err := organization.GetTeamInvites(t.Context(), &organization.SearchInvitesOptions{TeamID: team.ID})
+		require.NoError(t, err)
+
+		err = organization.LoadUsers(t.Context(), invites)
+		require.NoError(t, err)
+
+		for _, invite := range invites {
+			if invite.InvitedID.Has() {
+				assert.NotNil(t, invite.InvitedUser)
+			} else {
+				assert.Nil(t, invite.InvitedUser)
+			}
+			assert.NotNil(t, invite.InviterUser)
+		}
 	})
 }

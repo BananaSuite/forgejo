@@ -70,7 +70,7 @@ func TestLFSFileRender(t *testing.T) {
 
 		// Find the 'Git LFS' label.
 		fileNameDiffBar := doc.Find(".diff-file-name").Last().Text()
-		assert.Contains(t, fileNameDiffBar, locale.TrString("settings.quota.sizes.git.lfs"))
+		assert.Contains(t, fileNameDiffBar, locale.TrString("quota.sizes.git.lfs"))
 	})
 
 	// check that an image is flagged with the appropriate Git LFS label
@@ -104,7 +104,7 @@ func TestLFSFileRender(t *testing.T) {
 
 		// Find the 'Git LFS' label.
 		fileNameDiffBar := doc.Find(".diff-file-name").Last().Text()
-		assert.Contains(t, fileNameDiffBar, locale.TrString("settings.quota.sizes.git.lfs"))
+		assert.Contains(t, fileNameDiffBar, locale.TrString("quota.sizes.git.lfs"))
 	})
 
 	// check that a binary file is flagged with "Stored in Git LFS" and renders a
@@ -139,7 +139,7 @@ func TestLFSFileRender(t *testing.T) {
 
 		// Find the 'Git LFS' label.
 		fileNameDiffBar := doc.Find(".diff-file-name").Last().Text()
-		assert.Contains(t, fileNameDiffBar, locale.TrString("settings.quota.sizes.git.lfs"))
+		assert.Contains(t, fileNameDiffBar, locale.TrString("quota.sizes.git.lfs"))
 	})
 
 	// check that a directory with a README file shows its text and that the diff
@@ -169,7 +169,7 @@ func TestLFSFileRender(t *testing.T) {
 
 		// Find the 'Git LFS' label.
 		fileNameDiffBar := doc.Find(".diff-file-name").Last().Text()
-		assert.Contains(t, fileNameDiffBar, locale.TrString("settings.quota.sizes.git.lfs"))
+		assert.Contains(t, fileNameDiffBar, locale.TrString("quota.sizes.git.lfs"))
 	})
 
 	// check that an invalid lfs entry defaults to plaintext
@@ -273,16 +273,23 @@ func TestLFSPointerAndFindCommitView(t *testing.T) {
 			assert.Contains(t, filesTable.Text(), locale.TrString("repo.settings.lfs.no_pointers"))
 		})
 
-		t.Run("Find Commit View", func(t *testing.T) {
+		t.Run("Find Commit View (Valid OID)", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
-			req := NewRequest(t, "GET", "/user2/repo1/settings/lfs/find?oid=thisoiddoesnotexist&size=1")
+			req := NewRequest(t, "GET", "/user2/repo1/settings/lfs/find?oid=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&size=1")
 			resp := session.MakeRequest(t, req, http.StatusOK)
 
 			filesTable := NewHTMLParser(t, resp.Body).doc.Find(".user-main-content")
 			assert.Contains(t, filesTable.Text(), locale.TrString("repo.settings.lfs_lfs_file_no_commits"))
 			// While we're at it, why not include this as well?
-			assert.Contains(t, filesTable.Text(), "LFS / thisoiddoesnotexist")
+			assert.Contains(t, filesTable.Text(), "LFS / aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+		})
+
+		t.Run("Find Commit View (Invalid OID)", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			req := NewRequest(t, "GET", "/user2/repo1/settings/lfs/find?oid=invalidoid&size=1")
+			session.MakeRequest(t, req, http.StatusNotFound)
 		})
 	})
 

@@ -100,6 +100,7 @@ func CreateRepository(t testing.TB, owner *user_model.User, opts *CreateReposito
 
 	if !createOptions.AutoInit && opts.Files != nil {
 		sha, err := initRepo(owner, repo, gitFormat, opts.Files, "init")
+		// e.g. a way of getting the HTTP server to run is 'onApplicationRun'
 		require.NoError(t, err, "Make sure the Forgejo HTTP server is running (or use %T instead of %T for the Files field)", FilesInit{}, opts.Files)
 		if opts.LatestSha != nil {
 			*opts.LatestSha = sha
@@ -113,7 +114,7 @@ func CreateRepository(t testing.TB, owner *user_model.User, opts *CreateReposito
 
 	for user, mode := range opts.Collaborators {
 		require.NoError(t, repo_module.AddCollaborator(t.Context(), repo, user))
-		require.NoError(t, repo_model.ChangeCollaborationAccessMode(t.Context(), repo, user.ID, mode))
+		require.NoError(t, repo_module.ChangeCollaborationAccessMode(t.Context(), repo, user.ID, mode))
 	}
 
 	return repo
@@ -154,15 +155,16 @@ func EnableRepoUnits(t testing.TB, repo *repo_model.Repository, units ...unit_mo
 		var config convert.Conversion
 		if u == unit_model.TypePullRequests { // pull request config is needed (otherwise no merge allowed by default)
 			config = &repo_model.PullRequestsConfig{
-				AllowMerge:           true,
-				AllowRebase:          true,
-				AllowRebaseMerge:     true,
-				AllowSquash:          true,
-				AllowFastForwardOnly: true,
-				AllowManualMerge:     true,
-				AllowRebaseUpdate:    true,
-				DefaultMergeStyle:    repo_model.MergeStyleMerge,
-				DefaultUpdateStyle:   repo_model.UpdateStyleMerge,
+				AllowMerge:                 true,
+				AllowRebase:                true,
+				AllowRebaseMerge:           true,
+				AllowSquash:                true,
+				AllowFastForwardOnly:       true,
+				AllowManualMerge:           true,
+				AllowRebaseUpdate:          true,
+				DefaultMergeStyle:          repo_model.MergeStyleMerge,
+				DefaultUpdateStyle:         repo_model.UpdateStyleMerge,
+				DefaultAllowMaintainerEdit: true,
 			}
 		}
 		ru = append(ru, repo_model.RepoUnit{

@@ -74,11 +74,6 @@ func GetRawFile(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	if ctx.Repo().Repository.IsEmpty {
-		ctx.NotFound()
-		return
-	}
-
 	blob, entry, lastModified := getBlobForEntry(ctx)
 	if ctx.Written() {
 		return
@@ -128,11 +123,6 @@ func GetRawFileOrLFS(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	if ctx.Repo().Repository.IsEmpty {
-		ctx.NotFound()
-		return
-	}
-
 	blob, entry, lastModified := getBlobForEntry(ctx)
 	if ctx.Written() {
 		return
@@ -141,8 +131,9 @@ func GetRawFileOrLFS(ctx *context.APIContext) {
 	ctx.RespHeader().Set(giteaObjectTypeHeader, string(files_service.GetObjectTypeFromTreeEntry(entry)))
 	ctx.RespHeader().Set(forgejoObjectTypeHeader, string(files_service.GetObjectTypeFromTreeEntry(entry)))
 
-	// LFS Pointer files are at most 1024 bytes - so any blob greater than 1024 bytes cannot be an LFS file
-	if blob.Size() > 1024 {
+	// Any blob equal or greater than 1024 bytes cannot be an LFS file pointer
+	// See: https://github.com/git-lfs/git-lfs/blob/f0bffc4fe998fe5cb004dbca9e8951ea662ff66b/docs/spec.md?plain=1#L22-L23
+	if blob.Size() >= lfs.BlobSizeCutoff {
 		// First handle caching for the blob
 		if httpcache.HandleGenericETagTimeCache(ctx.Req, ctx.Resp, `"`+blob.ID.String()+`"`, lastModified) {
 			return
@@ -175,10 +166,9 @@ func GetRawFileOrLFS(ctx *context.APIContext) {
 	}
 
 	// Check if the blob represents a pointer
-	pointer, _ := lfs.ReadPointer(bytes.NewReader(buf))
-
-	// if it's not a pointer, just serve the data directly
-	if !pointer.IsValid() {
+	pointer, err := lfs.ReadPointer(bytes.NewReader(buf))
+	// if it's not a valid pointer, just serve the data directly
+	if err != nil {
 		// First handle caching for the blob
 		if httpcache.HandleGenericETagTimeCache(ctx.Req, ctx.Resp, `"`+blob.ID.String()+`"`, lastModified) {
 			return
@@ -193,7 +183,7 @@ func GetRawFileOrLFS(ctx *context.APIContext) {
 	meta, err := git_model.GetLFSMetaObjectByOid(ctx, ctx.Repo().Repository.ID, pointer.Oid)
 
 	// If there isn't one, just serve the data directly
-	if err == git_model.ErrLFSObjectNotExist {
+	if err == git_model.ErrLFSObjectNotExist || err == lfs.ErrInvalidOIDFormat {
 		// Handle caching for the blob SHA (not the LFS object OID)
 		if httpcache.HandleGenericETagTimeCache(ctx.Req, ctx.Resp, `"`+blob.ID.String()+`"`, lastModified) {
 			return
@@ -310,9 +300,10 @@ func archiveDownload(ctx *context.APIContext) {
 
 	aReq, err := archiver_service.NewRequest(ctx, ctx.Repo().Repository.ID, ctx.Repo().GitRepo, strings.TrimSuffix(uri, ext), tp)
 	if err != nil {
-		if errors.Is(err, archiver_service.ErrUnknownArchiveFormat{}) {
+		if archiver_service.IsUnknownArchiveFormatError(err) {
+			// Unreachable because archiver_service.ParseFileName performs the same check
 			ctx.Error(http.StatusBadRequest, "unknown archive format", err)
-		} else if errors.Is(err, archiver_service.RepoRefNotFoundError{}) {
+		} else if archiver_service.IsRepoRefNotFoundError(err) {
 			ctx.Error(http.StatusNotFound, "unrecognized reference", err)
 		} else {
 			ctx.ServerError("archiver_service.NewRequest", err)

@@ -126,7 +126,8 @@ func MembersAction(ctx *context.Context) {
 		var u *user_model.User
 		u, err = user_model.GetUserByName(ctx, uname)
 		if err != nil {
-			ctx.ServerError("GetUserByName", err)
+			ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
+			ctx.Redirect(ctx.Org.OrgLink + "/members")
 			return
 		}
 
@@ -145,6 +146,18 @@ func MembersAction(ctx *context.Context) {
 			ctx.Flash.Error(ctx.Tr("members.user_already_member"))
 			ctx.Redirect(ctx.Org.OrgLink + "/members")
 			return
+		}
+		if setting.Service.AddMembersByInvitations {
+			alreadyInvited, err := ctx.Org.Organization.IsInvitedToOrg(ctx, u.ID)
+			if err != nil {
+				ctx.ServerError("IsInvitedToOrg", err)
+				return
+			}
+			if alreadyInvited {
+				ctx.Flash.Error(ctx.Tr("members.user_already_invited_to_org"))
+				ctx.Redirect(ctx.Org.OrgLink + "/members")
+				return
+			}
 		}
 
 		teams, err := organization.FindOrgTeams(ctx, org.ID)

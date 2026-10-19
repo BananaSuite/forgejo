@@ -133,3 +133,45 @@ test.describe('repo actions variables settings', () => {
     await expect(page.getByText('There are no variables yet.')).toBeVisible();
   });
 });
+
+test.describe('repo collaboration settings', () => {
+  test('add collaborator', async ({page}) => {
+    const response = await page.goto('/user2/repo1/settings/collaboration');
+    expect(response?.status()).toBe(200);
+
+    await page.getByPlaceholder('Search users…').fill('user5');
+    await page.getByRole('button', {name: 'Add collaborator'}).click();
+
+    await expect(page.getByRole('link', {name: 'user5 (User Five)'})).toBeVisible();
+  });
+
+  test('change access mode', async ({page}) => {
+    const response = await page.goto('/user2/repo1/settings/collaboration');
+    expect(response?.status()).toBe(200);
+
+    const opener = page.locator('.access-mode .opener');
+    await expect(opener).toHaveText('Write');
+
+    // Check that opener and rmButton are same height
+    const rmButton = page.getByRole('button', {name: 'Remove'});
+    expect((await opener.boundingBox()).height).toBe((await rmButton.boundingBox()).height);
+
+    // Open dropdown and change access mode to Read
+    await opener.click();
+    await page.getByRole('button', {name: 'Read'}).click();
+
+    await expect(opener).toHaveText('Read');
+  });
+
+  test('remove collaborator', async ({page}) => {
+    const response = await page.goto('/user2/repo1/settings/collaboration');
+    expect(response?.status()).toBe(200);
+
+    await page.getByRole('button', {name: 'Remove'}).click();
+    const modal = page.locator('#delete-collaborator');
+    await expect(modal).toBeVisible();
+    await modal.getByRole('button', {name: 'Yes'}).click();
+
+    await expect(page.getByText('There are no collaborators yet.')).toBeVisible();
+  });
+});

@@ -358,6 +358,11 @@ func getPullInfo(ctx *context.Context) (issue *issues_model.Issue, ok bool) {
 	ctx.Data["Title"] = fmt.Sprintf("#%d - %s", issue.Index, emoji.ReplaceAliases(issue.Title))
 	ctx.Data["Issue"] = issue
 
+	if setting.Other.EnableFeed {
+		ctx.Data["EnableFeed"] = true
+		ctx.Data["FeedURL"] = issue.HTMLURL()
+	}
+
 	if !issue.IsPull {
 		ctx.Redirect(issue.Link())
 		return nil, false
@@ -658,8 +663,18 @@ func PrepareViewPullInfo(ctx *context.Context, issue *issues_model.Issue) *git.C
 	}
 
 	if headBranchExist {
-		var err error
-		ctx.Data["UpdateAllowed"], ctx.Data["UpdateByRebaseAllowed"], err = pull_service.IsUserAllowedToUpdate(ctx, pull, ctx.Doer)
+		headRepoPerm, err := access_model.GetUserRepoPermission(ctx, pull.HeadRepo, ctx.Doer)
+		if err != nil {
+			ctx.ServerError("GetUserRepoPermission head", err)
+			return nil
+		}
+		baseRepoPerm, err := access_model.GetUserRepoPermission(ctx, pull.BaseRepo, ctx.Doer)
+		if err != nil {
+			ctx.ServerError("GetUserRepoPermission base", err)
+			return nil
+		}
+
+		ctx.Data["UpdateAllowed"], ctx.Data["UpdateByRebaseAllowed"], err = pull_service.IsUserAllowedToUpdate(ctx, pull, ctx.Doer, headRepoPerm, baseRepoPerm)
 		if err != nil {
 			ctx.ServerError("IsUserAllowedToUpdate", err)
 			return nil
@@ -1173,12 +1188,12 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 
 	// determine if the user viewing the pull request can edit the head branch
 	if ctx.Doer != nil && pull.HeadRepo != nil && !pull.HasMerged {
-		headRepoPerm, err := access_model.GetUserRepoPermission(ctx, pull.HeadRepo, ctx.Doer)
+		editable, err := pull_service.CanEditHeadBranch(ctx, ctx.Doer, pull)
 		if err != nil {
-			ctx.ServerError("GetUserRepoPermission", err)
+			ctx.ServerError("CanEditHeadBranch", err)
 			return
 		}
-		ctx.Data["HeadBranchIsEditable"] = pull.HeadRepo.CanEnableEditor() && issues_model.CanMaintainerWriteToBranch(ctx, headRepoPerm, pull.HeadBranch, ctx.Doer) && pull.Flow != issues_model.PullRequestFlowAGit
+		ctx.Data["HeadBranchIsEditable"] = editable
 		ctx.Data["SourceRepoLink"] = pull.HeadRepo.Link()
 		ctx.Data["HeadBranch"] = pull.HeadBranch
 	}
@@ -1288,7 +1303,18 @@ func UpdatePullRequest(ctx *context.Context) {
 		return
 	}
 
-	allowedUpdateByMerge, allowedUpdateByRebase, err := pull_service.IsUserAllowedToUpdate(ctx, issue.PullRequest, ctx.Doer)
+	headRepoPerm, err := access_model.GetUserRepoPermission(ctx, issue.PullRequest.HeadRepo, ctx.Doer)
+	if err != nil {
+		ctx.ServerError("GetUserRepoPermission head", err)
+		return
+	}
+	baseRepoPerm, err := access_model.GetUserRepoPermission(ctx, issue.PullRequest.BaseRepo, ctx.Doer)
+	if err != nil {
+		ctx.ServerError("GetUserRepoPermission base", err)
+		return
+	}
+
+	allowedUpdateByMerge, allowedUpdateByRebase, err := pull_service.IsUserAllowedToUpdate(ctx, issue.PullRequest, ctx.Doer, headRepoPerm, baseRepoPerm)
 	if err != nil {
 		ctx.ServerError("IsUserAllowedToMerge", err)
 		return

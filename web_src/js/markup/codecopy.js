@@ -1,4 +1,4 @@
-import {svg} from '../svg.js';
+import {svg} from '../svg.ts';
 
 export function makeCodeCopyButton() {
   const button = document.createElement('button');
@@ -13,9 +13,16 @@ export function renderCodeCopy() {
 
   for (const el of els) {
     if (!el.textContent) continue;
-    const btn = makeCodeCopyButton();
+    // suggestion blocks are replaced by a rendered before/after diff (see markup/suggestion.js),
+    // so they must not get a copy button.
+    if (/(?:^|\s)language-suggestion(?:\s|$)/i.test(el.className)) continue;
+    const parent = el.closest('pre');
+    let btn = parent.nextElementSibling?.classList?.contains('code-copy') ? parent.nextElementSibling : null;
+    if (!btn) {
+      btn = makeCodeCopyButton();
+      parent.after(btn);
+    }
     // remove final trailing newline introduced during HTML rendering
     btn.setAttribute('data-clipboard-text', el.textContent.replace(/\r?\n$/, ''));
-    el.after(btn);
   }
 }

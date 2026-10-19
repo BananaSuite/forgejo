@@ -5,10 +5,8 @@ package actions
 
 import (
 	"context"
-	"fmt"
 
 	actions_model "forgejo.org/models/actions"
-	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	packages_model "forgejo.org/models/packages"
 	perm_model "forgejo.org/models/perm"
@@ -26,7 +24,6 @@ import (
 	notify_service "forgejo.org/services/notify"
 
 	"code.forgejo.org/forgejo/runner/v13/act/jobparser"
-	"xorm.io/builder"
 )
 
 type actionsNotifier struct {
@@ -114,7 +111,7 @@ func (n *actionsNotifier) issueChange(ctx context.Context, doer *user_model.User
 }
 
 // IssueChangeStatus notifies close or reopen issue to notifiers
-func (n *actionsNotifier) IssueChangeStatus(ctx context.Context, doer *user_model.User, commitID string, issue *issues_model.Issue, _ *issues_model.Comment, isClosed bool) {
+func (n *actionsNotifier) IssueChangeStatus(ctx context.Context, doer *user_model.User, prInfo *issues_model.PRNotificationInfo, issue *issues_model.Issue, _ *issues_model.Comment, isClosed bool) {
 	ctx = withMethod(ctx, "IssueChangeStatus")
 	permission, _ := access_model.GetUserRepoPermission(ctx, issue.Repo, issue.Poster)
 	if issue.IsPull {
@@ -128,7 +125,7 @@ func (n *actionsNotifier) IssueChangeStatus(ctx context.Context, doer *user_mode
 			PullRequest: convert.ToAPIPullRequest(ctx, issue.PullRequest, nil),
 			Repository:  convert.ToRepo(ctx, issue.Repo, permission),
 			Sender:      convert.ToUser(ctx, doer, nil),
-			CommitID:    commitID,
+			CommitID:    prInfo.MergedCommitID,
 		}
 		if isClosed {
 			apiPullRequest.Action = api.HookIssueClosed
@@ -481,7 +478,9 @@ func (n *actionsNotifier) PullRequestReview(ctx context.Context, pr *issues_mode
 				Type:    string(reviewHookType),
 				Content: review.Content,
 			},
-		}).Notify(ctx)
+		}).
+		WithPullRequest(pr).
+		Notify(ctx)
 }
 
 func (n *actionsNotifier) PullRequestReviewRequest(ctx context.Context, doer *user_model.User, issue *issues_model.Issue, reviewer *user_model.User, isRequest bool, comment *issues_model.Comment) {
@@ -830,21 +829,6 @@ func (n *actionsNotifier) MigrateRepository(ctx context.Context, doer, u *user_m
 	}).Notify(ctx)
 }
 
-// Call this sendActionRunNowDoneNotificationIfNeeded when there has been an update for an ActionRun.
-// priorRun and updatedRun represent the very same ActionRun, just at different times:
-// priorRun before the update and updatedRun after.
-// The parameter lastRun in the ActionRunNowDone notification represents an entirely different ActionRun:
-// the ActionRun of the same workflow that finished before priorRun/updatedRun.
-func sendActionRunNowDoneNotificationIfNeeded(ctx context.Context, priorRun, updatedRun *actions_model.ActionRun) error {
-	if !priorRun.Status.IsDone() && updatedRun.Status.IsDone() {
-		if err := updatedRun.LoadAttributes(ctx); err != nil {
-			return err
-		}
-		notify_service.ActionRunNowDone(ctx, updatedRun, priorRun.Status)
-	}
-	return nil
-}
-
 func calculateWarnings(run *actions_model.ActionRun, swfs []*jobparser.SingleWorkflow) {
 	warnings := []actions_model.PreExecutionWarning{}
 	warningDetails := [][]any{}
@@ -855,95 +839,9 @@ func calculateWarnings(run *actions_model.ActionRun, swfs []*jobparser.SingleWor
 		// harm in handling it here. (https://code.forgejo.org/forgejo/runner/issues/1579)
 		if j != nil && swf.HasPermissions() {
 			warnings = append(warnings, actions_model.WarningCodePermissions)
-			warningDetails = append(warningDetails, []any{id, "https://forgejo.org/docs/latest/user/api/authorized-integrations/"})
+			warningDetails = append(warningDetails, []any{id, setting.AppDocsURL("user/api/authorized-integrations/")})
 		}
 	}
 	run.PreExecutionWarningCodes = warnings
 	run.PreExecutionWarningDetails = warningDetails
-}
-
-// Insert a new run, and all its jobs, into the database.  In the event that all the `if` clauses of the jobs are
-// evaluated at this stage and are `false`,
-func InsertRun(ctx context.Context, run *actions_model.ActionRun, jobs []*jobparser.SingleWorkflow) error {
-	return db.WithTx(ctx, func(ctx context.Context) error {
-		calculateWarnings(run, jobs)
-
-		if err := actions_model.InsertRunWithoutNotification(ctx, run, jobs); err != nil {
-			return fmt.Errorf("InsertRunWithoutNotification: %w", err)
-		}
-
-		// Normally the status of a job is input to InsertRun as Waiting, and remains that way.  But InsertRunJobs can
-		// evaluate the 'if' clauses of each job, and if every job is skipped then the job status needs to be updated.
-		// ComputeRunStatus queries for the runs that we already have in-memory, so first do a quick check, then rely on
-		// that reusable code if needed.
-		columns, err := actions_model.ComputeExistingRunStatus(ctx, run)
-		if err != nil {
-			return fmt.Errorf("compute run status: %w", err)
-		}
-		if len(columns) != 0 {
-			if err := UpdateRun(ctx, run, columns...); err != nil {
-				return fmt.Errorf("update run: %w", err)
-			}
-		}
-
-		// Some jobs might have been been immediately set to Skipped when they were inserted.  Other jobs may be
-		// dependent on those skipped jobs.  While we're still in this transaction and before these jobs are visible,
-		// run the job emitter which can recursively evaluate this state and update dependent runs status to either
-		// skipped or waiting, depending on their 'if':
-		if !run.NeedApproval { // don't unblock jobs if the run needs approval
-			if err := checkJobsOfRun(ctx, run.ID, 0); err != nil {
-				return fmt.Errorf("check jobs of run: %w", err)
-			}
-		}
-
-		return nil
-	})
-}
-
-// wrapper of UpdateRunWithoutNotification with a call to the ActionRunNowDone notification channel
-func UpdateRun(ctx context.Context, run *actions_model.ActionRun, cols ...string) error {
-	// run.ID is the only thing that must be given
-	priorRun, err := actions_model.GetRunByID(ctx, run.ID)
-	if err != nil {
-		return err
-	}
-
-	if err = actions_model.UpdateRunWithoutNotification(ctx, run, cols...); err != nil {
-		return err
-	}
-
-	updatedRun, err := actions_model.GetRunByID(ctx, run.ID)
-	if err != nil {
-		return err
-	}
-	return sendActionRunNowDoneNotificationIfNeeded(ctx, priorRun, updatedRun)
-}
-
-// wrapper of UpdateRunJobWithoutNotification with a call to the ActionRunNowDone notification channel
-func UpdateRunJob(ctx context.Context, job *actions_model.ActionRunJob, cond builder.Cond, cols ...string) (int64, error) {
-	runID := job.RunID
-	if runID == 0 {
-		// job.ID is the only thing that must be given
-		// Don't overwrite job here, we'd loose the change we need to make.
-		oldJob, err := actions_model.GetRunJobByID(ctx, job.ID)
-		if err != nil {
-			return 0, err
-		}
-		runID = oldJob.RunID
-	}
-	priorRun, err := actions_model.GetRunByID(ctx, runID)
-	if err != nil {
-		return 0, err
-	}
-
-	affected, err := actions_model.UpdateRunJobWithoutNotification(ctx, job, cond, cols...)
-	if err != nil {
-		return affected, err
-	}
-
-	updatedRun, err := actions_model.GetRunByID(ctx, runID)
-	if err != nil {
-		return affected, err
-	}
-	return affected, sendActionRunNowDoneNotificationIfNeeded(ctx, priorRun, updatedRun)
 }

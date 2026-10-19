@@ -192,6 +192,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflows(entry.Commit)),
 		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
 		jobparser.WithGitContext(generateGiteaContextForRun(run)),
+		jobparser.EnableNamespaces(),
 	)
 	if err != nil {
 		return nil, nil, err
@@ -216,6 +217,9 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 
 	commit, err := gitRepo.GetCommit(ref)
 	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			return nil, util.NewInvalidArgumentErrorf("reference '%s' does not exist", ref)
+		}
 		return nil, err
 	}
 
@@ -232,7 +236,7 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 		}
 	}
 	if workflowEntry == nil {
-		return nil, errors.New("workflow not found")
+		return nil, util.NewNotExistErrorf("workflow not found")
 	}
 
 	return &Workflow{
