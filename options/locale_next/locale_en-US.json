@@ -1165,7 +1165,6 @@
 	"shortcuts.button.repo": "Repository",
 	"shortcuts.global.search": "Focus on searchbar",
 	"shortcuts.global.popup": "Show keyboard shortcuts dialog",
-	"shortcuts.global.close": "Close this dialog",
 	"funding.yaml_error.heading_one": "Error parsing funding config: %[1]s",
 	"funding.yaml_error.heading_few": "Errors parsing funding config:",
 	"funding.yaml_error.unknown_provider": "Unknown funding provider: %[1]s",
