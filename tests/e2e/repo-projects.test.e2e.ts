@@ -148,5 +148,47 @@ test.describe('project columns', () => {
     await expect(page.locator('.toast-body', {hasText: 'Network error'})).toBeVisible();
   });
 
+  test('set default success', async ({page}) => {
+    await expect(page.locator('.project-column')).toBeHidden();
+    await tryCreateColumn(page);
+    await tryCreateColumn(page);
+    await expect(page.locator('.project-column')).toHaveCount(2);
+    const testColumn = page.locator('.project-column').last();
+
+    const makeDefaultModal = page.locator('dialog[id^="default-project-column-modal-"]').last();
+    await expect(makeDefaultModal).toBeHidden();
+    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByRole('option', {name: 'Set default'}).click();
+    await expect(makeDefaultModal).toBeVisible();
+    await makeDefaultModal.getByRole('button', {name: 'Confirm'}).click();
+
+    // default worked
+    await expect(makeDefaultModal).toBeHidden();
+    await expect(page.locator('.toast-body')).toBeHidden();
+    // TODO: test that a specific column was defaulted
+  });
+
+  test('set default failure displays toast', async ({page}) => {
+    await expect(page.locator('.project-column')).toBeHidden();
+    await tryCreateColumn(page);
+    await tryCreateColumn(page);
+    await expect(page.locator('.project-column')).toHaveCount(2);
+    const testColumn = page.locator('.project-column').last();
+
+    const pathname = await page.evaluate(() => window.location.pathname);
+    await page.route(`${pathname}/*/default`, (route) => route.abort('internetdisconnected'));
+
+    const makeDefaultModal = page.locator('dialog[id^="default-project-column-modal-"]').last();
+    await expect(makeDefaultModal).toBeHidden();
+    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByRole('option', {name: 'Set default'}).click();
+    await expect(makeDefaultModal).toBeVisible();
+    await makeDefaultModal.getByRole('button', {name: 'Confirm'}).click();
+
+    // default failed
+    await expect(makeDefaultModal).toBeVisible();
+    await expect(page.locator('.toast-body', {hasText: 'Network error'})).toBeVisible();
+  });
+
   // TODO: toast when response goes through but it's 4xx or 5xx
 });

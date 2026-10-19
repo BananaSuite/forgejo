@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {contrastColor} from '../utils/color.ts';
 import {createSortable} from '../modules/sortable.ts';
 import {POST, DELETE, PUT} from '../modules/fetch.ts';
@@ -145,23 +144,24 @@ export function initRepoProject() {
     });
   }
 
-  $('.default-project-column-modal').each(function () {
-    const $boardColumn = $(this).closest('.project-column');
-    const $showButton = $($boardColumn).find('.default-project-column-show');
-    const $commitButton = $(this).find('.actions > .ok.button');
+  for (const dialog of document.getElementsByClassName('default-project-column-modal')) {
+    const boardColumn = dialog.closest('.project-column');
+    const showButton = boardColumn.querySelector('.default-project-column-show');
+    const commitButton = dialog.querySelector('.actions > .ok.button');
 
-    $($commitButton).on('click', async (e) => {
+    commitButton.addEventListener('click', async (e) => {
+      // TODO: move data-url to deleteColumnButton and then get this addEventListener function out of this loop!
       e.preventDefault();
 
       try {
-        await POST($($showButton).data('url'));
+        await POST(showButton.getAttribute('data-url'));
+        window.location.reload();
       } catch (error) {
         console.error(error);
-      } finally {
-        window.location.reload();
+        showErrorToast(i18n.network_error);
       }
     });
-  });
+  }
 
   for (const link of document.getElementsByClassName('show-delete-project-column-modal')) {
     const deleteColumnModal = document.querySelector(link.getAttribute('data-modal'));
