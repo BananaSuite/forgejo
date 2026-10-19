@@ -22,30 +22,31 @@ func TestTeamNotificationMail_test(t *testing.T) {
 	defer test.MockVariableValue(&setting.Admin.DisableRegularOrgCreation, false)()
 	defer test.MockVariableValue(&setting.Admin.SendNotificationEmailOnNewUser, true)()
 	require.NoError(t, unittest.PrepareTestDatabase())
-	inviter := new(user_model.User)
-	inviter.Name = "new_user"
-	inviter.Language = "en_US"
-	inviter.IsAdmin = false
-	inviter.Email = "new_user@example.com"
-	inviter.LastLoginUnix = 1693648327
-	inviter.CreatedUnix = 1693648027
-	inviter.AllowCreateOrganization = true
+	inviter := &user_model.User{
+		Name:                    "new_user",
+		Language:                "en_US",
+		Email:                   "new_user@example.com",
+		LastLoginUnix:           1693648327,
+		CreatedUnix:             1693648027,
+		AllowCreateOrganization: true,
+	}
 	require.NoError(t, user_model.CreateUser(t.Context(), inviter, &user_model.CreateUserOverwriteOptions{AllowCreateOrganization: optional.Some(true)}))
-	org := new(org_model.Organization)
-	org.Name = "new_org"
-	org.IsActive = true
+	org := &org_model.Organization{
+		Name:     "new_org",
+		IsActive: true,
+	}
 	require.NoError(t, org_model.CreateOrganization(t.Context(), org, inviter))
 	o, err := org_model.GetOrgByName(t.Context(), org.Name)
 	require.NoError(t, err)
 	team, _ := o.GetOwnerTeam(t.Context())
 	t.Run("with invitee", func(t *testing.T) {
-		invitedUser := new(user_model.User)
-		invitedUser.Name = "invited_user"
-		invitedUser.Language = "de-DE"
-		invitedUser.IsAdmin = false
-		invitedUser.Email = "invited_user@example.com"
-		invitedUser.LastLoginUnix = 1693648327
-		invitedUser.CreatedUnix = 1693648027
+		invitedUser := &user_model.User{
+			Name:          "invited_user",
+			Language:      "de-DE",
+			Email:         "invited_user@example.com",
+			LastLoginUnix: 1693648327,
+			CreatedUnix:   1693648027,
+		}
 		require.NoError(t, user_model.CreateUser(t.Context(), invitedUser))
 		invite, err := org_model.CreateTeamInviteForUser(t.Context(), inviter, invitedUser, team)
 		require.NoError(t, err)
@@ -54,7 +55,7 @@ func TestTeamNotificationMail_test(t *testing.T) {
 		defer MockMailSettings(func(msgs ...*Message) {
 			assert.Len(t, msgs, 1, "Test provides only one user, so only one email must be sent")
 			assert.Equal(t, invitedUser.Email, msgs[0].To, "checks if the recipient is invited user")
-			locale := translation.NewLocale(invite.InvitedUser.Language)
+			locale := translation.NewLocale("de-DE")
 			subject := locale.TrString("mail.team_invite.subject", inviter.DisplayName(), org.DisplayName())
 			assert.Equal(t, msgs[0].Subject, subject)
 			AssertTranslatedLocale(t, msgs[0].Subject, "mail.team_invite.subject")
@@ -73,7 +74,7 @@ func TestTeamNotificationMail_test(t *testing.T) {
 		defer MockMailSettings(func(msgs ...*Message) {
 			assert.Len(t, msgs, 1, "Test provides only one user, so only one email must be sent")
 			assert.Equal(t, "non-user@example.com", msgs[0].To, "checks if the recipient is invited user")
-			locale := translation.NewLocale(inviter.Language)
+			locale := translation.NewLocale("en_US")
 			subject := locale.TrString("mail.team_invite.subject", inviter.DisplayName(), org.DisplayName())
 			assert.Equal(t, msgs[0].Subject, subject)
 			AssertTranslatedLocale(t, msgs[0].Subject, "mail.team_invite.subject")
