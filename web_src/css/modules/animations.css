@@ -3,6 +3,11 @@
   100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
+@keyframes isLoadingSpinInline {
+  0% { transform: translate(0%, -50%) rotate(0deg); }
+  100% { transform: translate(0%, -50%) rotate(360deg); }
+}
+
 lazy-webc {
   display: block;
 }
@@ -47,6 +52,11 @@ lazy-webc::after,
 
 .is-loading.loading-icon-3px::after {
   border-width: 3px;
+}
+
+.is-loading.loading-inline::after {
+  inset-inline-start: 10px;
+  animation: isLoadingSpinInline 1000ms infinite linear;
 }
 
 /* for single form button, the loading state should be on the button, but not go semi-transparent, just replace the text on the button with the loader. */

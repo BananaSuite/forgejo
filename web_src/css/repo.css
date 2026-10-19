@@ -2508,6 +2508,7 @@ details.commit-body-toggle > summary.ellipsis-button {
 
 .diff .branch-and-tag-detail.is-loading {
   min-height: 2rem;
+  margin-bottom: -12px;
   > div {
     display: none !important;
   }
