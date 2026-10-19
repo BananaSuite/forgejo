@@ -26,7 +26,7 @@ import (
 
 func TestDiffFileGetEscapeStatus(t *testing.T) {
 	file := &DiffFile{Sections: []*DiffSection{{Lines: []*DiffLine{{Content: " ordinary"}}}}}
-	locale := translation.NewLocale("")
+	locale := translation.NewLocale("es-MX")
 	assert.False(t, file.GetEscapeStatus(locale).Escaped)
 
 	file.Sections[0].Lines[0].Content = " hidden\u200bcharacter"
