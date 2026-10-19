@@ -4,54 +4,43 @@
 		<button type="button" class="ui compact icon button" aria-label="Close" command="close" commandfor="shortcuts">{{svg "octicon-x" 16}}</button>
 	</header>
 	<article class="content">
-		<div class="ui small dropdown selection tw-w-full" role="combobox" >
-			{{svg "octicon-triangle-down" 14 "dropdown icon"}}
-			<div class="text">
-				{{ctx.Locale.Tr "shortcuts.button.global"}}
-			</div>
-			<div class="menu" role="listbox">
-					<label class="active item" role="option">
-						<input hidden type="radio" name="tab" value="global" checked>
-						{{ctx.Locale.Tr "shortcuts.button.global"}}
-					</label>
-					<label class="item" role="option">
-						<input hidden type="radio" name="tab" value="repo">
-						{{ctx.Locale.Tr "shortcuts.button.repo"}}
-					</label>
-			</div>
+		<div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
+			<section class="ui segment tw-m-0">
+				<h3 class="ui header">{{ctx.Locale.Tr "shortcuts.button.global"}}</h3>
+				<div class="divider"></div>
+				<div class="ui relaxed divided list">
+					<div class="item">
+						{{ctx.Locale.Tr "shortcuts.global.search"}}
+						<div class="right floated tw-leading-none"><kbd>s</kbd></div>
+					</div>
+					<div class="item">
+						{{ctx.Locale.Tr "shortcuts.global.popup"}}
+						<div class="right floated tw-leading-none"><kbd>?</kbd></div>
+					</div>
+					<div class="item">
+						{{ctx.Locale.Tr "shortcuts.global.close"}}
+						<div class="right floated tw-leading-none"><kbd>Escape</kbd></div>
+					</div>
+				</div>
+			</section>
+			<section class="ui segment tw-m-0">
+				<h3 class="ui header">{{ctx.Locale.Tr "shortcuts.button.repo"}}</h3>
+				<div class="divider"></div>
+				<div class="ui relaxed divided list">
+					<div class="item">
+						{{ctx.Locale.Tr "repo.find_file.go_to_file"}}
+						<div class="right floated tw-leading-none"><kbd>t</kbd></div>
+					</div>
+				</div>
+			</section>
 		</div>
-		<div class="tw-mt-4 tw-flex tw-justify-center">
-			<kbd>{{svg "octicon-arrow-up" 16}}</kbd>
-			&nbsp;{{ctx.Locale.Tr "shortcuts.hint"}}&nbsp;
-			<kbd>{{svg "octicon-arrow-down" 16}}</kbd>
+		<div class="tw-mt-4">
+			{{if .IsSigned}}
+				<input type="checkbox"{{if .SignedUser.EnableShortcuts}} checked{{end}}>
+			{{else}}
+				<input type="checkbox" checked>
+			{{end}}
+			<label>{{ctx.Locale.Tr "shortcuts.enable"}}</label>
 		</div>
-		<div class="tw-items-start tw-grid tw-grid-cols-1">
-			<ul data-tab="global">
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.global.search"}}</div>
-					<div><kbd>s</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.global.popup"}}</div>
-					<div><kbd>?</kbd></div>
-				</li>
-				<li>
-					<div>{{ctx.Locale.Tr "shortcuts.global.close"}}</div>
-					<div><kbd>Escape</kbd></div>
-				</li>
-			</ul>
-			<ul data-tab="repo" class="tw-invisible" aria-hidden="true">
-				<li>
-					<div>{{ctx.Locale.Tr "repo.find_file.go_to_file"}}</div>
-					<div><kbd>t</kbd></div>
-				</li>
-			</ul>
-		</div>
-		{{if .IsSigned}}
-			<input type="checkbox"{{if .SignedUser.EnableShortcuts}} checked{{end}}>
-		{{else}}
-			<input type="checkbox" checked>
-		{{end}}
-		<label>{{ctx.Locale.Tr "shortcuts.enable"}}</label>
 	</article>
 </dialog>
