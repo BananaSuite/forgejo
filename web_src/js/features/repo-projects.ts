@@ -110,6 +110,7 @@ export function initRepoProject() {
     const projectColorInput = modal.querySelector<HTMLInputElement>('#new_project_column_color');
     const boardColumn = modal.closest<HTMLDivElement>('.project-column');
     modal.querySelector<HTMLButtonElement>('.edit-project-column-button')?.addEventListener('click', async function (e) {
+      // TODO: can this function move outside this loop?
       e.preventDefault();
       try {
         await PUT(this.getAttribute('data-url'), {
@@ -162,23 +163,24 @@ export function initRepoProject() {
     });
   });
 
-  $('.show-delete-project-column-modal').each(function () {
-    const $deleteColumnModal = $(`${this.getAttribute('data-modal')}`);
-    const $deleteColumnButton = $deleteColumnModal.find('.actions > .ok.button');
-    const deleteUrl = this.getAttribute('data-url');
+  for (const link of document.getElementsByClassName('show-delete-project-column-modal')) {
+    const deleteColumnModal = document.querySelector(link.getAttribute('data-modal'));
+    const deleteColumnButton = deleteColumnModal.querySelector('.actions > .ok.button');
+    const deleteUrl = link.getAttribute('data-url');
 
-    $deleteColumnButton.on('click', async (e) => {
+    deleteColumnButton.addEventListener('click', async (e) => {
+      // TODO: move data-url to deleteColumnButton and then get this addEventListener function out of this loop!
       e.preventDefault();
 
       try {
         await DELETE(deleteUrl);
+        window.location.reload();
       } catch (error) {
         console.error(error);
-      } finally {
-        window.location.reload();
+        showErrorToast(i18n.network_error);
       }
     });
-  });
+  }
 
   document.getElementById('new_project_column_submit')?.addEventListener('click', function (e) {
     e.preventDefault();

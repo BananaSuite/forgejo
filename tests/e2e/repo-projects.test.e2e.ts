@@ -29,7 +29,6 @@ test.describe('project columns', () => {
   async function tryCreateColumn(page: Page, expectModalStillVisible: boolean = false) {
     const createModal = page.locator('dialog#new-project-column-item');
     await expect(createModal).toBeHidden();
-    await expect(page.locator('.project-column')).toBeHidden();
     await page.getByRole('button', {name: 'New column'}).click();
     await expect(createModal).toBeVisible();
     await createModal.getByRole('textbox', {name: 'Name'}).fill('Test column');
@@ -42,6 +41,7 @@ test.describe('project columns', () => {
   }
 
   test('create success', async ({page}) => {
+    await expect(page.locator('.project-column')).toBeHidden();
     await tryCreateColumn(page);
     await expect(page.locator('.project-column', {hasText: 'Test column'})).toBeVisible();
     await expect(page.locator('.toast-body')).toBeHidden();
@@ -50,11 +50,14 @@ test.describe('project columns', () => {
   test('create failure displays toast', async ({page}) => {
     const pathname = await page.evaluate(() => window.location.pathname);
     await page.route(pathname, (route) => route.abort('internetdisconnected'));
+
+    await expect(page.locator('.project-column')).toBeHidden();
     await tryCreateColumn(page, true); // modal didn't go away
     await expect(page.locator('.toast-body', {hasText: 'Network error'})).toBeVisible();
   });
 
   test('edit success', async ({page}) => {
+    await expect(page.locator('.project-column')).toBeHidden();
     await tryCreateColumn(page);
     const testColumn = page.locator('.project-column').first();
     const testColumnTitle = testColumn.locator('span.project-column-title-label'); // TODO: heading level 3 or 4
@@ -78,6 +81,7 @@ test.describe('project columns', () => {
   });
 
   test('edit failure displays toast', async ({page}) => {
+    await expect(page.locator('.project-column')).toBeHidden();
     await tryCreateColumn(page);
     const testColumn = page.locator('.project-column').first();
     const testColumnTitle = testColumn.locator('span.project-column-title-label'); // TODO: heading level 3 or 4
@@ -103,7 +107,46 @@ test.describe('project columns', () => {
     await expect(page.locator('.toast-body', {hasText: 'Network error'})).toBeVisible();
   });
 
-  // TODO: delete success
-  // TODO: delete failure displays toast
+  test('delete success', async ({page}) => {
+    await expect(page.locator('.project-column')).toBeHidden();
+    await tryCreateColumn(page);
+    await tryCreateColumn(page);
+    await expect(page.locator('.project-column')).toHaveCount(2);
+    const extraColumn = page.locator('.project-column').last();
+    await extraColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await extraColumn.getByRole('option', {name: 'Delete column'}).click();
+    const deleteModal = page.locator('dialog[id^="delete-project-column-modal-"]:modal');
+    await expect(deleteModal).toBeVisible();
+    await deleteModal.getByRole('button', {name: 'Confirm'}).click();
+
+    // delete worked
+    await expect(deleteModal).toBeHidden();
+    await expect(page.locator('.project-column')).toHaveCount(1);
+    await expect(page.locator('.toast-body')).toBeHidden();
+    // TODO: test that a specific column was deleted, not just any column
+  });
+
+  test('delete failure displays toast', async ({page}) => {
+    await expect(page.locator('.project-column')).toBeHidden();
+    await tryCreateColumn(page);
+    await tryCreateColumn(page);
+    await expect(page.locator('.project-column')).toHaveCount(2);
+    const extraColumn = page.locator('.project-column').last();
+
+    const pathname = await page.evaluate(() => window.location.pathname);
+    await page.route(`${pathname}/*`, (route) => route.abort('internetdisconnected'));
+
+    await extraColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await extraColumn.getByRole('option', {name: 'Delete column'}).click();
+    const deleteModal = page.locator('dialog[id^="delete-project-column-modal-"]:modal');
+    await expect(deleteModal).toBeVisible();
+    await deleteModal.getByRole('button', {name: 'Confirm'}).click();
+
+    // delete failed
+    await expect(deleteModal).toBeVisible();
+    await expect(page.locator('.project-column')).toHaveCount(2);
+    await expect(page.locator('.toast-body', {hasText: 'Network error'})).toBeVisible();
+  });
+
   // TODO: toast when response goes through but it's 4xx or 5xx
 });
