@@ -1,9 +1,7 @@
-<dialog id="shortcuts">
+<dialog id="shortcuts" class="modal">
 	<header>
 		<span>{{ctx.Locale.Tr "shortcuts.title"}}</span>
-		<form method="dialog">
-			<button type="submit" class="ui compact icon button" aria-label="Close">{{svg "octicon-x" 16}}</button>
-		</form>
+		<button type="button" class="ui compact icon button" aria-label="Close" command="close" commandfor="shortcuts">{{svg "octicon-x" 16}}</button>
 	</header>
 	<article class="content">
 		<div class="ui small dropdown selection tw-w-full" role="combobox" >

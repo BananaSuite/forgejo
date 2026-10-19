@@ -1158,20 +1158,14 @@
 	"form.website.valid_url_schemes": "Allowed URL schemes include: %s",
 	"graphs.recent_commits.title": "Number of commits in the past year",
 	"graphs.code_frequency.title": "Code frequency over the history of {0}",
-	"shortcuts": {
-		"title": "Keyboard shortcuts",
-		"hint": "Navigate with arrow keys",
-		"enable": "Enable keyboard shortcuts",
-		"button": {
-			"global": "Global",
-			"repo": "Repository"
-		},
-		"global": {
-			"search": "Focus on searchbar",
-			"popup": "Show keyboard shortcuts dialog",
-			"close": "Close this dialog"
-		}
-	},
+	"shortcuts.title": "Keyboard shortcuts",
+	"shortcuts.hint": "Navigate with arrow keys",
+	"shortcuts.enable": "Enable keyboard shortcuts",
+	"shortcuts.button.global": "Global",
+	"shortcuts.button.repo": "Repository",
+	"shortcuts.global.search": "Focus on searchbar",
+	"shortcuts.global.popup": "Show keyboard shortcuts dialog",
+	"shortcuts.global.close": "Close this dialog",
 	"funding.yaml_error.heading_one": "Error parsing funding config: %[1]s",
 	"funding.yaml_error.heading_few": "Errors parsing funding config:",
 	"funding.yaml_error.unknown_provider": "Unknown funding provider: %[1]s",

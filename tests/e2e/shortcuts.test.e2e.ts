@@ -1,3 +1,5 @@
+// Copyright 2026 The Forgejo Authors. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
 // @watch start
 // templates/shared/user/shortcuts_popup.tmpl
 // web_src/js/features/user-shortcuts.ts
