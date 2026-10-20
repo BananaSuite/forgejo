@@ -16,7 +16,12 @@ import (
 	"github.com/go-ap/jsonld"
 )
 
-func ProcessPersonInbox(ctx context.Context, user *user.User, activity *ap.Activity) (ServiceResult, error) {
+func ProcessPersonInbox(ctx context.Context, user *user.User, activity *ap.Activity, keyID string) (ServiceResult, error) {
+	err := AuthorizeKeyID(keyID, activity)
+	if err != nil {
+		log.Error("%v", err)
+		return ServiceResult{}, err
+	}
 	switch activity.Type {
 	case ap.CreateType:
 		return processPersonInboxCreate(ctx, user, activity)

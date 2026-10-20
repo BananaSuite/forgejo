@@ -4,6 +4,7 @@
 package activitypub
 
 import (
+	"fmt"
 	"net/http"
 
 	"forgejo.org/modules/log"
@@ -14,6 +15,22 @@ import (
 
 	"github.com/42wim/httpsig"
 )
+
+var FedCtxDataKeyIDKey = "FederationKeyID"
+
+func GetKeyID(ctx app_context.APIContext) (string, error) {
+	v := ctx.GetData()[FedCtxDataKeyIDKey]
+	if v == nil {
+		return "", fmt.Errorf("Error getting keyID from ContextDataStore")
+	}
+
+	keyID, ok := v.(string)
+	if !ok {
+		return "", fmt.Errorf("Error converting value of type (%t) to string", v)
+	}
+
+	return keyID, nil
+}
 
 func verifyHTTPSignature(ctx app_context.APIContext) (authenticated bool, err error) {
 	if !setting.Federation.SignatureEnforced {
@@ -29,7 +46,7 @@ func verifyHTTPSignature(ctx app_context.APIContext) (authenticated bool, err er
 		return false, err
 	}
 
-	ctx.Data[federation.FedCtxDataKeyIDKey] = v.KeyId()
+	ctx.Data[FedCtxDataKeyIDKey] = v.KeyId()
 
 	log.Debug("Verify %q, signed by KeyId: %v", r.URL.Path, v.KeyId())
 	signatureAlgorithm := httpsig.Algorithm(setting.Federation.SignatureAlgorithms[0])

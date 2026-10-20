@@ -12,14 +12,12 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"forgejo.org/models/forgefed"
 	"forgejo.org/models/user"
 	"forgejo.org/modules/activitypub"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
-	"forgejo.org/modules/web/middleware"
 
 	ap "github.com/go-ap/activitypub"
 )
@@ -214,38 +212,12 @@ func decodePublicKeyPem(pubKeyPem string) ([]byte, error) {
 	return block.Bytes, nil
 }
 
-var FedCtxDataKeyIDKey = "FederationKeyID"
-
-func getKeyID(ctx context.Context) (string, error) {
-	dataStore, ok := ctx.(middleware.ContextDataStore)
-	if !ok {
-		return "", fmt.Errorf("Error getting ContextDataStore from context")
-	}
-
-	v := dataStore.GetData()[FedCtxDataKeyIDKey]
-	if v == nil {
-		return "", fmt.Errorf("Error getting keyID from ContextDataStore")
-	}
-
-	keyID, ok := v.(string)
-	if !ok {
-		return "", fmt.Errorf("Error converting value of type (%t) to string", v)
-	}
-
-	return keyID, nil
-}
-
 // Finds the ID of requester and actor and compares them
 // This function should only be called **after** http signature verification
-func VerifyKeyIDMatchesActorID(ctx context.Context, activity *ap.Activity) error {
+func AuthorizeKeyID(keyID string, activity *ap.Activity) error {
 	// skip if key veryfication is not enforced
 	if !setting.Federation.SignatureEnforced {
 		return nil
-	}
-
-	keyID, err := getKeyID(ctx)
-	if err != nil {
-		return err
 	}
 
 	keyURL, err := url.Parse(keyID)
@@ -262,11 +234,7 @@ func VerifyKeyIDMatchesActorID(ctx context.Context, activity *ap.Activity) error
 		return err
 	}
 
-	if keyURL.Host != actorURL.Host {
-		return fmt.Errorf("Host in KeyID (%v) in signature does not match Host in ActorID in body (%v)", keyURL.Host, actorURL.Host)
-	}
-
-	if !strings.HasSuffix(keyURL.Path, "actor") && keyURL.Path != actorURL.Path {
+	if keyURL.Path != actorURL.Path {
 		return fmt.Errorf("KeyID (%v) in signature does not match ActorID in body (%v)", keyURL.Path, actorURL.Path)
 	}
 
