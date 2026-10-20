@@ -38,7 +38,8 @@ func TestTeamNotificationMail_test(t *testing.T) {
 	require.NoError(t, org_model.CreateOrganization(t.Context(), org, inviter))
 	o, err := org_model.GetOrgByName(t.Context(), org.Name)
 	require.NoError(t, err)
-	team, _ := o.GetOwnerTeam(t.Context())
+	team, err := o.GetOwnerTeam(t.Context())
+	require.NoError(t, err)
 	t.Run("with invitee", func(t *testing.T) {
 		invitedUser := &user_model.User{
 			Name:          "invited_user",
@@ -68,7 +69,8 @@ func TestTeamNotificationMail_test(t *testing.T) {
 	})
 
 	t.Run("without invitee", func(t *testing.T) {
-		invite, _ := org_model.CreateTeamInviteByEmail(t.Context(), inviter, team, "non-user@example.com")
+		invite, err := org_model.CreateTeamInviteByEmail(t.Context(), inviter, team, "non-user@example.com")
+		require.NoError(t, err)
 
 		called := false
 		defer MockMailSettings(func(msgs ...*Message) {
