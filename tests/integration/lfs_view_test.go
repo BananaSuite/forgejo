@@ -28,6 +28,62 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestLFSFileGet(t *testing.T) {
+	session := loginUser(t, "user2")
+	locale := translation.NewLocale("en-US")
+
+	// No Markdown rendering available here
+	t.Run("Markup", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequest(t, "GET", "/user2/lfs/settings/lfs/show/9d172e5c64b4f0024b9901ec6afe9ea052f3c9b6ff9f4b07956d8c48c86fca82")
+		resp := session.MakeRequest(t, req, http.StatusOK)
+
+		doc := NewHTMLParser(t, resp.Body).doc
+
+		fileInfo := doc.Find("div.file-view").First().Text()
+		assert.Contains(t, fileInfo, "# Testing READMEs in LFS")
+	})
+
+	// Check the "View raw" link
+	t.Run("Binary", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequest(t, "GET", "/user2/lfs/settings/lfs/show/2eccdb43825d2a49d99d542daa20075cff1d97d9d2349a8977efe9c03661737c")
+		resp := session.MakeRequest(t, req, http.StatusOK)
+
+		doc := NewHTMLParser(t, resp.Body).doc
+
+		fileInfo := doc.Find("div.view-raw > a").First()
+		assert.Contains(t, fileInfo.Text(), locale.TrString("repo.file_view_raw"))
+		hrefValue, hrefExists := fileInfo.Attr("href")
+		require.True(t, hrefExists)
+		assert.Contains(t, hrefValue, "/user2/lfs.git/info/lfs/objects/2eccdb43825d2a49d99d542daa20075cff1d97d9d2349a8977efe9c03661737c/ZGlyZWN0")
+
+		t.Run("Download", func(t *testing.T) {
+			t.Run("git-lfs", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				req = NewRequest(t, "GET", hrefValue).SetHeader("Accept", lfs.MediaType)
+				resp = session.MakeRequest(t, req, http.StatusOK)
+				assert.Equal(t, "application/octet-stream", resp.Header().Get("Content-Type"))
+				assert.Contains(t, resp.Header().Get("Content-Disposition"), "attachment; filename=\"direct\"")
+				assert.Equal(t, "107", resp.Header().Get("Content-Length"))
+			})
+
+			t.Run("Web", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				req = NewRequest(t, "GET", hrefValue)
+				resp = session.MakeRequest(t, req, http.StatusOK)
+				assert.Equal(t, "application/octet-stream", resp.Header().Get("Content-Type"))
+				assert.Contains(t, resp.Header().Get("Content-Disposition"), "inline; filename=\"direct\"")
+				assert.Equal(t, "107", resp.Header().Get("Content-Length"))
+			})
+		})
+	})
+}
+
 // check that files stored in LFS render properly in the web UI of the
 // repository settings
 func TestLFSFileSettingsRender(t *testing.T) {

@@ -32,6 +32,7 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/typesniffer"
 	"forgejo.org/services/context"
 )
 
@@ -115,24 +116,39 @@ func DownloadHandler(ctx *context.Context) {
 	}
 	defer content.Close()
 
-	if fromByte > 0 {
+	contentLength := toByte + 1 - fromByte
+	ctx.Resp.Header().Set("Content-Length", strconv.FormatInt(contentLength, 10))
+	isGitLFSClient := ctx.Req.Header.Get("Accept") == lfs_module.MediaType
+	if isGitLFSClient {
+		ctx.Resp.Header().Set("Content-Type", "application/octet-stream")
+	} else {
+		st, err := typesniffer.DetectContentTypeFromReader(content, "")
+		if err != nil {
+			log.Error("Whilst trying to read LFS OID[%s]: Unable to sniff type. Error: %v", meta.Oid, err)
+			writeStatus(ctx, http.StatusInternalServerError)
+			return
+		}
+		ctx.Resp.Header().Set("Content-Type", st.GetMimeType())
+	}
+
+	if fromByte > 0 || !isGitLFSClient {
 		_, err = content.Seek(fromByte, io.SeekStart)
 		if err != nil {
-			log.Error("Whilst trying to read LFS OID[%s]: Unable to seek to %d Error: %v", meta.Oid, fromByte, err)
+			log.Error("Whilst trying to read LFS OID[%s]: Unable to seek to %d. Error: %v", meta.Oid, fromByte, err)
 			writeStatus(ctx, http.StatusInternalServerError)
 			return
 		}
 	}
 
-	contentLength := toByte + 1 - fromByte
-	ctx.Resp.Header().Set("Content-Length", strconv.FormatInt(contentLength, 10))
-	ctx.Resp.Header().Set("Content-Type", "application/octet-stream")
-
 	filename := ctx.Params("filename")
 	if len(filename) > 0 {
 		decodedFilename, err := base64.RawURLEncoding.DecodeString(filename)
 		if err == nil {
-			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+string(decodedFilename)+"\"")
+			if isGitLFSClient {
+				ctx.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+string(decodedFilename)+"\"")
+			} else {
+				ctx.Resp.Header().Set("Content-Disposition", "inline; filename=\""+string(decodedFilename)+"\"")
+			}
 			ctx.Resp.Header().Set("Access-Control-Expose-Headers", "Content-Disposition")
 		}
 	}
