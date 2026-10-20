@@ -32,6 +32,7 @@ import (
 	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
+	apiv1_permissions "forgejo.org/routers/api/v1/permissions"
 	"forgejo.org/routers/api/v1/utils"
 	asymkey_service "forgejo.org/services/asymkey"
 	"forgejo.org/services/automerge"
@@ -1165,7 +1166,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	}
 
 	// user should have permission to read baseRepo's codes and pulls, NOT headRepo's
-	permBase, err := access_model.GetUserRepoPermissionWithReducer(ctx, baseRepo, ctx.Doer(), ctx.Reducer())
+	permBase, err := apiv1_permissions.GetUserRepoPermission(ctx, baseRepo)
 	if err != nil {
 		headGitRepo.Close()
 		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
@@ -1184,7 +1185,7 @@ func parseCompareInfo(ctx *context.APIContext, form api.CreatePullRequestOption)
 	}
 
 	// user should have permission to read headrepo's codes
-	permHead, err := access_model.GetUserRepoPermissionWithReducer(ctx, headRepo, ctx.Doer(), ctx.Reducer())
+	permHead, err := apiv1_permissions.GetUserRepoPermission(ctx, headRepo)
 	if err != nil {
 		headGitRepo.Close()
 		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer", err)
@@ -1313,14 +1314,14 @@ func UpdatePullRequest(ctx *context.APIContext) {
 		return
 	}
 
-	headRepoPerm, err := access_model.GetUserRepoPermissionWithReducer(ctx, pr.HeadRepo, ctx.Doer(), ctx.Reducer())
+	headRepoPerm, err := apiv1_permissions.GetUserRepoPermission(ctx, pr.HeadRepo)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer head repo", err)
+		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermission head repo", err)
 		return
 	}
-	baseRepoPerm, err := access_model.GetUserRepoPermissionWithReducer(ctx, pr.BaseRepo, ctx.Doer(), ctx.Reducer())
+	baseRepoPerm, err := apiv1_permissions.GetUserRepoPermission(ctx, pr.BaseRepo)
 	if err != nil {
-		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermissionWithReducer base repo", err)
+		ctx.Error(http.StatusInternalServerError, "GetUserRepoPermission base repo", err)
 		return
 	}
 

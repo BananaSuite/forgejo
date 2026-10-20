@@ -5,20 +5,18 @@
 package repo
 
 import (
-	stdCtx "context"
 	"errors"
 	"net/http"
 
 	issues_model "forgejo.org/models/issues"
-	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/optional"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
+	apiv1_permissions "forgejo.org/routers/api/v1/permissions"
 	"forgejo.org/routers/api/v1/utils"
-	"forgejo.org/services/authz"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
 	issue_service "forgejo.org/services/issue"
@@ -212,7 +210,7 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 
 	var apiComments []*api.TimelineComment
 	for _, comment := range comments {
-		if comment.Type != issues_model.CommentTypeCode && isXRefCommentAccessible(ctx, ctx.Doer(), comment, issue.RepoID, ctx.Reducer()) {
+		if comment.Type != issues_model.CommentTypeCode && isXRefCommentAccessible(ctx, comment, issue.RepoID) {
 			comment.Issue = issue
 			apiComments = append(apiComments, convert.ToTimelineComment(ctx, issue.Repo, comment, ctx.Doer()))
 		}
@@ -222,7 +220,7 @@ func ListIssueCommentsAndTimeline(ctx *context.APIContext) {
 	ctx.JSON(http.StatusOK, &apiComments)
 }
 
-func isXRefCommentAccessible(ctx stdCtx.Context, user *user_model.User, c *issues_model.Comment, issueRepoID int64, reducer authz.AuthorizationReducer) bool {
+func isXRefCommentAccessible(ctx *context.APIContext, c *issues_model.Comment, issueRepoID int64) bool {
 	// Remove comments that the user has no permissions to see
 	if issues_model.CommentTypeIsRef(c.Type) && c.RefRepoID != issueRepoID && c.RefRepoID != 0 {
 		var err error
@@ -231,7 +229,7 @@ func isXRefCommentAccessible(ctx stdCtx.Context, user *user_model.User, c *issue
 		if err != nil {
 			return false
 		}
-		perm, err := access_model.GetUserRepoPermissionWithReducer(ctx, c.RefRepo, user, reducer)
+		perm, err := apiv1_permissions.GetUserRepoPermission(ctx, c.RefRepo)
 		if err != nil {
 			return false
 		}

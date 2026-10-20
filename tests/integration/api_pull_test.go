@@ -13,15 +13,18 @@ import (
 	"strings"
 	"testing"
 
+	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/setting"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/test"
+	"forgejo.org/services/actions"
 	"forgejo.org/services/forms"
 	issue_service "forgejo.org/services/issue"
 	"forgejo.org/tests"
@@ -363,6 +366,45 @@ func TestAPICreatePullSameRepoSuccess(t *testing.T) {
 	DecodeJSON(t, res, pull)
 
 	assert.Equal(t, "65f1bf27bc3bf70f64657658635e66094edbcb4d", pull.MergeBase)
+}
+
+func TestAPICreatePullWithTaskToken(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// The synthetic forgejo-actions user is never a collaborator. A task
+	// token must instead receive its permission from its private repository.
+	repo := unittest.AssertExistsAndLoadBean(t, &repo_model.Repository{ID: 3})
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: repo.OwnerID})
+	gitRepo, err := gitrepo.OpenRepository(t.Context(), repo)
+	require.NoError(t, err)
+	defer gitRepo.Close()
+	require.NoError(t, gitRepo.CreateBranch("task-token-head", "test_branch"))
+
+	task := &actions_model.ActionTask{
+		ID:        999999,
+		JobID:     192,
+		Job:       &actions_model.ActionRunJob{ID: 192, RunID: 791},
+		Status:    actions_model.StatusRunning,
+		RepoID:    repo.ID,
+		OwnerID:   repo.OwnerID,
+		CommitSHA: "test",
+	}
+	_, err = db.GetEngine(t.Context()).Insert(task)
+	require.NoError(t, err)
+
+	token, err := actions.CreateAuthorizationToken(task, map[string]any{}, false, &repo_model.ActionsConfig{})
+	require.NoError(t, err)
+
+	req := NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/%s/pulls", owner.Name, repo.Name), &api.CreatePullRequestOption{
+		Head:  fmt.Sprintf("%s:task-token-head", owner.Name),
+		Base:  repo.DefaultBranch,
+		Title: "create a PR with an actions task token",
+	}).AddTokenAuth(token)
+	res := MakeRequest(t, req, http.StatusCreated)
+
+	pull := new(api.PullRequest)
+	DecodeJSON(t, res, pull)
+	assert.Equal(t, "create a PR with an actions task token", pull.Title)
 }
 
 func TestAPICreatePullWithFieldsSuccess(t *testing.T) {
