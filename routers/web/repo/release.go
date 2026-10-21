@@ -228,11 +228,12 @@ func verifyTagSignature(ctx *context.Context, r *repo_model.Release) (*asymkey.O
 	if err := r.LoadRepo(ctx); err != nil {
 		return nil, err
 	}
-	gitRepo, err := gitrepo.OpenRepository(ctx, r.Repo)
+
+	gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, r.Repo)
 	if err != nil {
 		return nil, err
 	}
-	defer gitRepo.Close()
+	defer closer.Close()
 
 	tag, err := gitRepo.GetTag(r.TagName)
 	if err != nil {
