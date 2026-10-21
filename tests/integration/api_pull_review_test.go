@@ -976,6 +976,12 @@ func TestAPIPullReviewResolveConversation(t *testing.T) {
 		MakeRequest(t, req, http.StatusForbidden)
 	})
 
+	t.Run("Without token", func(t *testing.T) {
+		req := NewRequest(t, http.MethodPost, unresolveURL(repo, root.ID))
+		MakeRequest(t, req, http.StatusUnauthorized)
+		require.NotNil(t, getComment(root.ID).Resolver)
+	})
+
 	t.Run("Unresolve", func(t *testing.T) {
 		var unresolved api.PullReviewComment
 		req := NewRequest(t, http.MethodPost, unresolveURL(repo, reply.ID)).AddTokenAuth(token)
@@ -983,6 +989,13 @@ func TestAPIPullReviewResolveConversation(t *testing.T) {
 		assert.Equal(t, root.ID, unresolved.ID)
 		assert.Nil(t, unresolved.Resolver)
 		assert.Nil(t, getComment(root.ID).Resolver)
+	})
+
+	t.Run("Unresolve is idempotent", func(t *testing.T) {
+		var unresolved api.PullReviewComment
+		req := NewRequest(t, http.MethodPost, unresolveURL(repo, root.ID)).AddTokenAuth(token)
+		DecodeJSON(t, MakeRequest(t, req, http.StatusOK), &unresolved)
+		assert.Nil(t, unresolved.Resolver)
 	})
 
 	t.Run("Comment of another repository", func(t *testing.T) {
