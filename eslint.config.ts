@@ -1062,7 +1062,7 @@ export default defineConfig(
 
     rules: {
       '@typescript-eslint/ban-ts-comment': [2, {
-        'ts-expect-error': {descriptionFormat: '^\\(TS\\d+\\) .{3}.*$'}, // e.g. "@ts-expect-error(TS2540) setting read-only property"
+        'ts-expect-error': {descriptionFormat: '^\\((TS\\d+)(,TS\\d+)*\\) .{3}.*$'}, // e.g. "@ts-expect-error(TS2540) setting read-only property"
       }],
 
       '@vitest/consistent-test-filename': [0],
