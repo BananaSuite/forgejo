@@ -163,7 +163,7 @@ async function confirmDefaultProjectColumn(this: HTMLButtonElement, e: PointerEv
 
   try {
     await POST(postUrl);
-    window.location.reload(); // TODO: couldn't POST-then-reload flows like this be done in HTML?
+    window.location.reload(); // TODO: couldn't POST-then-reload flows like this be done in HTML, like sign-out is?
   } catch (error) {
     console.error(error);
     showErrorToast(i18n.network_error);
