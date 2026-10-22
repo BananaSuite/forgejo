@@ -216,10 +216,11 @@ test.describe('project columns', () => {
     await expect(makeDefaultModal).toBeVisible();
     await makeDefaultModal.getByRole('button', {name: 'Confirm'}).click();
 
-    // default worked
+    // default worked; "Set default" is not present on the default column
     await expect(makeDefaultModal).toBeHidden();
     await expect(page.locator('.toast-body')).toBeHidden();
-    // TODO: test that a specific column was defaulted
+    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await expect(testColumn.getByRole('option', {name: 'Set default'})).toBeHidden();
   });
 
   test('cancel set default closes modal', async ({page}) => {
@@ -238,7 +239,8 @@ test.describe('project columns', () => {
 
     // default unchanged
     await expect(makeDefaultModal).toBeHidden();
-    // TODO: test that no default was set
+    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await expect(testColumn.getByRole('option', {name: 'Set default'})).toBeVisible();
   });
 
   test('set default failure displays toast', async ({page}) => {
@@ -261,6 +263,9 @@ test.describe('project columns', () => {
     // default failed
     await expect(makeDefaultModal).toBeVisible();
     await expect(page.locator('.toast-body', {hasText: 'Network error'})).toBeVisible();
+    await makeDefaultModal.evaluate((m: HTMLDialogElement) => m.close());
+    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await expect(testColumn.getByRole('option', {name: 'Set default'})).toBeVisible();
   });
 
   // TODO: project delete behaves
