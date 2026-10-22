@@ -723,10 +723,25 @@ func (m *webhookNotifier) PullRequestReview(ctx context.Context, pr *issues_mode
 		log.Error("models.GetUserRepoPermission: %v", err)
 		return
 	}
+	participants, err := pr.Issue.GetParticipantIDsByIssue(ctx)
+	if err != nil {
+		log.Error("issue.GetParticipantIDsByIssue: %v", err)
+		return
+	}
+	users, err := user_model.GetUserByIDs(ctx, participants)
+	if err != nil {
+		log.Error("getPullRequestPayloadInfo:", err)
+	}
+	var userNames []string
+	for _, u := range users {
+		userNames = append(userNames, u.Name)
+	}
+
 	if err := PrepareWebhooks(ctx, EventSource{Repository: review.Issue.Repo}, reviewHookType, &api.PullRequestPayload{
 		Action:            api.HookIssueReviewed,
 		Index:             review.Issue.Index,
 		PullRequest:       convert.ToAPIPullRequest(ctx, pr, review.Reviewer),
+		ParticipantNames:  &userNames,
 		RequestedReviewer: convert.ToUser(ctx, review.Reviewer, nil),
 		Repository:        convert.ToRepo(ctx, review.Issue.Repo, permission),
 		Sender:            convert.ToUser(ctx, review.Reviewer, nil),

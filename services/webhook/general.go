@@ -176,6 +176,13 @@ func (wpf webhookPayloadFormatter) getPullRequestPayloadInfo(p *api.PullRequestP
 	titleLink := wpf.linkFormatter(p.PullRequest.HTMLURL, issueTitle)
 	color = yellowColor
 
+	var mentions []string
+	for _, name := range *p.ParticipantNames {
+		m := "@" + name
+		mentions = append(mentions, m)
+	}
+	mentionsString := strings.Join(mentions, ", ")
+
 	switch p.Action {
 	case api.HookIssueOpened:
 		text = fmt.Sprintf("Pull request opened: %s", titleLink)
@@ -183,16 +190,16 @@ func (wpf webhookPayloadFormatter) getPullRequestPayloadInfo(p *api.PullRequestP
 		color = greenColor
 	case api.HookIssueClosed:
 		if p.PullRequest.HasMerged {
-			text = fmt.Sprintf("Pull request merged: %s", titleLink)
+			text = fmt.Sprintf("Pull request merged: %s %s", titleLink, mentionsString)
 			color = purpleColor
 		} else {
-			text = fmt.Sprintf("Pull request closed: %s", titleLink)
+			text = fmt.Sprintf("Pull request closed: %s %s", titleLink, mentionsString)
 			color = redColor
 		}
 	case api.HookIssueReOpened:
-		text = fmt.Sprintf("Pull request re-opened: %s", titleLink)
+		text = fmt.Sprintf("Pull request re-opened: %s %s", titleLink, mentionsString)
 	case api.HookIssueEdited:
-		text = fmt.Sprintf("Pull request edited: %s", titleLink)
+		text = fmt.Sprintf("Pull request edited: %s %s", titleLink, mentionsString)
 		attachmentText = p.PullRequest.Body
 	case api.HookIssueAssigned:
 		list := make([]string, len(p.PullRequest.Assignees))
@@ -214,12 +221,12 @@ func (wpf webhookPayloadFormatter) getPullRequestPayloadInfo(p *api.PullRequestP
 	case api.HookIssueDemilestoned:
 		text = fmt.Sprintf("Pull request milestone cleared: %s", titleLink)
 	case api.HookIssueReviewed:
-		text = fmt.Sprintf("Pull request reviewed: %s", titleLink)
+		text = fmt.Sprintf("Pull request reviewed: %s %s", titleLink, mentionsString)
 		attachmentText = p.Review.Content
 	case api.HookIssueReviewRequested:
-		text = fmt.Sprintf("Pull request review requested: %s", titleLink)
+		text = fmt.Sprintf("Pull request review requested: %s %s", titleLink, mentionsString)
 	case api.HookIssueReviewRequestRemoved:
-		text = fmt.Sprintf("Pull request review request removed: %s", titleLink)
+		text = fmt.Sprintf("Pull request review request removed: %s %s", titleLink, mentionsString)
 	}
 	if wpf.withRepoName {
 		text = fmt.Sprintf("[%s] %s", p.Repository.FullName, text)
