@@ -74,7 +74,7 @@
 						<span class="project-column-title-label">{{.Title}}</span>
 					</div>
 					{{if $canWriteProject}}
-						<div class="ui dropdown jump item">
+						<div class="ui dropdown jump item" aria-label="{{ctx.Locale.Tr "repo.projects.column.context_menu"}}">
 							<div class="tw-px-2">
 								{{svg "octicon-kebab-horizontal"}}
 							</div>
@@ -166,6 +166,7 @@
 </div>
 
 {{if $canWriteProject}}
+	{{/* TODO: do something about g-modal-confirm; should be a <dialog class="modal"> instead, and could probs do without JS */}}
 	<div class="ui g-modal-confirm delete modal" id="delete-project">
 		<div class="header">
 			{{svg "octicon-trash"}}

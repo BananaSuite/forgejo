@@ -81,7 +81,7 @@ test.describe('project columns', () => {
 
     const editModal = page.locator('dialog[id^="edit-project-column-modal-"]');
     await expect(editModal).toBeHidden();
-    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByLabel('Column menu').click();
     await testColumn.getByRole('option', {name: 'Edit column'}).click();
     await expect(editModal).toBeVisible();
     await editModal.getByRole('textbox', {name: 'Name'}).fill('Different test column');
@@ -105,7 +105,7 @@ test.describe('project columns', () => {
 
     const editModal = page.locator('dialog[id^="edit-project-column-modal-"]');
     await expect(editModal).toBeHidden();
-    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByLabel('Column menu').click();
     await testColumn.getByRole('option', {name: 'Edit column'}).click();
     await expect(editModal).toBeVisible();
     await editModal.getByRole('textbox', {name: 'Name'}).fill('Different test column');
@@ -131,7 +131,7 @@ test.describe('project columns', () => {
 
     const editModal = page.locator('dialog[id^="edit-project-column-modal-"]');
     await expect(editModal).toBeHidden();
-    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByLabel('Column menu').click();
     await testColumn.getByRole('option', {name: 'Edit column'}).click();
     await expect(editModal).toBeVisible();
     await editModal.getByRole('textbox', {name: 'Name'}).fill('Different test column');
@@ -150,7 +150,7 @@ test.describe('project columns', () => {
     await tryCreateColumn(page);
     await expect(page.locator('.project-column')).toHaveCount(2);
     const extraColumn = page.locator('.project-column').last();
-    await extraColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await extraColumn.getByLabel('Column menu').click();
     await extraColumn.getByRole('option', {name: 'Delete column'}).click();
     const deleteModal = page.locator('dialog[id^="delete-project-column-modal-"]:modal');
     await expect(deleteModal).toBeVisible();
@@ -169,7 +169,7 @@ test.describe('project columns', () => {
     await tryCreateColumn(page);
     await expect(page.locator('.project-column')).toHaveCount(2);
     const extraColumn = page.locator('.project-column').last();
-    await extraColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await extraColumn.getByLabel('Column menu').click();
     await extraColumn.getByRole('option', {name: 'Delete column'}).click();
     const deleteModal = page.locator('dialog[id^="delete-project-column-modal-"]:modal');
     await expect(deleteModal).toBeVisible();
@@ -190,7 +190,7 @@ test.describe('project columns', () => {
     const pathname = await page.evaluate(() => window.location.pathname);
     await page.route(`${pathname}/*`, (route) => route.abort('internetdisconnected'));
 
-    await extraColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await extraColumn.getByLabel('Column menu').click();
     await extraColumn.getByRole('option', {name: 'Delete column'}).click();
     const deleteModal = page.locator('dialog[id^="delete-project-column-modal-"]:modal');
     await expect(deleteModal).toBeVisible();
@@ -211,7 +211,7 @@ test.describe('project columns', () => {
 
     const makeDefaultModal = page.locator('dialog[id^="default-project-column-modal-"]').last();
     await expect(makeDefaultModal).toBeHidden();
-    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByLabel('Column menu').click();
     await testColumn.getByRole('option', {name: 'Set default'}).click();
     await expect(makeDefaultModal).toBeVisible();
     await makeDefaultModal.getByRole('button', {name: 'Confirm'}).click();
@@ -219,7 +219,7 @@ test.describe('project columns', () => {
     // default worked; "Set default" is not present on the default column
     await expect(makeDefaultModal).toBeHidden();
     await expect(page.locator('.toast-body')).toBeHidden();
-    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByLabel('Column menu').click();
     await expect(testColumn.getByRole('option', {name: 'Set default'})).toBeHidden();
   });
 
@@ -232,14 +232,14 @@ test.describe('project columns', () => {
 
     const makeDefaultModal = page.locator('dialog[id^="default-project-column-modal-"]').last();
     await expect(makeDefaultModal).toBeHidden();
-    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByLabel('Column menu').click();
     await testColumn.getByRole('option', {name: 'Set default'}).click();
     await expect(makeDefaultModal).toBeVisible();
     await makeDefaultModal.getByRole('button', {name: 'Cancel'}).click();
 
     // default unchanged
     await expect(makeDefaultModal).toBeHidden();
-    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByLabel('Column menu').click();
     await expect(testColumn.getByRole('option', {name: 'Set default'})).toBeVisible();
   });
 
@@ -255,7 +255,7 @@ test.describe('project columns', () => {
 
     const makeDefaultModal = page.locator('dialog[id^="default-project-column-modal-"]').last();
     await expect(makeDefaultModal).toBeHidden();
-    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByLabel('Column menu').click();
     await testColumn.getByRole('option', {name: 'Set default'}).click();
     await expect(makeDefaultModal).toBeVisible();
     await makeDefaultModal.getByRole('button', {name: 'Confirm'}).click();
@@ -264,7 +264,7 @@ test.describe('project columns', () => {
     await expect(makeDefaultModal).toBeVisible();
     await expect(page.locator('.toast-body', {hasText: 'Network error'})).toBeVisible();
     await makeDefaultModal.evaluate((m: HTMLDialogElement) => m.close());
-    await testColumn.getByRole('combobox').click(); // TODO: label, and improved dropdown?
+    await testColumn.getByLabel('Column menu').click();
     await expect(testColumn.getByRole('option', {name: 'Set default'})).toBeVisible();
   });
 
