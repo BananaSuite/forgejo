@@ -23,8 +23,8 @@ const (
 	packageVersion      = "0:1.0.1-te~st"
 	packageArchitecture = "amd64"
 	packageAuthor       = "KN4CK3R"
-	packageDescription  = "single line synopsis\n extended description\n with multiple\n lines.\n .\n New paragraph!\n With verbatim list:\n  * item a\n  * item b\n extending b"
-	description         = "single line synopsis\n\nextended description with multiple lines.\n\nNew paragraph! With verbatim list:\n* item a\n* item b extending b"
+	packageDescription  = "single line synopsis\n extended description\n with multiple\n lines.\n .\n New paragraph!\n With verbatim list:\n  * item a\n  * item b\n extending b\n .\n    indented with 4 spaces"
+	description         = "single line synopsis\n\nextended description with multiple lines.\n\nNew paragraph! With verbatim list:\n* item a\n* item b extending b\n\n  indented with 4 spaces"
 	projectURL          = "https://gitea.io"
 )
 
