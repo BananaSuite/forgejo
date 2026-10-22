@@ -26,12 +26,12 @@ test.describe('project columns', () => {
     await page.getByRole('link', {name: projectName}).click();
   });
 
-  async function tryCreateColumn(page: Page, expectModalStillVisible: boolean = false) {
+  async function tryCreateColumn(page: Page, columnName: string, expectModalStillVisible: boolean = false) {
     const createModal = page.locator('dialog#new-project-column-item');
     await expect(createModal).toBeHidden();
     await page.getByRole('button', {name: 'New column'}).click();
     await expect(createModal).toBeVisible();
-    await createModal.getByRole('textbox', {name: 'Name'}).fill('Test column');
+    await createModal.getByRole('textbox', {name: 'Name'}).fill(columnName);
     await createModal.getByRole('button', {name: 'Create column'}).click();
     if (expectModalStillVisible) {
       await expect(createModal).toBeVisible();
@@ -42,7 +42,7 @@ test.describe('project columns', () => {
 
   test('create success', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
-    await tryCreateColumn(page);
+    await tryCreateColumn(page, 'Test column');
     await expect(page.locator('.project-column', {hasText: 'Test column'})).toBeVisible();
     await expect(page.locator('.toast-body')).toBeHidden();
   });
@@ -66,13 +66,13 @@ test.describe('project columns', () => {
     await page.route(pathname, (route) => route.abort('internetdisconnected'));
 
     await expect(page.locator('.project-column')).toBeHidden();
-    await tryCreateColumn(page, true); // modal didn't go away
+    await tryCreateColumn(page, 'Test column', true); // modal didn't go away
     await expect(page.locator('.toast-body', {hasText: 'Network error'})).toBeVisible();
   });
 
   test('edit success', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
-    await tryCreateColumn(page);
+    await tryCreateColumn(page, 'Test column');
     const testColumn = page.locator('.project-column').first();
     const testColumnTitle = testColumn.locator('span.project-column-title-label'); // TODO: heading level 3 or 4
     await expect(testColumn).toBeVisible();
@@ -96,7 +96,7 @@ test.describe('project columns', () => {
 
   test('cancel edit closes modal', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
-    await tryCreateColumn(page);
+    await tryCreateColumn(page, 'Test column');
     const testColumn = page.locator('.project-column').first();
     const testColumnTitle = testColumn.locator('span.project-column-title-label'); // TODO: heading level 3 or 4
     await expect(testColumn).toBeVisible();
@@ -119,7 +119,7 @@ test.describe('project columns', () => {
 
   test('edit failure displays toast', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
-    await tryCreateColumn(page);
+    await tryCreateColumn(page, 'Test column');
     const testColumn = page.locator('.project-column').first();
     const testColumnTitle = testColumn.locator('span.project-column-title-label'); // TODO: heading level 3 or 4
     await expect(testColumn).toBeVisible();
@@ -146,8 +146,8 @@ test.describe('project columns', () => {
 
   test('delete success', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
-    await tryCreateColumn(page);
-    await tryCreateColumn(page);
+    await tryCreateColumn(page, 'Test column 1');
+    await tryCreateColumn(page, 'Test column 2');
     await expect(page.locator('.project-column')).toHaveCount(2);
     const extraColumn = page.locator('.project-column').last();
     await extraColumn.getByLabel('Column menu').click();
@@ -160,13 +160,15 @@ test.describe('project columns', () => {
     await expect(deleteModal).toBeHidden();
     await expect(page.locator('.project-column')).toHaveCount(1);
     await expect(page.locator('.toast-body')).toBeHidden();
-    // TODO: test that a specific column was deleted, not just any column
+    const testColumnTitle = extraColumn.locator('span.project-column-title-label'); // TODO: heading level 3 or 4
+    await expect(testColumnTitle).toHaveText('Test column 1');
+    await expect(testColumnTitle).not.toHaveText('Test column 2'); // second column was deleted
   });
 
   test('cancel delete closes modal', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
-    await tryCreateColumn(page);
-    await tryCreateColumn(page);
+    await tryCreateColumn(page, 'Test column');
+    await tryCreateColumn(page, 'Test column 2');
     await expect(page.locator('.project-column')).toHaveCount(2);
     const extraColumn = page.locator('.project-column').last();
     await extraColumn.getByLabel('Column menu').click();
@@ -182,8 +184,8 @@ test.describe('project columns', () => {
 
   test('delete failure displays toast', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
-    await tryCreateColumn(page);
-    await tryCreateColumn(page);
+    await tryCreateColumn(page, 'Test column');
+    await tryCreateColumn(page, 'Test column 2');
     await expect(page.locator('.project-column')).toHaveCount(2);
     const extraColumn = page.locator('.project-column').last();
 
@@ -204,8 +206,8 @@ test.describe('project columns', () => {
 
   test('set default success', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
-    await tryCreateColumn(page);
-    await tryCreateColumn(page);
+    await tryCreateColumn(page, 'Test column');
+    await tryCreateColumn(page, 'Test column 2');
     await expect(page.locator('.project-column')).toHaveCount(2);
     const testColumn = page.locator('.project-column').last();
 
@@ -225,8 +227,8 @@ test.describe('project columns', () => {
 
   test('cancel set default closes modal', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
-    await tryCreateColumn(page);
-    await tryCreateColumn(page);
+    await tryCreateColumn(page, 'Test column');
+    await tryCreateColumn(page, 'Test column 2');
     await expect(page.locator('.project-column')).toHaveCount(2);
     const testColumn = page.locator('.project-column').last();
 
@@ -245,8 +247,8 @@ test.describe('project columns', () => {
 
   test('set default failure displays toast', async ({page}) => {
     await expect(page.locator('.project-column')).toBeHidden();
-    await tryCreateColumn(page);
-    await tryCreateColumn(page);
+    await tryCreateColumn(page, 'Test column');
+    await tryCreateColumn(page, 'Test column 2');
     await expect(page.locator('.project-column')).toHaveCount(2);
     const testColumn = page.locator('.project-column').last();
 
