@@ -70,4 +70,12 @@ func TestGetLatestCommitStatusForRepoAndSHAs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, statuses)
 	})
+
+	t.Run("db error", func(t *testing.T) {
+		defer unittest.SetFaultInjector(0)()
+
+		statuses, err := GetLatestCommitStatusForRepoAndSHAs(ctx, []RepoSHA{{RepoID: 1, SHA: shaA}})
+		require.ErrorIs(t, err, unittest.ErrFaultInjected)
+		assert.Nil(t, statuses)
+	})
 }
