@@ -160,15 +160,20 @@ func ParseControlFile(r io.Reader) (*Package, error) {
 			switch key {
 			case "Description":
 				// From https://www.debian.org/doc/debian-policy/ch-controlfields.html#description
+				// Point 2, if the line starts with '  ', then interpret as new line
+				if line[:2] == "  " || line[:2] == "\t\t" {
+					p.Metadata.Description += "\n" + strings.TrimPrefix(strings.TrimPrefix(line, "  "), "\t\t")
+					descParagraph = false
+					continue
+				}
 				// Point 3, if the line is ' .', then interpret it as a blank line.
-				if line == " ." {
+				if line == " ." || line == "\t." {
 					// The first newline is to end the current line, the second newline is
 					// to indicate the blank line.
 					p.Metadata.Description += "\n\n"
 					descParagraph = true
 					continue
 				}
-
 				if descParagraph {
 					// New paragraph is started, strip the leading space.
 					descParagraph = false
