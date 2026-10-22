@@ -178,7 +178,7 @@ func ParseControlFile(r io.Reader) (*Package, error) {
 				if descParagraph {
 					// New paragraph is started, strip the leading space.
 					descParagraph = false
-					description += strings.TrimPrefix(line, " ")
+					description += strings.TrimPrefix(strings.TrimPrefix(line, " "), "\t")
 				} else {
 					description += line
 				}

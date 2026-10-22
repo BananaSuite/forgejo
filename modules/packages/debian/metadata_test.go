@@ -193,6 +193,18 @@ func TestParseControlFile(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, p)
 		assert.Equal(t, "A\n\nB\n\nC", p.Metadata.Description)
+		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n\tB\n\tC"))
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		assert.Equal(t, "A\n\nB\tC", p.Metadata.Description)
+		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n\tB\n\t\tC\n\t\tD\n\t\t\t\tE\n\tF"))
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		assert.Equal(t, "A\n\nB\nC\nD\n\t\tE\tF", p.Metadata.Description)
+		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n\tB\n\t.\n\tC"))
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		assert.Equal(t, "A\n\nB\n\nC", p.Metadata.Description)
 	})
 
 	t.Run("Valid", func(t *testing.T) {
