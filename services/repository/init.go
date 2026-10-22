@@ -33,11 +33,11 @@ func initRepoCommit(ctx context.Context, tmpPath string, repo *repo_model.Reposi
 	committerName := sig.Name
 	committerEmail := sig.Email
 
-	if stdout, _, err := git.NewCommand(ctx, "add", "--all").
+	if stdout, _, err := git.NewCommand(ctx, "add", "--all", "--force").
 		SetDescription(fmt.Sprintf("initRepoCommit (git add): %s", tmpPath)).
 		RunStdString(&git.RunOpts{Dir: tmpPath}); err != nil {
-		log.Error("git add --all failed: Stdout: %s\nError: %v", stdout, err)
-		return fmt.Errorf("git add --all: %w", err)
+		log.Error("git add --all --forcefailed: Stdout: %s\nError: %v", stdout, err)
+		return fmt.Errorf("git add --all --force: %w", err)
 	}
 
 	cmd := git.NewCommand(ctx, "commit", "--message=Initial commit").
