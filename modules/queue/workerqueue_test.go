@@ -180,10 +180,10 @@ func testWorkerPoolQueuePersistence(t *testing.T, queueSetting setting.QueueSett
 func TestWorkerPoolQueueActiveWorkers(t *testing.T) {
 	defer test.MockVariableValue(&workerIdleDuration, 300*time.Millisecond)()
 
-	chGoroutineIDs := make(chan string)
+	syncChannel := make(chan struct{})
 	handler := func(items ...int) (unhandled []int) {
 		time.Sleep(100 * time.Millisecond)
-		chGoroutineIDs <- goroutineID() // hacky way to identify a worker
+		syncChannel <- struct{}{}
 		return nil
 	}
 
@@ -203,7 +203,7 @@ func TestWorkerPoolQueueActiveWorkers(t *testing.T) {
 
 	// Wait for all tasks in the queue to finish
 	for range workloadSize {
-		<-chGoroutineIDs
+		<-syncChannel
 	}
 	// Wait a small amount of time to give the queue time to get done
 	// This amount of time plus the previous time should be well below the idle duration
@@ -228,7 +228,7 @@ func TestWorkerPoolQueueActiveWorkers(t *testing.T) {
 
 	// Wait for all tasks in the queue to finish
 	for range workloadSize {
-		<-chGoroutineIDs
+		<-syncChannel
 	}
 	time.Sleep(50 * time.Millisecond)
 	assert.Equal(t, 3, q.GetWorkerNumber())
@@ -236,7 +236,7 @@ func TestWorkerPoolQueueActiveWorkers(t *testing.T) {
 	time.Sleep(workerIdleDuration)
 	assert.Equal(t, 1, q.GetWorkerNumber()) // there is at least one worker after the queue begins working
 	stop()
-	close(chGoroutineIDs)
+	close(syncChannel)
 }
 
 func TestWorkerPoolQueueShutdown(t *testing.T) {
