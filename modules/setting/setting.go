@@ -59,8 +59,14 @@ func init() {
 func initialAppDocsVer() string {
 	result := "latest"
 
+	// if "dev", use default
+	appVer := strings.TrimSpace(AppVer)
+	if appVer == "dev" {
+		return result
+	}
+
 	// parse semver if we haven't yet
-	ver, err := version.NewSemver(strings.TrimSpace(AppVer))
+	ver, err := version.NewSemver(appVer)
 	if err != nil {
 		log.Warn("Doclinks will fallback to version '%s' due to err: %v", result, err)
 	} else {
