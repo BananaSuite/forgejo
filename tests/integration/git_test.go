@@ -57,7 +57,8 @@ func TestActionsTokenAuth(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		task := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionTask{ID: 47})
 		task.GenerateToken()
-		actions_model.UpdateTask(db.DefaultContext, task)
+		task.UpdateToken(t.Context())
+		actions_model.UpdateTask(t.Context(), task)
 		u.User = url.UserPassword("token", task.Token)
 
 		t.Run("clone task's own repo", func(t *testing.T) {

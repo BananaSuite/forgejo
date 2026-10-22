@@ -13,7 +13,6 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	auth_model "forgejo.org/models/auth"
-	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
@@ -38,8 +37,9 @@ func NewActionsUserTestContext(t *testing.T, username, reponame string) APITestC
 	task.RepoID = repo.ID
 	task.OwnerID = repoOwner.ID
 	task.GenerateToken()
+	task.UpdateToken(t.Context())
 
-	actions_model.UpdateTask(db.DefaultContext, task)
+	actions_model.UpdateTask(t.Context(), task)
 	return APITestContext{
 		Session:  emptyTestSession(t),
 		Token:    task.Token,
