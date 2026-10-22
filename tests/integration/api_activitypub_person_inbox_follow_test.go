@@ -42,7 +42,6 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 
 		distantURL := federatedSrv.URL
 		distantUser15URL := fmt.Sprintf("%s/api/v1/activitypub/user-id/15", distantURL)
-		distantUser15AliasURL := fmt.Sprintf("%s/api/v1/activitypub/user-id/alias15", distantURL)
 
 		localUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		localUser2URL := localUrl.JoinPath("/api/v1/activitypub/user-id/2").String()
@@ -55,7 +54,7 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 			`{"type":"Follow",`+
 				`"actor":"%s",`+
 				`"object":"%s"}`,
-			distantUser15AliasURL,
+			distantUser15URL,
 			localUser2URL,
 		)
 
@@ -65,7 +64,7 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 		distantURI, err := url.Parse(distantURL)
 		require.NoError(t, err)
 
-		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey, mock.ApActor.KeyID(federatedSrv.URL), []*url.URL{distantURI})
+		c, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey, mock.Persons[0].KeyID(federatedSrv.URL), []*url.URL{distantURI})
 		require.NoError(t, err)
 
 		resp, err := c.Post(followActivity, localUser2Inbox)
@@ -103,8 +102,8 @@ func TestActivityPubPersonInboxFollow(t *testing.T) {
 			localUser2URL,
 		)
 
-		c, err = cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
-			mock.ApActor.KeyID(federatedSrv.URL), nil)
+		c, err = cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
+			mock.Persons[0].KeyID(federatedSrv.URL), nil)
 
 		require.NoError(t, err)
 
@@ -138,7 +137,7 @@ func TestActivityPubFollowRefollow(t *testing.T) {
 		defer test.MockVariableValue(&setting.AppURL, localUrl.String())()
 
 		distantURL := federatedSrv.URL
-		distantUser15AliasURL := fmt.Sprintf("%s/api/v1/activitypub/user-id/alias15", distantURL)
+		distantUser15URL := fmt.Sprintf("%s/api/v1/activitypub/user-id/15", distantURL)
 
 		localUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 		localUser2URL := localUrl.JoinPath("/api/v1/activitypub/user-id/2")
@@ -159,7 +158,7 @@ func TestActivityPubFollowRefollow(t *testing.T) {
 		assert.Equal(t, int64(2), follow.FollowedUserID)
 
 		apiCtx, _ := contexttest.MockAPIContext(t, localUser2Inbox.String())
-		err = federation.FollowRemoteActor(apiCtx, localUser, distantUser15AliasURL)
+		err = federation.FollowRemoteActor(apiCtx, localUser, distantUser15URL)
 		require.NoError(t, err)
 	})
 }

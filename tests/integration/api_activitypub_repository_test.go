@@ -89,8 +89,11 @@ func TestActivityPubRepositoryInboxValid(t *testing.T) {
 		cf, err := activitypub.NewClientFactoryWithTimeout(60 * time.Second)
 		require.NoError(t, err)
 
-		c, err := cf.WithKeysDirect(ctx, mock.ApActor.PrivKey,
-			mock.ApActor.KeyID(federatedSrv.URL), nil)
+		c15, err := cf.WithKeysDirect(ctx, mock.Persons[0].PrivKey,
+			mock.Persons[0].KeyID(federatedSrv.URL), nil)
+		require.NoError(t, err)
+		c30, err := cf.WithKeysDirect(ctx, mock.Persons[1].PrivKey,
+			mock.Persons[1].KeyID(federatedSrv.URL), nil)
 		require.NoError(t, err)
 
 		activity1 := fmt.Appendf(nil,
@@ -101,7 +104,7 @@ func TestActivityPubRepositoryInboxValid(t *testing.T) {
 			timeNow.Format(time.RFC3339),
 			federatedSrv.URL, u.JoinPath(fmt.Sprintf("/api/v1/activitypub/repository-id/%d", repositoryID)).String())
 		t.Logf("activity: %s", activity1)
-		resp, err := c.Post(activity1, localRepoInbox)
+		resp, err := c15.Post(activity1, localRepoInbox)
 
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -120,7 +123,7 @@ func TestActivityPubRepositoryInboxValid(t *testing.T) {
 			timeNow.Add(time.Second).Format(time.RFC3339),
 			federatedSrv.URL, u.JoinPath(fmt.Sprintf("/api/v1/activitypub/repository-id/%d", repositoryID)).String())
 		t.Logf("activity: %s", activity2)
-		resp, err = c.Post(activity2, localRepoInbox)
+		resp, err = c30.Post(activity2, localRepoInbox)
 
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -140,7 +143,7 @@ func TestActivityPubRepositoryInboxValid(t *testing.T) {
 			timeNow.Add(time.Second*2).Format(time.RFC3339),
 			federatedSrv.URL, u.JoinPath(fmt.Sprintf("/api/v1/activitypub/repository-id/%d", otherRepositoryID)).String())
 		t.Logf("activity: %s", activity3)
-		resp, err = c.Post(activity3, otherRepoInboxURL)
+		resp, err = c30.Post(activity3, otherRepoInboxURL)
 
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -149,7 +152,7 @@ func TestActivityPubRepositoryInboxValid(t *testing.T) {
 		unittest.AssertExistsAndLoadBean(t, &user.User{ID: federatedUser.UserID})
 
 		// Replay activity2.
-		resp, err = c.Post(activity2, localRepoInbox)
+		resp, err = c30.Post(activity2, localRepoInbox)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNotAcceptable, resp.StatusCode)
 	})

@@ -19,6 +19,10 @@ import (
 var FedCtxDataKeyIDKey = "FederationKeyID"
 
 func GetKeyID(ctx app_context.APIContext) (string, error) {
+	if !setting.Federation.SignatureEnforced {
+		return "", nil
+	}
+
 	v := ctx.GetData()[FedCtxDataKeyIDKey]
 	if v == nil {
 		return "", fmt.Errorf("Error getting keyID from ContextDataStore")
