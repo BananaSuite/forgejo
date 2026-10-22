@@ -23,7 +23,8 @@ const (
 	packageVersion      = "0:1.0.1-te~st"
 	packageArchitecture = "amd64"
 	packageAuthor       = "KN4CK3R"
-	description         = "Description with multiple lines.\n\nNew paragraph! With verbatim list:\n* item a\n* item b"
+	packageDescription  = "single line synopsis\n extended description\n with multiple\n lines.\n .\n New paragraph!\n With verbatim list:\n  * item a\n  * item b\n extending b"
+	description         = "single line synopsis\n\nextended description with multiple lines.\n\nNew paragraph! With verbatim list:\n* item a\n* item b extending b"
 	projectURL          = "https://gitea.io"
 )
 
@@ -139,15 +140,15 @@ func (nopCloser) Close() error {
 }
 
 func TestParseControlFile(t *testing.T) {
-	buildContent := func(name, version, architecture string) *bytes.Buffer {
+	buildContent := func(name, version, architecture, description string) *bytes.Buffer {
 		var buf bytes.Buffer
-		buf.WriteString("Package: " + name + "\nVersion: " + version + "\nArchitecture: " + architecture + "\nMaintainer: " + packageAuthor + " <kn4ck3r@gitea.io>\nHomepage: " + projectURL + "\nDepends: a,\n b\nDescription: Description\n with multiple\n lines.\n .\n New paragraph!\n With verbatim list:\n  * item a\n  * item b")
+		buf.WriteString("Package: " + name + "\nVersion: " + version + "\nArchitecture: " + architecture + "\nMaintainer: " + packageAuthor + " <kn4ck3r@gitea.io>\nHomepage: " + projectURL + "\nDepends: a,\n b\nDescription: " + description)
 		return &buf
 	}
 
 	t.Run("InvalidName", func(t *testing.T) {
 		for _, name := range []string{"", "-cd"} {
-			p, err := ParseControlFile(buildContent(name, packageVersion, packageArchitecture))
+			p, err := ParseControlFile(buildContent(name, packageVersion, packageArchitecture, packageDescription))
 			assert.Nil(t, p)
 			require.ErrorIs(t, err, ErrInvalidName)
 		}
@@ -155,28 +156,47 @@ func TestParseControlFile(t *testing.T) {
 
 	t.Run("InvalidVersion", func(t *testing.T) {
 		for _, version := range []string{"", "1-", ":1.0", "1_0"} {
-			p, err := ParseControlFile(buildContent(packageName, version, packageArchitecture))
+			p, err := ParseControlFile(buildContent(packageName, version, packageArchitecture, packageDescription))
 			assert.Nil(t, p)
 			require.ErrorIs(t, err, ErrInvalidVersion)
 		}
 	})
 
 	t.Run("InvalidArchitecture", func(t *testing.T) {
-		p, err := ParseControlFile(buildContent(packageName, packageVersion, ""))
+		p, err := ParseControlFile(buildContent(packageName, packageVersion, "", packageDescription))
 		assert.Nil(t, p)
 		require.ErrorIs(t, err, ErrInvalidArchitecture)
 	})
 
 	t.Run("ValidVersionEpoch", func(t *testing.T) {
 		for _, version := range []string{"0:1.2.3-test", "1:1.2.3-test", "9:1.2.3-test", "10:1.2.3-test", "37:1.2.3-test", "99:1.2.3-test"} {
-			p, err := ParseControlFile(buildContent(packageName, version, packageArchitecture))
+			p, err := ParseControlFile(buildContent(packageName, version, packageArchitecture, packageDescription))
 			require.NoError(t, err)
 			assert.NotNil(t, p)
 		}
 	})
 
+	t.Run("ValidPackageDescription", func(t *testing.T) {
+		p, err := ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A"))
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		assert.Equal(t, "A", p.Metadata.Description)
+		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n B\n C"))
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		assert.Equal(t, "A\n\nB C", p.Metadata.Description)
+		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n B\n  C\n  D\n    E\n F"))
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		assert.Equal(t, "A\n\nB\nC\nD\n  E F", p.Metadata.Description)
+		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n B\n .\n C"))
+		require.NoError(t, err)
+		assert.NotNil(t, p)
+		assert.Equal(t, "A\n\nB\n\nC", p.Metadata.Description)
+	})
+
 	t.Run("Valid", func(t *testing.T) {
-		content := buildContent(packageName, packageVersion, packageArchitecture)
+		content := buildContent(packageName, packageVersion, packageArchitecture, packageDescription)
 		full := content.String()
 
 		p, err := ParseControlFile(content)

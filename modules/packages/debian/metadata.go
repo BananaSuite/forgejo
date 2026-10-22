@@ -143,7 +143,8 @@ func ParseControlFile(r io.Reader) (*Package, error) {
 	}
 
 	key := ""
-	descParagraph := false
+	descParagraph := true
+	description := ""
 	var depends strings.Builder
 	var control strings.Builder
 
@@ -162,7 +163,7 @@ func ParseControlFile(r io.Reader) (*Package, error) {
 				// From https://www.debian.org/doc/debian-policy/ch-controlfields.html#description
 				// Point 2, if the line starts with '  ', then interpret as new line
 				if line[:2] == "  " || line[:2] == "\t\t" {
-					p.Metadata.Description += "\n" + strings.TrimPrefix(strings.TrimPrefix(line, "  "), "\t\t")
+					description += "\n" + strings.TrimPrefix(strings.TrimPrefix(line, "  "), "\t\t")
 					descParagraph = false
 					continue
 				}
@@ -170,16 +171,16 @@ func ParseControlFile(r io.Reader) (*Package, error) {
 				if line == " ." || line == "\t." {
 					// The first newline is to end the current line, the second newline is
 					// to indicate the blank line.
-					p.Metadata.Description += "\n\n"
+					description += "\n\n"
 					descParagraph = true
 					continue
 				}
 				if descParagraph {
 					// New paragraph is started, strip the leading space.
 					descParagraph = false
-					p.Metadata.Description += strings.TrimPrefix(line, " ")
+					description += strings.TrimPrefix(line, " ")
 				} else {
-					p.Metadata.Description += line
+					description += line
 				}
 			case "Depends":
 				depends.WriteString(trimmed)
@@ -207,7 +208,7 @@ func ParseControlFile(r io.Reader) (*Package, error) {
 					p.Metadata.Maintainer = a.Name
 				}
 			case "Description":
-				p.Metadata.Description = value
+				description = value + "\n\n"
 			case "Depends":
 				depends.WriteString(value)
 			case "Homepage":
@@ -230,6 +231,8 @@ func ParseControlFile(r io.Reader) (*Package, error) {
 	if p.Architecture == "" {
 		return nil, ErrInvalidArchitecture
 	}
+
+	p.Metadata.Description = strings.TrimSpace(description)
 
 	dependencies := strings.Split(depends.String(), ",")
 	for i := range dependencies {
