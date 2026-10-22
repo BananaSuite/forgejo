@@ -6,24 +6,27 @@
 // web_src/js/features/repo-projects.ts
 // @watch end
 
-import {expect, type Page} from '@playwright/test';
+import {expect, type Page, type TestInfo} from '@playwright/test';
 import {test} from './utils_e2e.ts';
 
 test.use({user: 'user2'});
+
+async function createProjectForTest(page: Page, testInfo: TestInfo) {
+  // create a project for this test (project IDs are not always predictable, but test name works ok)
+  const testPath = testInfo.titlePath.join(' › ');
+  const testTitle = `${testPath} (${testInfo.project.name})`; // e.g. "repo-projects › project columns › create (Mobile Chrome)"
+  const projectName = `Test project: ${testTitle}`;
+  await page.getByRole('link', {name: 'New project'}).click();
+  await page.getByRole('textbox', {name: 'Title'}).fill(projectName);
+  await page.getByRole('button', {name: 'Create project'}).click();
+  await page.getByRole('link', {name: projectName}).click();
+}
 
 test.describe('project columns', () => {
   test.beforeEach(async ({page}, testInfo) => {
     const resp = await page.goto('/user2/repo2/projects');
     expect(resp.status()).toBe(200);
-
-    // create a project for this test (project IDs are not always predictable, but test name works ok)
-    const testPath = testInfo.titlePath.join(' › ');
-    const testTitle = `${testPath} (${testInfo.project.name})`; // e.g. "repo-projects › project columns › create (Mobile Chrome)"
-    const projectName = `Test project: ${testTitle}`;
-    await page.getByRole('link', {name: 'New project'}).click();
-    await page.getByRole('textbox', {name: 'Title'}).fill(projectName);
-    await page.getByRole('button', {name: 'Create project'}).click();
-    await page.getByRole('link', {name: projectName}).click();
+    await createProjectForTest(page, testInfo);
   });
 
   async function tryCreateColumn(page: Page, columnName: string, expectModalStillVisible: boolean = false) {
@@ -270,6 +273,7 @@ test.describe('project columns', () => {
     await expect(testColumn.getByRole('option', {name: 'Set default'})).toBeVisible();
   });
 
-  // TODO: project delete behaves
   // TODO: toast when response goes through but it's 4xx or 5xx
 });
+
+// TODO: project delete behaves
