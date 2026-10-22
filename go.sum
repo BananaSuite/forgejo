@@ -40,8 +40,8 @@ code.forgejo.org/go-chi/captcha v1.0.3 h1:ii3VrlhSJeSyJA2GD/UvjY3tbzGB0ZH/og1ZPV
 code.forgejo.org/go-chi/captcha v1.0.3/go.mod h1:YXw47044t3pHWdigYyn+NMnccv0Y9h69kDwpMsCO2C4=
 code.forgejo.org/go-chi/session v1.1.0 h1:xIxqNHh4G0lrgoXlBfFSd5BL7qcOXHW26gCPOplGnzc=
 code.forgejo.org/go-chi/session v1.1.0/go.mod h1:/JtAY2Ny3oC5GNUwBfsjM34NKcZe08+P/g115IHWLSM=
-code.forgejo.org/xorm/xorm v1.4.1 h1:LnauiMKnGv6wdHRyHjcOh1uZ1LICnEe7Vkcq/dZaRw8=
-code.forgejo.org/xorm/xorm v1.4.1/go.mod h1:c6nAsDepRhg2QI4TvTgo263IXCTCYKTWJAyZM4XGbog=
+code.forgejo.org/xorm/xorm v1.5.0 h1:tmw5jKOJ60qEzULfQhxpEXeipiKDYW4ZdwK+mrC9lkU=
+code.forgejo.org/xorm/xorm v1.5.0/go.mod h1:LxLb0+U/h4iYfT+h8eOEiFccFOnAPWYtBFz4BdMnDnA=
 code.gitea.io/sdk/gitea v0.21.0 h1:69n6oz6kEVHRo1+APQQyizkhrZrLsTLXey9142pfkD4=
 code.gitea.io/sdk/gitea v0.21.0/go.mod h1:tnBjVhuKJCn8ibdyyhvUyxrR1Ca2KHEoTWoukNhXQPA=
 code.pfad.fr/check v1.1.0 h1:GWvjdzhSEgHvEHe2uJujDcpmZoySKuHQNrZMfzfO0bE=
@@ -432,8 +432,8 @@ github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSo
 github.com/hexops/valast v1.4.3 h1:oBoGERMJh6UZdRc6cduE1CTPK+VAdXA59Y1HFgu3sm0=
 github.com/hexops/valast v1.4.3/go.mod h1:Iqx2kLj3Jn47wuXpj3wX40xn6F93QNFBHuiKBerkTGA=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
-github.com/huandu/xstrings v1.6.2 h1:+X5X6N46b40cmDw7FFJFU6Eoq0yJS8lbYigT2EFau4c=
-github.com/huandu/xstrings v1.6.2/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
+github.com/huandu/xstrings v1.6.3 h1:7997PcI0mYC9uPNBJ7udg/KrdJh1GhJid8f2tzKFHYQ=
+github.com/huandu/xstrings v1.6.3/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/ianlancetaylor/demangle v0.0.0-20230524184225-eabc099b10ab/go.mod h1:gx7rwoVhcfuVKG5uya9Hs3Sxj7EIvldVofAWIUtGouw=
 github.com/inbucket/html2text v1.0.0 h1:N5kza++4uBBDJ2Z3KUnTRyPNoBcW+YfOgNiNmNB+sgs=

@@ -15,7 +15,7 @@ require (
 	code.forgejo.org/go-chi/cache v1.0.1
 	code.forgejo.org/go-chi/captcha v1.0.3
 	code.forgejo.org/go-chi/session v1.1.0
-	code.forgejo.org/xorm/xorm v1.4.1
+	code.forgejo.org/xorm/xorm v1.5.0
 	code.gitea.io/sdk/gitea v0.21.0
 	codeberg.org/gusted/mcaptcha v0.0.0-20220723083913-4f3072e1d570
 	connectrpc.com/connect v1.21.1
@@ -63,7 +63,7 @@ require (
 	github.com/gorilla/sessions v1.4.0
 	github.com/hashicorp/go-version v1.8.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/huandu/xstrings v1.6.2
+	github.com/huandu/xstrings v1.6.3
 	github.com/inbucket/html2text v1.0.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/jhillyerd/enmime/v2 v2.2.0
