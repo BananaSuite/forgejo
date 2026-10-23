@@ -143,6 +143,9 @@ func runHTTPSWithTLSConfig(network, listenAddr, name string, tlsConfig *tls.Conf
 	return graceful.HTTPListenAndServeTLSConfig(network, listenAddr, name, tlsConfig, m, useProxyProtocol, proxyProtocolTLSBridging)
 }
 
+// certCheckInterval limits how often handshakes check the certificate files for changes.
+var certCheckInterval = time.Second
+
 // certReloader serves the certificate from certFile and keyFile and reloads it
 // when either file's modification time changes.
 type certReloader struct {
@@ -151,8 +154,11 @@ type certReloader struct {
 	mu              sync.Mutex
 	cert            *tls.Certificate
 	certMod, keyMod time.Time
+	checked         time.Time
+	lastErr         string
 }
 
+// load must be called with r.mu held once the listener is serving.
 func (r *certReloader) load() error {
 	certInfo, err := os.Stat(r.certFile)
 	if err != nil {
@@ -163,8 +169,6 @@ func (r *certReloader) load() error {
 		return err
 	}
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	if r.cert != nil && certInfo.ModTime().Equal(r.certMod) && keyInfo.ModTime().Equal(r.keyMod) {
 		return nil
 	}
@@ -183,10 +187,19 @@ func (r *certReloader) load() error {
 // GetCertificate keeps serving the previous certificate if a reload fails, which
 // covers a renewal that has written the cert file but not yet the key file.
 func (r *certReloader) GetCertificate(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-	if err := r.load(); err != nil {
-		log.Error("Failed to reload https cert file %s and key file %s: %v", r.certFile, r.keyFile, err)
-	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if time.Since(r.checked) < certCheckInterval {
+		return r.cert, nil
+	}
+	r.checked = time.Now()
+
+	if err := r.load(); err == nil {
+		r.lastErr = ""
+	} else if err.Error() != r.lastErr {
+		r.lastErr = err.Error()
+		log.Error("Failed to reload https cert file %s and key file %s: %v", r.certFile, r.keyFile, err)
+	}
 	return r.cert, nil
 }

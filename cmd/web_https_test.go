@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"forgejo.org/modules/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,6 +44,8 @@ func writeSelfSignedCert(t *testing.T, certFile, keyFile string, mtime time.Time
 }
 
 func TestCertReloader(t *testing.T) {
+	defer test.MockVariableValue(&certCheckInterval, 0)()
+
 	dir := t.TempDir()
 	certFile := filepath.Join(dir, "cert.pem")
 	keyFile := filepath.Join(dir, "key.pem")
@@ -55,21 +59,31 @@ func TestCertReloader(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, derA, cert.Certificate[0])
 
-	t.Run("reloads on change", func(t *testing.T) {
-		derB := writeSelfSignedCert(t, certFile, keyFile, now.Add(time.Minute))
+	derB := writeSelfSignedCert(t, certFile, keyFile, now.Add(time.Minute))
+	cert, err = r.GetCertificate(nil)
+	require.NoError(t, err)
+	assert.Equal(t, derB, cert.Certificate[0])
 
-		cert, err := r.GetCertificate(nil)
-		require.NoError(t, err)
-		assert.Equal(t, derB, cert.Certificate[0])
+	// An invalid key keeps the previous cert and records the error.
+	require.NoError(t, os.WriteFile(keyFile, []byte("garbage"), 0o600))
+	mtime := now.Add(2 * time.Minute)
+	require.NoError(t, os.Chtimes(keyFile, mtime, mtime))
+	cert, err = r.GetCertificate(nil)
+	require.NoError(t, err)
+	assert.Equal(t, derB, cert.Certificate[0])
+	assert.NotEmpty(t, r.lastErr)
 
-		t.Run("keeps previous cert on invalid key", func(t *testing.T) {
-			require.NoError(t, os.WriteFile(keyFile, []byte("garbage"), 0o600))
-			mtime := now.Add(2 * time.Minute)
-			require.NoError(t, os.Chtimes(keyFile, mtime, mtime))
+	// A valid pair clears the error.
+	derC := writeSelfSignedCert(t, certFile, keyFile, now.Add(3*time.Minute))
+	cert, err = r.GetCertificate(nil)
+	require.NoError(t, err)
+	assert.Equal(t, derC, cert.Certificate[0])
+	assert.Empty(t, r.lastErr)
 
-			cert, err := r.GetCertificate(nil)
-			require.NoError(t, err)
-			assert.Equal(t, derB, cert.Certificate[0])
-		})
-	})
+	// Changes within the check interval are not picked up.
+	defer test.MockVariableValue(&certCheckInterval, time.Hour)()
+	writeSelfSignedCert(t, certFile, keyFile, now.Add(4*time.Minute))
+	cert, err = r.GetCertificate(nil)
+	require.NoError(t, err)
+	assert.Equal(t, derC, cert.Certificate[0])
 }
