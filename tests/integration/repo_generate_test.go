@@ -471,7 +471,7 @@ func TestRepoGenerateFromTemplateIncludeIgnoredFiles(t *testing.T) {
 		template := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
 			IsTemplate: true,
 			Files: forgery.MapFS{
-				"README.md": forgery.MapFile("Hello!"),
+				"README.md":  forgery.MapFile("Hello!"),
 				".gitignore": forgery.MapFile("README.md\n"),
 			},
 		})
@@ -497,6 +497,5 @@ func TestRepoGenerateFromTemplateIncludeIgnoredFiles(t *testing.T) {
 		req = NewRequestf(t, "GET", "/%s/%s/raw/branch/main/README.md", user.Name, generatedName)
 		resp = session.MakeRequest(t, req, http.StatusOK)
 		assert.Equal(t, "Hello!", resp.Body.String())
-
 	})
 }
