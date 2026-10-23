@@ -21,8 +21,7 @@ type CreateTeamOptions struct {
 	Name             string
 	CanCreateOrgRepo bool
 
-	Mode  perm.AccessMode
-	Units []*org_model.TeamUnit
+	Mode perm.AccessMode
 
 	Members []*user_model.User
 }
@@ -46,7 +45,6 @@ func CreateTeam(t *testing.T, org *org_model.Organization, opts *CreateTeamOptio
 		LowerName:               opts.Name,
 		IncludesAllRepositories: true,
 		AccessMode:              opts.Mode,
-		Units:                   opts.Units,
 		CanCreateOrgRepo:        opts.CanCreateOrgRepo,
 	}
 	require.NoError(t, db.Insert(t.Context(), team))
