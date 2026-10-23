@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"forgejo.org/modules/graceful"
 	"forgejo.org/modules/log"
@@ -127,29 +129,64 @@ func runHTTPS(network, listenAddr, name, certFile, keyFile string, m http.Handle
 		tlsConfig.CipherSuites = ciphers
 	}
 
-	tlsConfig.Certificates = make([]tls.Certificate, 1)
-
-	certPEMBlock, err := os.ReadFile(certFile)
-	if err != nil {
-		log.Error("Failed to load https cert file %s for %s:%s: %v", certFile, network, listenAddr, err)
+	r := &certReloader{certFile: certFile, keyFile: keyFile}
+	if err := r.load(); err != nil {
+		log.Error("Failed to load https cert file %s and key file %s for %s:%s: %v", certFile, keyFile, network, listenAddr, err)
 		return err
 	}
-
-	keyPEMBlock, err := os.ReadFile(keyFile)
-	if err != nil {
-		log.Error("Failed to load https key file %s for %s:%s: %v", keyFile, network, listenAddr, err)
-		return err
-	}
-
-	tlsConfig.Certificates[0], err = tls.X509KeyPair(certPEMBlock, keyPEMBlock)
-	if err != nil {
-		log.Error("Failed to create certificate from cert file %s and key file %s for %s:%s: %v", certFile, keyFile, network, listenAddr, err)
-		return err
-	}
+	tlsConfig.GetCertificate = r.GetCertificate
 
 	return graceful.HTTPListenAndServeTLSConfig(network, listenAddr, name, tlsConfig, m, useProxyProtocol, proxyProtocolTLSBridging)
 }
 
 func runHTTPSWithTLSConfig(network, listenAddr, name string, tlsConfig *tls.Config, m http.Handler, useProxyProtocol, proxyProtocolTLSBridging bool) error {
 	return graceful.HTTPListenAndServeTLSConfig(network, listenAddr, name, tlsConfig, m, useProxyProtocol, proxyProtocolTLSBridging)
+}
+
+// certReloader serves the certificate from certFile and keyFile and reloads it
+// when either file's modification time changes.
+type certReloader struct {
+	certFile, keyFile string
+
+	mu              sync.Mutex
+	cert            *tls.Certificate
+	certMod, keyMod time.Time
+}
+
+func (r *certReloader) load() error {
+	certInfo, err := os.Stat(r.certFile)
+	if err != nil {
+		return err
+	}
+	keyInfo, err := os.Stat(r.keyFile)
+	if err != nil {
+		return err
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.cert != nil && certInfo.ModTime().Equal(r.certMod) && keyInfo.ModTime().Equal(r.keyMod) {
+		return nil
+	}
+
+	cert, err := tls.LoadX509KeyPair(r.certFile, r.keyFile)
+	if err != nil {
+		return err
+	}
+	if r.cert != nil {
+		log.Info("Reloaded https cert file %s and key file %s", r.certFile, r.keyFile)
+	}
+	r.cert, r.certMod, r.keyMod = &cert, certInfo.ModTime(), keyInfo.ModTime()
+	return nil
+}
+
+// GetCertificate keeps serving the previous certificate if a reload fails, which
+// covers a renewal that has written the cert file but not yet the key file.
+func (r *certReloader) GetCertificate(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+	if err := r.load(); err != nil {
+		log.Error("Failed to reload https cert file %s and key file %s: %v", r.certFile, r.keyFile, err)
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.cert, nil
 }
