@@ -147,15 +147,15 @@ func runHTTPSWithTLSConfig(network, listenAddr, name string, tlsConfig *tls.Conf
 var certCheckInterval = time.Second
 
 // certReloader serves the certificate from certFile and keyFile and reloads it
-// when either file's modification time changes.
+// when either file's modification time or size changes.
 type certReloader struct {
 	certFile, keyFile string
 
-	mu              sync.Mutex
-	cert            *tls.Certificate
-	certMod, keyMod time.Time
-	checked         time.Time
-	lastErr         string
+	mu                sync.Mutex
+	cert              *tls.Certificate
+	certInfo, keyInfo os.FileInfo
+	checked           time.Time
+	lastErr           string
 }
 
 // load must be called with r.mu held once the listener is serving.
@@ -169,7 +169,12 @@ func (r *certReloader) load() error {
 		return err
 	}
 
-	if r.cert != nil && certInfo.ModTime().Equal(r.certMod) && keyInfo.ModTime().Equal(r.keyMod) {
+	// Sizes are compared too, because a file rewritten in place can keep its
+	// mtime if the write finishes within one timestamp tick.
+	unchanged := func(old, cur os.FileInfo) bool {
+		return old.ModTime().Equal(cur.ModTime()) && old.Size() == cur.Size()
+	}
+	if r.cert != nil && unchanged(r.certInfo, certInfo) && unchanged(r.keyInfo, keyInfo) {
 		return nil
 	}
 
@@ -180,7 +185,7 @@ func (r *certReloader) load() error {
 	if r.cert != nil {
 		log.Info("Reloaded https cert file %s and key file %s", r.certFile, r.keyFile)
 	}
-	r.cert, r.certMod, r.keyMod = &cert, certInfo.ModTime(), keyInfo.ModTime()
+	r.cert, r.certInfo, r.keyInfo = &cert, certInfo, keyInfo
 	return nil
 }
 

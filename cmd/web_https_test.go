@@ -80,10 +80,27 @@ func TestCertReloader(t *testing.T) {
 	assert.Equal(t, derC, cert.Certificate[0])
 	assert.Empty(t, r.lastErr)
 
+	// A rewrite within the same mtime tick is picked up if the size changed.
+	oldInfo, err := os.Stat(certFile)
+	require.NoError(t, err)
+	sameMtime := now.Add(3 * time.Minute)
+	derD := writeSelfSignedCert(t, certFile, keyFile, sameMtime)
+	if newInfo, err := os.Stat(certFile); err == nil && newInfo.Size() == oldInfo.Size() {
+		f, err := os.OpenFile(certFile, os.O_APPEND|os.O_WRONLY, 0)
+		require.NoError(t, err)
+		_, err = f.WriteString("\n")
+		require.NoError(t, err)
+		require.NoError(t, f.Close())
+		require.NoError(t, os.Chtimes(certFile, sameMtime, sameMtime))
+	}
+	cert, err = r.GetCertificate(nil)
+	require.NoError(t, err)
+	assert.Equal(t, derD, cert.Certificate[0])
+
 	// Changes within the check interval are not picked up.
 	defer test.MockVariableValue(&certCheckInterval, time.Hour)()
 	writeSelfSignedCert(t, certFile, keyFile, now.Add(4*time.Minute))
 	cert, err = r.GetCertificate(nil)
 	require.NoError(t, err)
-	assert.Equal(t, derC, cert.Certificate[0])
+	assert.Equal(t, derD, cert.Certificate[0])
 }
