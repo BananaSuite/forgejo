@@ -460,3 +460,40 @@ func TestRepoGenerateTemplatingDotGitDir(t *testing.T) {
 		assert.Equal(t, "Hello!", resp.Body.String())
 	})
 }
+
+func TestRepoGenerateFromTemplateIncludeIgnoredFiles(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user := forgery.CreateUser(t, &forgery.CreateUserOptions{
+			IsAdmin: true, // required to see the detailed error message on the error response
+		})
+		session := loginUser(t, user.Name)
+
+		template := forgery.CreateRepository(t, user, &forgery.CreateRepositoryOptions{
+			IsTemplate: true,
+			Files: forgery.MapFS{
+				"README.md": forgery.MapFile("Hello!"),
+				".gitignore": forgery.MapFile("README.md\n"),
+			},
+		})
+
+		// The repo.TemplateID field is not initialized. Luckily, the ID field holds the expected value
+		templateID := strconv.FormatInt(template.ID, 10)
+		generatedName := "it"
+
+		testRepoGenerateSuccess(
+			t,
+			session,
+			templateID,
+			user.Name,
+			template.Name,
+			user,
+			user,
+			generatedName,
+		)
+
+		req := NewRequestf(t, "GET", "/%s/%s/raw/branch/main/README.md", user.Name, generatedName)
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, "Hello!", resp.Body.String())
+
+	})
+}
