@@ -491,8 +491,11 @@ func TestRepoGenerateFromTemplateIncludeIgnoredFiles(t *testing.T) {
 			generatedName,
 		)
 
-		req := NewRequestf(t, "GET", "/%s/%s/raw/branch/main/README.md", user.Name, generatedName)
+		req := NewRequestf(t, "GET", "/%s/%s/raw/branch/main/.gitignore", user.Name, generatedName)
 		resp := session.MakeRequest(t, req, http.StatusOK)
+		assert.Equal(t, "README.md\n", resp.Body.String())
+		req = NewRequestf(t, "GET", "/%s/%s/raw/branch/main/README.md", user.Name, generatedName)
+		resp = session.MakeRequest(t, req, http.StatusOK)
 		assert.Equal(t, "Hello!", resp.Body.String())
 
 	})
