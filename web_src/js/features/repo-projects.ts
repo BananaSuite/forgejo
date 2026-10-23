@@ -22,7 +22,7 @@ async function createNewColumn(url: string, columnTitle: JQuery, projectColorInp
   } catch (error) {
     console.error(error);
   } finally {
-    columnTitle.closest('form').removeAttr(ATTR_DIRTY); // user already submitted; no need to ask they're sure
+    columnTitle.closest('form')?.removeAttr(ATTR_DIRTY); // user already submitted; no need to ask they're sure
     window.location.reload();
   }
 }
