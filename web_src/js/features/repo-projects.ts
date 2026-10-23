@@ -119,7 +119,7 @@ export function initRepoProject() {
         console.error(error);
       } finally {
         projectTitleLabel.textContent = projectTitleInput?.value;
-        projectTitleInput.closest('form')?.removeAttr(ATTR_DIRTY); // user just submitted; no need to ask they're sure
+        projectTitleInput.closest('form')?.removeAttribute(ATTR_DIRTY); // user just submitted; no need to ask they're sure
         const dividers = boardColumn.querySelectorAll<HTMLDivElement>(':scope > .divider');
         if (projectColorInput.value) {
           const color = contrastColor(projectColorInput.value);
