@@ -3112,7 +3112,7 @@ func NewComment(ctx *context.Context) {
 		return
 	}
 
-	if issue.IsLocked && !ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull) && !ctx.Doer.IsAdmin {
+	if issue.IsLocked && !ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull) {
 		ctx.JSONError(ctx.Tr("repo.issues.comment_on_locked"))
 		return
 	}
