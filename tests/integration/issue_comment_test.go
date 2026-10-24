@@ -18,7 +18,6 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/test"
-	app_context "forgejo.org/services/context"
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
 
@@ -692,21 +691,23 @@ func TestIssueNewComment(t *testing.T) {
 	t.Run("Locked", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		issueSession.MakeRequest(t, NewRequestWithValues(t, "POST", issue.HTMLURL()+"/comments", map[string]string{
-			"content": "Hi there!",
-		}), http.StatusSeeOther)
-		flashCookie := issueSession.GetCookie(app_context.CookieNameFlash)
-		assert.NotNil(t, flashCookie)
-		assert.Equal(t, "error%3DYou%2Bcannot%2Bcomment%2Bon%2Ba%2Blocked%2Bissue.", flashCookie.Value)
+		var errorResp struct {
+			Error string `json:"errorMessage"`
+		}
 
-		pullrequestSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
+		resp := issueSession.MakeRequest(t, NewRequestWithValues(t, "POST", issue.HTMLURL()+"/comments", map[string]string{
 			"content": "Hi there!",
-		}), http.StatusSeeOther)
-		flashCookie = pullrequestSession.GetCookie(app_context.CookieNameFlash)
-		assert.NotNil(t, flashCookie)
-		assert.Equal(t, "error%3DYou%2Bcannot%2Bcomment%2Bon%2Ba%2Blocked%2Bissue.", flashCookie.Value)
+		}), http.StatusBadRequest)
+		DecodeJSON(t, resp, &errorResp)
+		assert.Equal(t, "You cannot comment on a locked issue.", errorResp.Error)
 
-		resp := writeSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
+		resp = pullrequestSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
+			"content": "Hi there!",
+		}), http.StatusBadRequest)
+		DecodeJSON(t, resp, &errorResp)
+		assert.Equal(t, "You cannot comment on a locked issue.", errorResp.Error)
+
+		resp = writeSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
 			"content": "Hi there!",
 		}), http.StatusOK)
 		assert.NotEmpty(t, test.RedirectURL(resp))
