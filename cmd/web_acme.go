@@ -81,9 +81,14 @@ func runACME(listenAddr string, m http.Handler) error {
 		HTTPProxy:               proxy.Proxy(),
 	}
 
-	// Preserve behavior to use Let's encrypt test CA when Let's encrypt is CA.
 	if certmagic.DefaultACME.CA == certmagic.LetsEncryptProductionCA {
+		// Preserve behavior to use Let's encrypt test CA when Let's encrypt is CA.
 		certmagic.DefaultACME.TestCA = certmagic.LetsEncryptStagingCA
+
+		if ip := net.ParseIP(setting.Domain); ip != nil {
+			// https://letsencrypt.org/docs/profiles/
+			certmagic.DefaultACME.Profile = "shortlived"
+		}
 	}
 
 	magic := certmagic.NewDefault()
