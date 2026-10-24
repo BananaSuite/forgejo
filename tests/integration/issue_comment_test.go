@@ -18,6 +18,7 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/test"
+	app_context "forgejo.org/services/context"
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
 
@@ -641,6 +642,18 @@ func TestIssueNewComment(t *testing.T) {
 		Members:   []*user_model.User{pullrequestUser},
 	})
 
+	writeUser := forgery.CreateUser(t, nil)
+	writeSession := loginUser(t, writeUser.Name)
+
+	adminUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{}, "is_admin = true")
+	adminSession := loginUser(t, adminUser.Name)
+
+	forgery.CreateTeam(t, org, &forgery.CreateTeamOptions{
+		Mode:      perm.AccessModeWrite,
+		UnitTypes: []unit_model.Type{unit_model.TypeIssues, unit_model.TypePullRequests},
+		Members:   []*user_model.User{writeUser},
+	})
+
 	repo := forgery.CreateRepository(t, org.AsUser(), &forgery.CreateRepositoryOptions{IsPrivate: true})
 	issue := forgery.CreateIssue(t, orgOwner, repo, "Issue", "Not relevant")
 	pr := forgery.CreatePullRequest(t, orgOwner, repo, "Pull", "Not relevant")
@@ -666,6 +679,39 @@ func TestIssueNewComment(t *testing.T) {
 		}), http.StatusNotFound)
 
 		resp := pullrequestSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
+			"content": "Hi there!",
+		}), http.StatusOK)
+		assert.NotEmpty(t, test.RedirectURL(resp))
+	})
+
+	issue.IsLocked = true
+	require.NoError(t, issues_model.UpdateIssueCols(t.Context(), issue, "is_locked"))
+	pr.IsLocked = true
+	require.NoError(t, issues_model.UpdateIssueCols(t.Context(), pr, "is_locked"))
+
+	t.Run("Locked", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		issueSession.MakeRequest(t, NewRequestWithValues(t, "POST", issue.HTMLURL()+"/comments", map[string]string{
+			"content": "Hi there!",
+		}), http.StatusSeeOther)
+		flashCookie := issueSession.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "error%3DYou%2Bcannot%2Bcomment%2Bon%2Ba%2Blocked%2Bissue.", flashCookie.Value)
+
+		pullrequestSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
+			"content": "Hi there!",
+		}), http.StatusSeeOther)
+		flashCookie = pullrequestSession.GetCookie(app_context.CookieNameFlash)
+		assert.NotNil(t, flashCookie)
+		assert.Equal(t, "error%3DYou%2Bcannot%2Bcomment%2Bon%2Ba%2Blocked%2Bissue.", flashCookie.Value)
+
+		resp := writeSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
+			"content": "Hi there!",
+		}), http.StatusOK)
+		assert.NotEmpty(t, test.RedirectURL(resp))
+
+		resp = adminSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
 			"content": "Hi there!",
 		}), http.StatusOK)
 		assert.NotEmpty(t, test.RedirectURL(resp))
