@@ -15,6 +15,7 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/gitrepo"
 	api "forgejo.org/modules/structs"
+	"forgejo.org/modules/util"
 	"forgejo.org/modules/web"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
@@ -1352,37 +1353,19 @@ func markPullReviewConversation(ctx *context.APIContext, isResolve bool) {
 		return
 	}
 
-	if !comment.Issue.IsPull {
+	root, err := pull_service.MarkConversation(ctx, comment, ctx.Doer(), isResolve)
+	switch {
+	case errors.Is(err, util.ErrNotExist):
 		ctx.NotFound()
 		return
-	}
-
-	if comment.Type != issues_model.CommentTypeCode {
-		ctx.Error(http.StatusUnprocessableEntity, "", "comment is not part of a review conversation")
+	case errors.Is(err, util.ErrInvalidArgument):
+		ctx.Error(http.StatusUnprocessableEntity, "", err)
 		return
-	}
-
-	canMark, err := issues_model.CanMarkConversation(ctx, comment.Issue, ctx.Doer())
-	if err != nil {
+	case errors.Is(err, util.ErrPermissionDenied):
+		ctx.Error(http.StatusForbidden, "", err)
+		return
+	case err != nil:
 		ctx.InternalServerError(err)
-		return
-	}
-	if !canMark {
-		ctx.Error(http.StatusForbidden, "", "user is not allowed to resolve this conversation")
-		return
-	}
-
-	root, isWrong := loadConversationRoot(ctx, comment)
-	if isWrong {
-		return
-	}
-
-	if err := issues_model.MarkConversation(ctx, root, ctx.Doer(), isResolve); err != nil {
-		ctx.InternalServerError(err)
-		return
-	}
-
-	if root, isWrong = loadConversationRoot(ctx, comment); isWrong {
 		return
 	}
 
@@ -1394,20 +1377,4 @@ func markPullReviewConversation(ctx *context.APIContext, isResolve bool) {
 	}
 
 	ctx.JSON(http.StatusOK, apiComment)
-}
-
-// loadConversationRoot returns the first comment of the conversation, which is the only one holding the resolved mark
-func loadConversationRoot(ctx *context.APIContext, comment *issues_model.Comment) (*issues_model.Comment, bool) {
-	conversation, err := issues_model.FetchCodeConversation(ctx, comment, ctx.Doer())
-	if err != nil {
-		ctx.InternalServerError(err)
-		return nil, true
-	}
-
-	if len(conversation) == 0 || conversation[0].Review == nil {
-		ctx.NotFound()
-		return nil, true
-	}
-
-	return conversation[0], false
 }
