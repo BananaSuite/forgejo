@@ -21,7 +21,8 @@ type CreateTeamOptions struct {
 	Name             string
 	CanCreateOrgRepo bool
 
-	Mode perm.AccessMode
+	Mode      perm.AccessMode
+	UnitTypes []unit_model.Type
 
 	Members []*user_model.User
 }
@@ -39,6 +40,10 @@ func CreateTeam(t *testing.T, org *org_model.Organization, opts *CreateTeamOptio
 		opts.Name = "team-" + uniqueSafeName(t.Name())
 	}
 
+	if len(opts.UnitTypes) == 0 {
+		opts.UnitTypes = unit_model.AllRepoUnitTypes
+	}
+
 	team := &org_model.Team{
 		OrgID:                   org.ID,
 		Name:                    opts.Name,
@@ -49,8 +54,8 @@ func CreateTeam(t *testing.T, org *org_model.Organization, opts *CreateTeamOptio
 	}
 	require.NoError(t, db.Insert(t.Context(), team))
 
-	units := make([]org_model.TeamUnit, 0, len(unit_model.AllRepoUnitTypes))
-	for _, tp := range unit_model.AllRepoUnitTypes {
+	units := make([]org_model.TeamUnit, 0, len(opts.UnitTypes))
+	for _, tp := range opts.UnitTypes {
 		up := opts.Mode
 		if tp == unit_model.TypeExternalTracker || tp == unit_model.TypeExternalWiki {
 			up = perm.AccessModeRead
