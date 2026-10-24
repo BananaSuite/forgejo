@@ -13,9 +13,13 @@ import (
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
 	org_model "forgejo.org/models/organization"
+	"forgejo.org/models/perm"
+	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/test"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
@@ -590,4 +594,80 @@ func TestIssueCommentChangePullReference(t *testing.T) {
 		"octicon-bookmark", "User One", "/user1",
 		[]string{"user1 referenced this pull request from user12/repo10 ", "pr2 #1"},
 		[]string{"/user1", "/user12/repo10/pulls/1", "#issuecomment-2093", "/user12/repo10/pulls/1"})
+}
+
+func TestIssueNewComment(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// Test these checks on a non-private repository, as otherwise the private visibility check is
+	// tested and not the 'prevent unauthenticated from doing something'.
+	t.Run("Not logged in", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 1}, "is_pull = false")
+		require.NoError(t, issue.LoadRepo(t.Context()))
+		pr := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2}, "is_pull = true")
+		require.NoError(t, pr.LoadRepo(t.Context()))
+
+		resp := MakeRequest(t, NewRequestWithValues(t, "POST", issue.HTMLURL()+"/comments", map[string]string{
+			"content": "Hi there!",
+		}), http.StatusSeeOther)
+		assert.Equal(t, "/user/login", test.RedirectURL(resp))
+
+		resp = MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
+			"content": "Hi there!",
+		}), http.StatusSeeOther)
+		assert.Equal(t, "/user/login", test.RedirectURL(resp))
+	})
+
+	orgOwner := forgery.CreateUser(t, nil)
+	org := forgery.CreateOrganisation(t, orgOwner)
+
+	issueUser := forgery.CreateUser(t, nil)
+	issueSession := loginUser(t, issueUser.Name)
+
+	forgery.CreateTeam(t, org, &forgery.CreateTeamOptions{
+		Mode:      perm.AccessModeRead,
+		UnitTypes: []unit_model.Type{unit_model.TypeIssues},
+		Members:   []*user_model.User{issueUser},
+	})
+
+	pullrequestUser := forgery.CreateUser(t, nil)
+	pullrequestSession := loginUser(t, pullrequestUser.Name)
+
+	forgery.CreateTeam(t, org, &forgery.CreateTeamOptions{
+		Mode:      perm.AccessModeRead,
+		UnitTypes: []unit_model.Type{unit_model.TypePullRequests},
+		Members:   []*user_model.User{pullrequestUser},
+	})
+
+	repo := forgery.CreateRepository(t, org.AsUser(), &forgery.CreateRepositoryOptions{IsPrivate: true})
+	issue := forgery.CreateIssue(t, orgOwner, repo, "Issue", "Not relevant")
+	pr := forgery.CreatePullRequest(t, orgOwner, repo, "Pull", "Not relevant")
+
+	t.Run("New issue comment", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		resp := issueSession.MakeRequest(t, NewRequestWithValues(t, "POST", issue.HTMLURL()+"/comments", map[string]string{
+			"content": "Hi there!",
+		}), http.StatusOK)
+		assert.NotEmpty(t, test.RedirectURL(resp))
+
+		pullrequestSession.MakeRequest(t, NewRequestWithValues(t, "POST", issue.HTMLURL()+"/comments", map[string]string{
+			"content": "Hi there!",
+		}), http.StatusNotFound)
+	})
+
+	t.Run("New PR comment", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		issueSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
+			"content": "Hi there!",
+		}), http.StatusNotFound)
+
+		resp := pullrequestSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
+			"content": "Hi there!",
+		}), http.StatusOK)
+		assert.NotEmpty(t, test.RedirectURL(resp))
+	})
 }
