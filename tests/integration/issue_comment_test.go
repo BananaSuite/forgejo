@@ -703,6 +703,28 @@ func TestIssueNewComment(t *testing.T) {
 		assert.Equal(t, "form.Status: InError: In", errorResp.Error)
 	})
 
+	t.Run("Close", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		resp := issueSession.MakeRequest(t, NewRequestWithValues(t, "POST", issue.HTMLURL()+"/comments", map[string]string{
+			"status": "close",
+		}), http.StatusOK)
+		assert.NotEmpty(t, test.RedirectURL(resp))
+		assert.False(t, unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: issue.ID}).IsClosed)
+
+		resp = pullrequestSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
+			"status": "close",
+		}), http.StatusOK)
+		assert.NotEmpty(t, test.RedirectURL(resp))
+		assert.False(t, unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: pr.ID}).IsClosed)
+
+		resp = writeSession.MakeRequest(t, NewRequestWithValues(t, "POST", issue.HTMLURL()+"/comments", map[string]string{
+			"status": "close",
+		}), http.StatusOK)
+		assert.NotEmpty(t, test.RedirectURL(resp))
+		assert.True(t, unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: issue.ID}).IsClosed)
+	})
+
 	issue.IsLocked = true
 	require.NoError(t, issues_model.UpdateIssueCols(t.Context(), issue, "is_locked"))
 	pr.IsLocked = true
