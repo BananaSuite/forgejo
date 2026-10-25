@@ -7,10 +7,13 @@
 
 <div class="ui container">
 	<h4 class="ui top attached header">
-		{{ctx.Locale.Tr "admin.service_message.type_modal"}}
+		{{ctx.Locale.Tr "admin.service_message"}}
 	</h4>
 	<form class="ui attached segment comment service-message form" method="post" action="{{AppSubUrl}}/admin/service_message?sm_type=modal" enctype="multipart/form-data">
 		<fieldset>
+			<p>
+				{{ctx.Locale.Tr "admin.service_message.type_modal"}}
+			</p>
 			<label>
 				{{ctx.Locale.Tr "admin.service_message.title"}}
 				<input name="title" placeholder={{ctx.Locale.Tr "admin.service_message.title_description"}} value="{{.ModalServiceMessageTitle}}" autofocus required maxlength="128">
