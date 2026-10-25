@@ -754,7 +754,6 @@ test('aria-keyshortcuts is present with JS on', async ({page}) => {
   const italic = page.locator('md-italic');
   const link = page.locator('button[data-md-action="new-link"]');
 
-  // key shortcuts are handled by JS; we shouldn't call them out this way otherwise
   await expect(bold).toHaveAttribute('aria-keyshortcuts', 'Ctrl+B Meta+B');
   await expect(italic).toHaveAttribute('aria-keyshortcuts', 'Ctrl+I Meta+I');
   await expect(link).toHaveAttribute('aria-keyshortcuts', 'Ctrl+K Meta+K');
@@ -776,6 +775,7 @@ test('aria-keyshortcuts is not present with JS off', async ({browser}) => {
   const italic = page.locator('md-italic');
   const link = page.locator('button[data-md-action="new-link"]');
 
+  // key shortcuts are handled by JS; we shouldn't call them out this way otherwise
   for (const button of [bold, italic, link]) {
     await expect(button).not.toHaveAttribute('aria-keyshortcuts');
   }
