@@ -683,6 +683,26 @@ func TestIssueNewComment(t *testing.T) {
 		assert.NotEmpty(t, test.RedirectURL(resp))
 	})
 
+	t.Run("Form validation", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		var errorResp struct {
+			Error string `json:"errorMessage"`
+		}
+
+		resp := issueSession.MakeRequest(t, NewRequestWithValues(t, "POST", issue.HTMLURL()+"/comments", map[string]string{
+			"status": "unknown",
+		}), http.StatusBadRequest)
+		DecodeJSON(t, resp, &errorResp)
+		assert.Equal(t, "form.Status: InError: In", errorResp.Error)
+
+		resp = pullrequestSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
+			"status": "unknown",
+		}), http.StatusBadRequest)
+		DecodeJSON(t, resp, &errorResp)
+		assert.Equal(t, "form.Status: InError: In", errorResp.Error)
+	})
+
 	issue.IsLocked = true
 	require.NoError(t, issues_model.UpdateIssueCols(t.Context(), issue, "is_locked"))
 	pr.IsLocked = true
