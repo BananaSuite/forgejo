@@ -4,8 +4,7 @@ SPDX-License-Identifier: GPL-3.0-or-later */
 .service-message-content {
   margin: 0 0.5rem !important;
   padding: 0.5rem !important;
-  height: calc(100vh - 450px);
-  min-height: 60vh;
+  min-height: min(60vh, 400px);
   flex: 0 0 auto;
   overflow: auto;
   display: flex;
