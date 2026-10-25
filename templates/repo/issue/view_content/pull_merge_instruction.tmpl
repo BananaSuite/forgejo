@@ -46,9 +46,8 @@
 			{{end}}
 			<div>git switch '{{$localBranch}}'</div>
 		</code></pre></div>
-	</div>
 	{{if .ShowMergeInstructions}}
-	<div id="merge-instructions" class="markup tw-mt-4">
+	<div id="merge-instructions">
 		<h3>{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_title"}}</h3>
 		<p>{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_desc"}}</p>
 		{{if not .AutodetectManualMerge}}
@@ -90,4 +89,5 @@
 		</code></pre></div>
 	</div>
 	{{end}}
+	</div>
 </details>
