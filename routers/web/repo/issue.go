@@ -3122,6 +3122,18 @@ func NewComment(ctx *context.Context) {
 		return
 	}
 
+	// If closing or re-opening, check if you're allowed to do so.
+	if form.Status != "" && !ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull) && !issue.IsPoster(ctx.Doer.ID) {
+		ctx.JSONError(ctx.Tr("repo.issues.change_status.not_allowed"))
+		return
+	}
+
+	// Can't re-open a merged pull request.
+	if form.Status == "reopen" && issue.IsPull && issue.PullRequest.HasMerged {
+		ctx.JSONError(ctx.Tr("repo.issues.change_status.reopen_merged"))
+		return
+	}
+
 	var attachments []string
 	if setting.Attachment.Enabled {
 		attachments = form.Files
@@ -3129,116 +3141,111 @@ func NewComment(ctx *context.Context) {
 
 	var comment *issues_model.Comment
 	defer func() {
-		// Check if issue admin/poster changes the status of issue.
-		if (ctx.Repo.CanWriteIssuesOrPulls(issue.IsPull) || (ctx.IsSigned && issue.IsPoster(ctx.Doer.ID))) &&
-			(form.Status == "reopen" || form.Status == "close") &&
-			(!issue.IsPull || !issue.PullRequest.HasMerged) {
-			// Duplication and conflict check should apply to reopen pull request.
-			var pr *issues_model.PullRequest
+		// Duplication and conflict check should apply to reopen pull request.
+		var pr *issues_model.PullRequest
 
-			if form.Status == "reopen" && issue.IsPull {
-				pull := issue.PullRequest
-				var err error
-				pr, err = issues_model.GetUnmergedPullRequest(ctx, pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch, pull.Flow)
-				if err != nil {
-					if !issues_model.IsErrPullRequestNotExist(err) {
-						ctx.JSONError(ctx.Tr("repo.issues.dependency.pr_close_blocked"))
-						return
-					}
-				}
-
-				// Regenerate patch and test conflict.
-				if pr == nil {
-					issue.PullRequest.HeadCommitID = ""
-					pull_service.AddToTaskQueue(ctx, issue.PullRequest)
-				}
-
-				// check whether the ref of PR <refs/pulls/pr_index/head> in base repo is consistent with the head commit of head branch in the head repo
-				// get head commit of PR
-				if pull.Flow == issues_model.PullRequestFlowGithub {
-					if err := pull.LoadBaseRepo(ctx); err != nil {
-						ctx.ServerError("Unable to load base repo", err)
-						return
-					}
-					if err := pull.LoadHeadRepo(ctx); err != nil {
-						ctx.ServerError("Unable to load head repo", err)
-						return
-					}
-
-					// Check if the base branch of the pull request still exists.
-					if ok := git.IsBranchExist(ctx, pull.BaseRepo.RepoPath(), pull.BaseBranch); !ok {
-						ctx.JSONError(ctx.Tr("repo.pulls.reopen_failed.base_branch"))
-						return
-					}
-
-					// Check if the head branch of the pull request still exists.
-					if ok := git.IsBranchExist(ctx, pull.HeadRepo.RepoPath(), pull.HeadBranch); !ok {
-						ctx.JSONError(ctx.Tr("repo.pulls.reopen_failed.head_branch"))
-						return
-					}
-
-					prHeadRef := pull.GetGitRefName()
-					prHeadCommitID, err := git.GetFullCommitID(ctx, pull.BaseRepo.RepoPath(), prHeadRef)
-					if err != nil {
-						ctx.ServerError("Get head commit Id of pr fail", err)
-						return
-					}
-
-					headBranchRef := pull.GetGitHeadBranchRefName()
-					headBranchCommitID, err := git.GetFullCommitID(ctx, pull.HeadRepo.RepoPath(), headBranchRef)
-					if err != nil {
-						ctx.ServerError("Get head commit Id of head branch fail", err)
-						return
-					}
-
-					err = pull.LoadIssue(ctx)
-					if err != nil {
-						ctx.ServerError("load the issue of pull request error", err)
-						return
-					}
-
-					if prHeadCommitID != headBranchCommitID {
-						// force push to base repo
-						if err := pull_service.PushToBaseRepo(ctx, pull); err != nil {
-							ctx.ServerError("force push error", err)
-							return
-						}
-					}
+		if form.Status == "reopen" && issue.IsPull {
+			pull := issue.PullRequest
+			var err error
+			pr, err = issues_model.GetUnmergedPullRequest(ctx, pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch, pull.Flow)
+			if err != nil {
+				if !issues_model.IsErrPullRequestNotExist(err) {
+					ctx.JSONError(ctx.Tr("repo.issues.dependency.pr_close_blocked"))
+					return
 				}
 			}
 
-			if pr != nil {
-				ctx.Flash.Info(ctx.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
-			} else {
-				isClosed := form.Status == "close"
-				if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer, &issues_model.PRNotificationInfo{MergedCommitID: ""}, isClosed); err != nil {
-					if errors.Is(err, user_model.ErrBlockedByUser) {
-						if issue.IsPull {
-							ctx.JSONError(ctx.Tr("repo.pulls.blocked_by_user"))
-						} else {
-							ctx.JSONError(ctx.Tr("repo.issues.blocked_by_user"))
-						}
-						return
-					}
+			// Regenerate patch and test conflict.
+			if pr == nil {
+				issue.PullRequest.HeadCommitID = ""
+				pull_service.AddToTaskQueue(ctx, issue.PullRequest)
+			}
 
-					log.Error("ChangeStatus: %v", err)
-
-					if issues_model.IsErrDependenciesLeft(err) {
-						if issue.IsPull {
-							ctx.JSONError(ctx.Tr("repo.issues.dependency.pr_close_blocked"))
-						} else {
-							ctx.JSONError(ctx.Tr("repo.issues.dependency.issue_close_blocked"))
-						}
-						return
-					}
-				} else {
-					if err := stopTimerIfAvailable(ctx, ctx.Doer, issue); err != nil {
-						ctx.ServerError("CreateOrStopIssueStopwatch", err)
-						return
-					}
-
-					log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
+			// check whether the ref of PR <refs/pulls/pr_index/head> in base repo is consistent with the head commit of head branch in the head repo
+			// get head commit of PR
+			if pull.Flow == issues_model.PullRequestFlowGithub {
+				if err := pull.LoadBaseRepo(ctx); err != nil {
+					ctx.ServerError("Unable to load base repo", err)
+					return
 				}
+				if err := pull.LoadHeadRepo(ctx); err != nil {
+					ctx.ServerError("Unable to load head repo", err)
+					return
+				}
+
+				// Check if the base branch of the pull request still exists.
+				if ok := git.IsBranchExist(ctx, pull.BaseRepo.RepoPath(), pull.BaseBranch); !ok {
+					ctx.JSONError(ctx.Tr("repo.pulls.reopen_failed.base_branch"))
+					return
+				}
+
+				// Check if the head branch of the pull request still exists.
+				if ok := git.IsBranchExist(ctx, pull.HeadRepo.RepoPath(), pull.HeadBranch); !ok {
+					ctx.JSONError(ctx.Tr("repo.pulls.reopen_failed.head_branch"))
+					return
+				}
+
+				prHeadRef := pull.GetGitRefName()
+				prHeadCommitID, err := git.GetFullCommitID(ctx, pull.BaseRepo.RepoPath(), prHeadRef)
+				if err != nil {
+					ctx.ServerError("Get head commit Id of pr fail", err)
+					return
+				}
+
+				headBranchRef := pull.GetGitHeadBranchRefName()
+				headBranchCommitID, err := git.GetFullCommitID(ctx, pull.HeadRepo.RepoPath(), headBranchRef)
+				if err != nil {
+					ctx.ServerError("Get head commit Id of head branch fail", err)
+					return
+				}
+
+				err = pull.LoadIssue(ctx)
+				if err != nil {
+					ctx.ServerError("load the issue of pull request error", err)
+					return
+				}
+
+				if prHeadCommitID != headBranchCommitID {
+					// force push to base repo
+					if err := pull_service.PushToBaseRepo(ctx, pull); err != nil {
+						ctx.ServerError("force push error", err)
+						return
+					}
+				}
+			}
+		}
+
+		if pr != nil {
+			ctx.Flash.Info(ctx.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
+		} else {
+			isClosed := form.Status == "close"
+			if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer, &issues_model.PRNotificationInfo{MergedCommitID: ""}, isClosed); err != nil {
+				if errors.Is(err, user_model.ErrBlockedByUser) {
+					if issue.IsPull {
+						ctx.JSONError(ctx.Tr("repo.pulls.blocked_by_user"))
+					} else {
+						ctx.JSONError(ctx.Tr("repo.issues.blocked_by_user"))
+					}
+					return
+				}
+
+				log.Error("ChangeStatus: %v", err)
+
+				if issues_model.IsErrDependenciesLeft(err) {
+					if issue.IsPull {
+						ctx.JSONError(ctx.Tr("repo.issues.dependency.pr_close_blocked"))
+					} else {
+						ctx.JSONError(ctx.Tr("repo.issues.dependency.issue_close_blocked"))
+					}
+					return
+				}
+			} else {
+				if err := stopTimerIfAvailable(ctx, ctx.Doer, issue); err != nil {
+					ctx.ServerError("CreateOrStopIssueStopwatch", err)
+					return
+				}
+
+				log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
 			}
 		}
 

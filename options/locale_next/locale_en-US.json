@@ -108,6 +108,8 @@
 	"repo.issues.filter_modified.hint": "Filter by last modified date",
 	"repo.issues.filter_sort.hint_with_placeholder": "Sort by: %s",
 	"repo.issues.context.copy_markdown": "Copy Markdown",
+	"repo.issues.change_status.not_allowed": "You don't have authorization to change the status of this issue.",
+	"repo.issues.change_status.reopen_merged": "You can't re-open a merged pull request.",
 	"repo.milestones.closed.heading": "Closed milestones",
 	"repo.milestones.open.heading": "Open milestones",
 	"repo.signing.will_sign": "This commit will be signed with key \"%s\".",
