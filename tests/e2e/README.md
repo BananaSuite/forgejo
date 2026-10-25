@@ -28,9 +28,9 @@ For tests that require interactive Git repos,
 you also need to ensure a Forgejo binary is ready to be used by Git hooks.
 For this, you additionally need to run
 
-~~~
+```
 make TAGS="sqlite sqlite_unlock_notify" backend
-~~~
+```
 
 ### Install dependencies
 
@@ -189,18 +189,18 @@ For example:
 Alternatively, if you know the backend request that will be made before the reload,
 you can explicitly wait for it:
 
-~~~js
+```js
 const submitted = page.waitForResponse('/my/backend/post/request');
 await page.locator('button').first().click(); // perform your interaction
 await submitted;
-~~~
+```
 
 If the page redirects to another URL,
 you can alternatively use:
 
-~~~js
+```js
 await page.waitForURL('**/target.html');
-~~~
+```
 
 ### Visual testing
 
@@ -242,14 +242,14 @@ The following environment variables control visual testing:
 Signing in takes time and is actually executed step-by-step.
 If your test does not rely on a user account, skip this step.
 
-~~~js
+```js
 test('For anyone', async ({page}) => {
   await page.goto('/somepage');
-~~~
+```
 
 If you need a user account, you can use something like:
 
-~~~js
+```js
 import {test} from './utils_e2e.ts';
 
 // reuse user2 token from scope `shared`
@@ -258,7 +258,7 @@ test.use({user: 'user2', authScope: 'shared'})
 test('For signed users only', async ({page}) => {
 
 })
-~~~
+```
 
 users are created in [utils_e2e_test.go](utils_e2e_test.go)
 
@@ -327,14 +327,14 @@ a full recursive subfolder,
 two files with a shorthand pattern,
 and a set of files with a certain ending:
 
-~~~
+```
 // @watch start
 // templates/webhook/shared-settings.tmpl
 // templates/repo/settings/**
 // web_src/css/{form,repo}.css
 // web_src/css/modules/*.css
 // @watch end
-~~~
+```
 
 The patterns are evaluated on a "first-match" basis.
 Under the hood, [gobwas/glob](https://github.com/gobwas/glob) is used.
@@ -361,9 +361,9 @@ although playwright repeatedly tries to find the content.
 You can [group statements using toPass](https://playwright.dev/docs/test-assertions#expecttopass).
 This code retries the dropdown click until the second item is found.
 
-~~~js
+```js
 await expect(async () => {
   await page.locator('.dropdown').click();
   await page.locator('.dropdown .item').first().click();
 }).toPass();
-~~~
+```
