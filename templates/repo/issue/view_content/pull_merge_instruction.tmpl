@@ -47,8 +47,7 @@
 			<div>git switch '{{$localBranch}}'</div>
 		</code></pre></div>
 	{{if .ShowMergeInstructions}}
-	<div id="merge-instructions">
-		<h3>{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_title"}}</h3>
+		<h3 id="merge-instructions">{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_title"}}</h3>
 		<p>{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_desc"}}</p>
 		{{if not .AutodetectManualMerge}}
 			<p>{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_warning"}}</p>
@@ -87,7 +86,6 @@
 			<div>git merge '{{$localBranch}}'</div>
 			<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
 		</code></pre></div>
-	</div>
 	{{end}}
 	</div>
 </details>
