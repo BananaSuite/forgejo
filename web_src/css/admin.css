@@ -43,6 +43,20 @@
   white-space: nowrap;
 }
 
+.admin .table td.notice-description {
+  position: relative;
+  width: 80%;
+}
+
+.admin .table td.notice-description > span {
+  position: absolute;
+  inset: 0;
+  padding: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .admin-responsive-columns {
   display: flex;
   flex-wrap: wrap;

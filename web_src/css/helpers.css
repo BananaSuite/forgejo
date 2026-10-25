@@ -8,20 +8,6 @@ Gitea's tailwind-style CSS helper classes have `gt-` prefix.
   text-overflow: ellipsis !important;
 }
 
-td.auto-ellipsis {
-  position: relative;
-  width: 80%;
-}
-
-td.auto-ellipsis > span {
-  position: absolute;
-  inset: 0;
-  padding: inherit;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .interact-fg { color: inherit !important; }
 .interact-fg:hover { color: var(--color-primary) !important; }
 .interact-fg:active { color: var(--color-primary-active) !important; }
