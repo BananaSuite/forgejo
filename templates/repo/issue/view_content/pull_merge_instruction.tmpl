@@ -46,46 +46,46 @@
 			{{end}}
 			<div>git switch '{{$localBranch}}'</div>
 		</code></pre></div>
-	{{if .ShowMergeInstructions}}
-		<h3 id="merge-instructions">{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_title"}}</h3>
-		<p>{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_desc"}}</p>
-		{{if not .AutodetectManualMerge}}
-			<p>{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_warning"}}</p>
+		{{if .ShowMergeInstructions}}
+			<h3 id="merge-instructions">{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_title"}}</h3>
+			<p>{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_desc"}}</p>
+			{{if not .AutodetectManualMerge}}
+				<p>{{ctx.Locale.Tr "repo.pulls.cmd_instruction_merge_warning"}}</p>
+			{{end}}
+			<div><pre class="code-block trim-empty-lines tw-mb-0" data-pull-merge-style="merge"><code>
+				<div>git switch '{{.PullRequest.BaseBranch}}'</div>
+				<div>git merge --no-ff '{{$localBranch}}'</div>
+				<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
+			</code></pre></div>
+			<div><pre class="code-block trim-empty-lines tw-mb-0 tw-hidden" data-pull-merge-style="rebase"><code>
+				<div>git switch '{{$localBranch}}'</div>
+				<div>git rebase '{{.PullRequest.BaseBranch}}'</div>
+				<div>git switch '{{.PullRequest.BaseBranch}}'</div>
+				<div>git merge --ff-only '{{$localBranch}}'</div>
+				<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
+			</code></pre></div>
+			<div><pre class="code-block trim-empty-lines tw-mb-0 tw-hidden" data-pull-merge-style="rebase-merge"><code>
+				<div>git switch '{{$localBranch}}'</div>
+				<div>git rebase '{{.PullRequest.BaseBranch}}'</div>
+				<div>git switch '{{.PullRequest.BaseBranch}}'</div>
+				<div>git merge --no-ff '{{$localBranch}}'</div>
+				<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
+			</code></pre></div>
+			<div><pre class="code-block trim-empty-lines tw-mb-0 tw-hidden" data-pull-merge-style="squash"><code>
+				<div>git switch '{{.PullRequest.BaseBranch}}'</div>
+				<div>git merge --squash '{{$localBranch}}'</div>
+				<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
+			</code></pre></div>
+			<div><pre class="code-block trim-empty-lines tw-mb-0 tw-hidden" data-pull-merge-style="fast-forward-only"><code>
+				<div>git switch '{{.PullRequest.BaseBranch}}'</div>
+				<div>git merge --ff-only '{{$localBranch}}'</div>
+				<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
+			</code></pre></div>
+			<div><pre class="code-block trim-empty-lines tw-mb-0 tw-hidden" data-pull-merge-style="manually-merged"><code>
+				<div>git switch '{{.PullRequest.BaseBranch}}'</div>
+				<div>git merge '{{$localBranch}}'</div>
+				<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
+			</code></pre></div>
 		{{end}}
-		<div><pre class="code-block trim-empty-lines tw-mb-0" data-pull-merge-style="merge"><code>
-			<div>git switch '{{.PullRequest.BaseBranch}}'</div>
-			<div>git merge --no-ff '{{$localBranch}}'</div>
-			<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
-		</code></pre></div>
-		<div><pre class="code-block trim-empty-lines tw-mb-0 tw-hidden" data-pull-merge-style="rebase"><code>
-			<div>git switch '{{$localBranch}}'</div>
-			<div>git rebase '{{.PullRequest.BaseBranch}}'</div>
-			<div>git switch '{{.PullRequest.BaseBranch}}'</div>
-			<div>git merge --ff-only '{{$localBranch}}'</div>
-			<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
-		</code></pre></div>
-		<div><pre class="code-block trim-empty-lines tw-mb-0 tw-hidden" data-pull-merge-style="rebase-merge"><code>
-			<div>git switch '{{$localBranch}}'</div>
-			<div>git rebase '{{.PullRequest.BaseBranch}}'</div>
-			<div>git switch '{{.PullRequest.BaseBranch}}'</div>
-			<div>git merge --no-ff '{{$localBranch}}'</div>
-			<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
-		</code></pre></div>
-		<div><pre class="code-block trim-empty-lines tw-mb-0 tw-hidden" data-pull-merge-style="squash"><code>
-			<div>git switch '{{.PullRequest.BaseBranch}}'</div>
-			<div>git merge --squash '{{$localBranch}}'</div>
-			<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
-		</code></pre></div>
-		<div><pre class="code-block trim-empty-lines tw-mb-0 tw-hidden" data-pull-merge-style="fast-forward-only"><code>
-			<div>git switch '{{.PullRequest.BaseBranch}}'</div>
-			<div>git merge --ff-only '{{$localBranch}}'</div>
-			<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
-		</code></pre></div>
-		<div><pre class="code-block trim-empty-lines tw-mb-0 tw-hidden" data-pull-merge-style="manually-merged"><code>
-			<div>git switch '{{.PullRequest.BaseBranch}}'</div>
-			<div>git merge '{{$localBranch}}'</div>
-			<div>git push origin '{{.PullRequest.BaseBranch}}'</div>
-		</code></pre></div>
-	{{end}}
 	</div>
 </details>
