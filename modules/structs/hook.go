@@ -40,6 +40,8 @@ type HookList []*Hook
 
 // CreateHookOptionConfig has all config options in it
 // required are "content_type" and "url" Required
+// optional is "secret"
+// Additional config options for type = slack: "channel", "username", "icon_url", "color"
 type CreateHookOptionConfig map[string]string
 
 // CreateHookOption options when create a hook
@@ -58,6 +60,9 @@ type CreateHookOption struct {
 
 // EditHookOption options when modify one hook
 type EditHookOption struct {
+	// Valid options are "content_type", "url", "secret"
+	// Additional config options for type = slack: "channel", "username", "icon_url", "color"
+	// If "channel" is set, "username", "icon_url" and "color" are also updated
 	Config              map[string]string `json:"config"`
 	Events              []string          `json:"events"`
 	BranchFilter        string            `json:"branch_filter" binding:"GlobPattern"`

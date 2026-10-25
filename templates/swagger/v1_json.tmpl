@@ -25640,7 +25640,7 @@
       "x-go-package": "forgejo.org/modules/structs"
     },
     "CreateHookOptionConfig": {
-      "description": "CreateHookOptionConfig has all config options in it\nrequired are \"content_type\" and \"url\" Required",
+      "description": "CreateHookOptionConfig has all config options in it\nrequired are \"content_type\" and \"url\" Required\noptional is \"secret\"\nAdditional config options for type = slack: \"channel\", \"username\", \"icon_url\", \"color\"",
       "type": "object",
       "additionalProperties": {
         "type": "string"
@@ -26874,6 +26874,7 @@
           "x-go-name": "BranchFilter"
         },
         "config": {
+          "description": "Valid options are \"content_type\", \"url\", \"secret\"\nAdditional config options for type = slack: \"channel\", \"username\", \"icon_url\", \"color\"\nIf \"channel\" is set, \"username\", \"icon_url\" and \"color\" are also updated",
           "type": "object",
           "additionalProperties": {
             "type": "string"
