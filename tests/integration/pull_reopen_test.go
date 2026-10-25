@@ -208,5 +208,23 @@ func TestPullrequestReopen(t *testing.T) {
 
 			reopenPR(t, http.StatusOK)
 		})
+
+		t.Run("Merged", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			// Currently has merge conflict, change target to `main` to resolve that.
+			require.NoError(t, pull_service.ChangeTargetBranch(t.Context(), pullRequest, user2, "main"))
+
+			link := fmt.Sprintf("%s/pulls/%d/merge", baseRepo.FullName(), issue.Index)
+			session.MakeRequest(t, NewRequestWithValues(t, "POST", link, map[string]string{
+				"do": "merge",
+			}), http.StatusOK)
+
+			resp := reopenPR(t, http.StatusBadRequest)
+
+			var errorResp errorJSON
+			DecodeJSON(t, resp, &errorResp)
+			assert.Equal(t, "You can't re-open a merged pull request.", errorResp.Error)
+		})
 	})
 }

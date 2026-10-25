@@ -706,16 +706,22 @@ func TestIssueNewComment(t *testing.T) {
 	t.Run("Close", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
+		var errorResp struct {
+			Error string `json:"errorMessage"`
+		}
+
 		resp := issueSession.MakeRequest(t, NewRequestWithValues(t, "POST", issue.HTMLURL()+"/comments", map[string]string{
 			"status": "close",
-		}), http.StatusOK)
-		assert.NotEmpty(t, test.RedirectURL(resp))
+		}), http.StatusBadRequest)
+		DecodeJSON(t, resp, &errorResp)
+		assert.Equal(t, "You don't have authorization to change the status of this issue.", errorResp.Error)
 		assert.False(t, unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: issue.ID}).IsClosed)
 
 		resp = pullrequestSession.MakeRequest(t, NewRequestWithValues(t, "POST", pr.HTMLURL()+"/comments", map[string]string{
 			"status": "close",
-		}), http.StatusOK)
-		assert.NotEmpty(t, test.RedirectURL(resp))
+		}), http.StatusBadRequest)
+		DecodeJSON(t, resp, &errorResp)
+		assert.Equal(t, "You don't have authorization to change the status of this issue.", errorResp.Error)
 		assert.False(t, unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: pr.ID}).IsClosed)
 
 		resp = writeSession.MakeRequest(t, NewRequestWithValues(t, "POST", issue.HTMLURL()+"/comments", map[string]string{
