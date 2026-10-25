@@ -92,7 +92,7 @@ function showContentHistoryDetail(issueBaseUrl, commentId, historyId, itemTitleH
 }
 
 function showContentHistoryMenu(issueBaseUrl, $item, commentId) {
-  const $headerLeft = $item.find('.comment-header-left');
+  const $headerLeft = $item.find('.comment-header-left').first();
   const menuHtml = `
   <div class="ui dropdown interact-fg content-history-menu" data-comment-id="${commentId}">
     &bull; ${i18nTextEdited}${svg('octicon-triangle-down', 14, 'dropdown icon')}
