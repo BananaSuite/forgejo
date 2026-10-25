@@ -1,6 +1,5 @@
 /*
 Gitea's tailwind-style CSS helper classes have `gt-` prefix.
-Gitea's private styles use `g-` prefix.
 */
 
 .gt-ellipsis {
@@ -9,11 +8,12 @@ Gitea's private styles use `g-` prefix.
   text-overflow: ellipsis !important;
 }
 
-.g-table-auto-ellipsis td.auto-ellipsis {
+td.auto-ellipsis {
   position: relative;
+  width: 80%;
 }
 
-.g-table-auto-ellipsis td.auto-ellipsis span {
+td.auto-ellipsis > span {
   position: absolute;
   inset: 0;
   padding: inherit;
