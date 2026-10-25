@@ -522,7 +522,7 @@ test.describe('Markdown insert link', () => {
   });
 });
 
-test('Text expander has higher prio then prefix continuation', async ({page}) => {
+test('Text expander has higher prio than prefix continuation', async ({page}) => {
   const response = await page.goto('/user2/repo1/issues/new');
   expect(response?.status()).toBe(200);
 
@@ -743,6 +743,37 @@ test('Markdown bold/italic toolbar and shortcut', async ({page}) => {
   await expect(textarea).toHaveValue(`_line 1_\nline 2\nline 3\nline 4`);
   await textarea.press('ControlOrMeta+KeyI');
   await expect(textarea).toHaveValue(`line 1\nline 2\nline 3\nline 4`);
+});
+
+test('aria-keyshortcuts is present with JS on', async ({page}) => {
+  // Load page with editor
+  const response = await page.goto('/user2/repo1/issues/new');
+  expect(response?.status()).toBe(200);
+
+  const bold = page.locator('md-bold');
+  const italic = page.locator('md-italic');
+  const link = page.locator('button[data-md-action="new-link"]');
+
+  // key shortcuts are handled by JS; we shouldn't call them out this way otherwise
+  await expect(bold).toHaveAttribute('aria-keyshortcuts', 'Ctrl+B Meta+B');
+  await expect(italic).toHaveAttribute('aria-keyshortcuts', 'Ctrl+I Meta+I');
+  await expect(link).toHaveAttribute('aria-keyshortcuts', 'Ctrl+K Meta+K');
+});
+
+test('aria-keyshortcuts is not present with JS off', async ({browser}) => {
+  // Load page with editor, sans Javascript
+  const context = await browser.newContext({javaScriptEnabled: false});
+  const page = await context.newPage();
+  const response = await page.goto('/user2/repo1/issues/new');
+  expect(response?.status()).toBe(200);
+
+  const bold = page.locator('md-bold');
+  const italic = page.locator('md-italic');
+  const link = page.locator('button[data-md-action="new-link"]');
+
+  for (const button of [bold, italic, link]) {
+    await expect(button).not.toHaveAttribute('aria-keyshortcuts');
+  }
 });
 
 test('Monospace button aria-label', async ({page}) => {

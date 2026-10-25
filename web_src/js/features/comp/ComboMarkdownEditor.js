@@ -107,7 +107,10 @@ class ComboMarkdownEditor {
     // Find all data-md-ctrl-shortcut elements in the markdown toolbar.
     const shortcutKeys = new Map();
     for (const el of this.textareaMarkdownToolbar.querySelectorAll('[data-md-ctrl-shortcut]')) {
-      shortcutKeys.set(el.getAttribute('data-md-ctrl-shortcut'), el);
+      const shortcut = el.getAttribute('data-md-ctrl-shortcut');
+      const shortcutUpper = shortcut.toUpperCase();
+      el.ariaKeyShortcuts = `Ctrl+${shortcutUpper} Meta+${shortcutUpper}`;
+      shortcutKeys.set(shortcut, el);
     }
 
     // Track whether any actual input or pointer action was made after focusing, and only intercept Tab presses after that.
