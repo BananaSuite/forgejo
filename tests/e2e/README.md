@@ -12,7 +12,6 @@ as well as some tips and tricks you should know.
 
 Feel free to extend this file with more instructions if you feel like you have something to share!
 
-
 ## How to run the tests?
 
 Before running any tests, please ensure you perform a clean frontend build:
@@ -46,7 +45,6 @@ npx playwright install-deps
 > On some operating systems, the installation of missing libraries can complicate testing certain browsers.
 > It is often not necessary to test with all browsers locally.
 > Choosing either Firefox or Chromium is fine.
-
 
 ### Run all tests
 
@@ -96,13 +94,11 @@ npx playwright test actions.test.e2e.ts:9
 First, specify the complete test filename,
 and after the colon you can put the linenumber where the test is defined.
 
-
 #### With VSCodium or VSCode
 
 To debug a test, you can also use "Playwright Test" for
 [VScodium](https://open-vsx.org/extension/ms-playwright/playwright)
 or [VSCode](https://marketplace.visualstudio.com/items?itemName=ms-playwright.playwright).
-
 
 ### Run all tests via local act_runner
 
@@ -125,18 +121,22 @@ It is still documented for the sake of completeness:
 You can also perform e2e tests using MariaDB/MySQL or PostgreSQL if you want.
 
 Setup a MySQL database inside docker
+
 ```sh
 docker run -e "MYSQL_DATABASE=test" -e "MYSQL_ALLOW_EMPTY_PASSWORD=yes" -p 3306:3306 --rm --name mysql mysql:latest #(Ctrl-c to stop the database)
 ```
+
 Start tests based on the database container
 ```sh
 TEST_MYSQL_HOST=localhost:3306 TEST_MYSQL_DBNAME=test?multiStatements=true TEST_MYSQL_USERNAME=root TEST_MYSQL_PASSWORD='' make test-e2e-mysql
 ```
 
 Setup a pgsql database inside docker
+
 ```sh
 docker run -e POSTGRES_DB=test -e POSTGRES_PASSWORD=password -p 5432:5432 --rm --name pgsql postgres:latest #(Ctrl-c to stop the database)
 ```
+
 Start tests based on the database container
 ```sh
 TEST_PGSQL_HOST=localhost:5432 TEST_PGSQL_DBNAME=test TEST_PGSQL_USERNAME=postgres TEST_PGSQL_PASSWORD=postgres make test-e2e-pgsql
@@ -154,7 +154,6 @@ For SQLite:
 ```sh
 make test-e2e-sqlite#example
 ```
-
 
 ## Tips and tricks
 
