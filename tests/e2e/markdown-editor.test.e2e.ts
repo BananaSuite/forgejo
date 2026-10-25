@@ -758,6 +758,11 @@ test('aria-keyshortcuts is present with JS on', async ({page}) => {
   await expect(bold).toHaveAttribute('aria-keyshortcuts', 'Ctrl+B Meta+B');
   await expect(italic).toHaveAttribute('aria-keyshortcuts', 'Ctrl+I Meta+I');
   await expect(link).toHaveAttribute('aria-keyshortcuts', 'Ctrl+K Meta+K');
+
+  // labels shouldn't duplicate key shortcut info
+  await expect(bold).toHaveAccessibleName('Add bold text');
+  await expect(italic).toHaveAccessibleName('Add italic text');
+  await expect(link).toHaveAccessibleName('Add a link');
 });
 
 test('aria-keyshortcuts is not present with JS off', async ({browser}) => {
@@ -774,6 +779,11 @@ test('aria-keyshortcuts is not present with JS off', async ({browser}) => {
   for (const button of [bold, italic, link]) {
     await expect(button).not.toHaveAttribute('aria-keyshortcuts');
   }
+
+  // labels still shouldn't duplicate key shortcut info (they aren't present anyway sans JS)
+  await expect(bold).toHaveAccessibleName('Add bold text');
+  await expect(italic).toHaveAccessibleName('Add italic text');
+  await expect(link).toHaveAccessibleName('Add a link');
 });
 
 test('Monospace button aria-label', async ({page}) => {

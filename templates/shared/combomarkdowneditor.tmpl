@@ -23,13 +23,13 @@ Template Attributes:
 		{{end}}
 		<div class="markdown-toolbar-group">
 			<md-header class="markdown-toolbar-button" data-tooltip-content="{{ctx.Locale.Tr "mde.buttons.heading.tooltip"}}">{{svg "octicon-heading"}}</md-header>
-			<md-bold class="markdown-toolbar-button" data-tooltip-content="{{ctx.Locale.Tr "mde.buttons.bold.tooltip"}}" data-md-ctrl-shortcut="b">{{svg "octicon-bold"}}</md-bold>
-			<md-italic class="markdown-toolbar-button" data-tooltip-content="{{ctx.Locale.Tr "mde.buttons.italic.tooltip"}}" data-md-ctrl-shortcut="i">{{svg "octicon-italic"}}</md-italic>
+			<md-bold class="markdown-toolbar-button" data-tooltip-content="{{ctx.Locale.Tr "mde.buttons.bold.tooltip"}}" aria-label="{{ctx.Locale.Tr "mde.buttons.bold.label"}}" data-md-ctrl-shortcut="b">{{svg "octicon-bold"}}</md-bold>
+			<md-italic class="markdown-toolbar-button" data-tooltip-content="{{ctx.Locale.Tr "mde.buttons.italic.tooltip"}}" aria-label="{{ctx.Locale.Tr "mde.buttons.italic.label"}}" data-md-ctrl-shortcut="i">{{svg "octicon-italic"}}</md-italic>
 		</div>
 		<div class="markdown-toolbar-group">
 			<md-quote class="markdown-toolbar-button" data-tooltip-content="{{ctx.Locale.Tr "mde.buttons.quote.tooltip"}}">{{svg "octicon-quote"}}</md-quote>
 			<md-code class="markdown-toolbar-button" data-tooltip-content="{{ctx.Locale.Tr "mde.buttons.code.tooltip"}}">{{svg "octicon-code"}}</md-code>
-			<button type="button" class="markdown-toolbar-button show-modal" data-md-button data-md-action="new-link" data-tooltip-content="{{ctx.Locale.Tr "mde.buttons.link.tooltip"}}" data-md-ctrl-shortcut="k">{{svg "octicon-link"}}</button>
+			<button type="button" class="markdown-toolbar-button show-modal" data-md-button data-md-action="new-link" data-tooltip-content="{{ctx.Locale.Tr "mde.buttons.link.tooltip"}}" aria-label="{{ctx.Locale.Tr "mde.buttons.link.label"}}" data-md-ctrl-shortcut="k">{{svg "octicon-link"}}</button>
 			{{if .SuggestionButton}}
 				<button type="button" class="markdown-toolbar-button" data-md-button data-md-action="suggestion" data-tooltip-content="{{ctx.Locale.Tr "mde.buttons.suggestion.tooltip"}}">{{svg "octicon-diff"}}</button>
 			{{end}}
