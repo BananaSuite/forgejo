@@ -17,7 +17,7 @@ Feel free to extend this file with more instructions if you feel like you have s
 
 Before running any tests, please ensure you perform a clean frontend build:
 
-```
+```sh
 make clean frontend
 ```
 
@@ -28,7 +28,7 @@ For tests that require interactive Git repos,
 you also need to ensure a Forgejo binary is ready to be used by Git hooks.
 For this, you additionally need to run
 
-```
+```sh
 make TAGS="sqlite sqlite_unlock_notify" backend
 ```
 
@@ -38,7 +38,7 @@ Browsertesting is performed by playwright.
 You need certain system libraries and playwright will download required browsers.
 Playwright takes care of this when you run:
 
-```
+```sh
 npx playwright install-deps
 ```
 
@@ -52,7 +52,7 @@ npx playwright install-deps
 
 If you want to run the full test suite, you can use
 
-```
+```sh
 make test-e2e-sqlite
 ```
 
@@ -62,7 +62,7 @@ We recommend that you use interactive testing for the development.
 After you performed the required builds,
 you should use one shell to start the debugserver (and leave it running):
 
-```
+```sh
 make test-e2e-debugserver
 ```
 
@@ -83,13 +83,13 @@ Playwright ships with an integrated UI mode which allows you to
 run individual tests and to debug them by seeing detailed traces of what playwright does.
 Launch it with:
 
-```
+```sh
 npx playwright test --ui
 ```
 
 #### Running individual tests
 
-```
+```sh
 npx playwright test actions.test.e2e.ts:9
 ```
 
@@ -109,7 +109,7 @@ or [VSCode](https://marketplace.visualstudio.com/items?itemName=ms-playwright.pl
 If you have a [forgejo runner](https://code.forgejo.org/forgejo/runner/),
 you can use it to run the test jobs:
 
-```
+```sh
 forgejo-runner exec -W .forgejo/workflows/testing.yml -j test-e2e
 ```
 
@@ -125,20 +125,20 @@ It is still documented for the sake of completeness:
 You can also perform e2e tests using MariaDB/MySQL or PostgreSQL if you want.
 
 Setup a MySQL database inside docker
-```
+```sh
 docker run -e "MYSQL_DATABASE=test" -e "MYSQL_ALLOW_EMPTY_PASSWORD=yes" -p 3306:3306 --rm --name mysql mysql:latest #(Ctrl-c to stop the database)
 ```
 Start tests based on the database container
-```
+```sh
 TEST_MYSQL_HOST=localhost:3306 TEST_MYSQL_DBNAME=test?multiStatements=true TEST_MYSQL_USERNAME=root TEST_MYSQL_PASSWORD='' make test-e2e-mysql
 ```
 
 Setup a pgsql database inside docker
-```
+```sh
 docker run -e POSTGRES_DB=test -e POSTGRES_PASSWORD=password -p 5432:5432 --rm --name pgsql postgres:latest #(Ctrl-c to stop the database)
 ```
 Start tests based on the database container
-```
+```sh
 TEST_PGSQL_HOST=localhost:5432 TEST_PGSQL_DBNAME=test TEST_PGSQL_USERNAME=postgres TEST_PGSQL_PASSWORD=postgres make test-e2e-pgsql
 ```
 
@@ -151,7 +151,7 @@ Example command to run `example.test.e2e.ts` test file:
 
 For SQLite:
 
-```
+```sh
 make test-e2e-sqlite#example
 ```
 
@@ -327,7 +327,7 @@ a full recursive subfolder,
 two files with a shorthand pattern,
 and a set of files with a certain ending:
 
-```
+```js
 // @watch start
 // templates/webhook/shared-settings.tmpl
 // templates/repo/settings/**
