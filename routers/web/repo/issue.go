@@ -3107,6 +3107,11 @@ func UpdateIssueStatus(ctx *context.Context) {
 // NewComment create a comment for issue
 func NewComment(ctx *context.Context) {
 	form := web.GetForm(ctx).(*forms.CreateCommentForm)
+	if ctx.HasError() {
+		ctx.JSONError(ctx.GetErrMsg())
+		return
+	}
+
 	issue := GetActionIssue(ctx)
 	if ctx.Written() {
 		return
@@ -3120,11 +3125,6 @@ func NewComment(ctx *context.Context) {
 	var attachments []string
 	if setting.Attachment.Enabled {
 		attachments = form.Files
-	}
-
-	if ctx.HasError() {
-		ctx.JSONError(ctx.GetErrMsg())
-		return
 	}
 
 	var comment *issues_model.Comment
