@@ -3179,98 +3179,95 @@ func NewComment(ctx *context.Context) {
 		attachments = form.Files
 	}
 
+	// Create a comment if there's content or a attachment.
 	var comment *issues_model.Comment
-	defer func() {
-		// Duplication and conflict check should apply to reopen pull request.
-		if form.Status == "reopen" && issue.IsPull {
-			// check whether the ref of PR <refs/pulls/pr_index/head> in base repo is consistent with the head commit of head branch in the head repo
-			// get head commit of PR
-			if issue.PullRequest.Flow == issues_model.PullRequestFlowGithub {
-				prHeadRef := issue.PullRequest.GetGitRefName()
-				prHeadCommitID, err := git.GetFullCommitID(ctx, issue.PullRequest.BaseRepo.RepoPath(), prHeadRef)
-				if err != nil {
-					ctx.ServerError("Get head commit Id of pr fail", err)
-					return
-				}
-
-				headBranchRef := issue.PullRequest.GetGitHeadBranchRefName()
-				headBranchCommitID, err := git.GetFullCommitID(ctx, issue.PullRequest.HeadRepo.RepoPath(), headBranchRef)
-				if err != nil {
-					ctx.ServerError("Get head commit Id of head branch fail", err)
-					return
-				}
-
-				if prHeadCommitID != headBranchCommitID {
-					// force push to base repo
-					if err := pull_service.PushToBaseRepo(ctx, issue.PullRequest); err != nil {
-						ctx.ServerError("force push error", err)
-						return
-					}
-				}
-			}
-
-			// Regenerate patch and test conflict.
-			pull_service.AddToTaskQueue(ctx, issue.PullRequest)
-		}
-
-		isClosed := form.Status == "close"
-		if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer, &issues_model.PRNotificationInfo{MergedCommitID: ""}, isClosed); err != nil {
+	if len(form.Content) != 0 || len(attachments) != 0 {
+		var err error
+		comment, err = issue_service.CreateIssueComment(ctx, ctx.Doer, ctx.Repo.Repository, issue, form.Content, attachments)
+		if err != nil {
 			if errors.Is(err, user_model.ErrBlockedByUser) {
-				if issue.IsPull {
-					ctx.JSONError(ctx.Tr("repo.pulls.blocked_by_user"))
-				} else {
-					ctx.JSONError(ctx.Tr("repo.issues.blocked_by_user"))
-				}
-				return
+				ctx.JSONError(ctx.Tr("repo.comment.blocked_by_user"))
+			} else {
+				ctx.ServerError("CreateIssueComment", err)
 			}
-
-			log.Error("ChangeStatus: %v", err)
-
-			if issues_model.IsErrDependenciesLeft(err) {
-				if issue.IsPull {
-					ctx.JSONError(ctx.Tr("repo.issues.dependency.pr_close_blocked"))
-				} else {
-					ctx.JSONError(ctx.Tr("repo.issues.dependency.issue_close_blocked"))
-				}
-				return
-			}
-		} else {
-			if err := stopTimerIfAvailable(ctx, ctx.Doer, issue); err != nil {
-				ctx.ServerError("CreateOrStopIssueStopwatch", err)
-				return
-			}
-
-			log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
+			return
 		}
 
-		// Redirect to comment hashtag if there is any actual content.
-		typeName := "issues"
-		if issue.IsPull {
-			typeName = "pulls"
-		}
-		if comment != nil {
-			ctx.JSONRedirect(fmt.Sprintf("%s/%s/%d#%s", ctx.Repo.RepoLink, typeName, issue.Index, comment.HashTag()))
-		} else {
-			ctx.JSONRedirect(fmt.Sprintf("%s/%s/%d", ctx.Repo.RepoLink, typeName, issue.Index))
-		}
-	}()
-
-	// Fix #321: Allow empty comments, as long as we have attachments.
-	if len(form.Content) == 0 && len(attachments) == 0 {
-		return
+		log.Trace("Comment created: %d/%d/%d", ctx.Repo.Repository.ID, issue.ID, comment.ID)
 	}
 
-	comment, err := issue_service.CreateIssueComment(ctx, ctx.Doer, ctx.Repo.Repository, issue, form.Content, attachments)
-	if err != nil {
+	// Duplication and conflict check should apply to reopen pull request.
+	if form.Status == "reopen" && issue.IsPull {
+		// check whether the ref of PR <refs/pulls/pr_index/head> in base repo is consistent with the head commit of head branch in the head repo
+		// get head commit of PR
+		if issue.PullRequest.Flow == issues_model.PullRequestFlowGithub {
+			prHeadRef := issue.PullRequest.GetGitRefName()
+			prHeadCommitID, err := git.GetFullCommitID(ctx, issue.PullRequest.BaseRepo.RepoPath(), prHeadRef)
+			if err != nil {
+				ctx.ServerError("Get head commit Id of pr fail", err)
+				return
+			}
+
+			headBranchRef := issue.PullRequest.GetGitHeadBranchRefName()
+			headBranchCommitID, err := git.GetFullCommitID(ctx, issue.PullRequest.HeadRepo.RepoPath(), headBranchRef)
+			if err != nil {
+				ctx.ServerError("Get head commit Id of head branch fail", err)
+				return
+			}
+
+			if prHeadCommitID != headBranchCommitID {
+				// force push to base repo
+				if err := pull_service.PushToBaseRepo(ctx, issue.PullRequest); err != nil {
+					ctx.ServerError("force push error", err)
+					return
+				}
+			}
+		}
+
+		// Regenerate patch and test conflict.
+		pull_service.AddToTaskQueue(ctx, issue.PullRequest)
+	}
+
+	isClosed := form.Status == "close"
+	if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer, &issues_model.PRNotificationInfo{MergedCommitID: ""}, isClosed); err != nil {
 		if errors.Is(err, user_model.ErrBlockedByUser) {
-			ctx.JSONError(ctx.Tr("repo.comment.blocked_by_user"))
-		} else {
-			ctx.ServerError("CreateIssueComment", err)
+			if issue.IsPull {
+				ctx.JSONError(ctx.Tr("repo.pulls.blocked_by_user"))
+			} else {
+				ctx.JSONError(ctx.Tr("repo.issues.blocked_by_user"))
+			}
+			return
 		}
-		return
+
+		log.Error("ChangeStatus: %v", err)
+
+		if issues_model.IsErrDependenciesLeft(err) {
+			if issue.IsPull {
+				ctx.JSONError(ctx.Tr("repo.issues.dependency.pr_close_blocked"))
+			} else {
+				ctx.JSONError(ctx.Tr("repo.issues.dependency.issue_close_blocked"))
+			}
+			return
+		}
+	} else {
+		if err := stopTimerIfAvailable(ctx, ctx.Doer, issue); err != nil {
+			ctx.ServerError("CreateOrStopIssueStopwatch", err)
+			return
+		}
+
+		log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
 	}
 
-	log.Trace("Comment created: %d/%d/%d", ctx.Repo.Repository.ID, issue.ID, comment.ID)
+	// Redirect to comment hashtag if there is any actual content.
+	typeName := "issues"
+	if issue.IsPull {
+		typeName = "pulls"
+	}
+	if comment != nil {
+		ctx.JSONRedirect(fmt.Sprintf("%s/%s/%d#%s", ctx.Repo.RepoLink, typeName, issue.Index, comment.HashTag()))
+	} else {
+		ctx.JSONRedirect(fmt.Sprintf("%s/%s/%d", ctx.Repo.RepoLink, typeName, issue.Index))
+	}
 }
 
 // UpdateCommentContent change comment of issue's content
