@@ -149,6 +149,9 @@ func ProjectAssignment(ctx *APIContext) {
 }
 
 func ReqProjectReadPermissions(ctx *APIContext) {
+	if ctx.IsUserSiteAdmin() {
+		return
+	}
 	hasRead, err := hasReadProjectPermission(ctx, ctx.Project().APIOwnerType, ctx.Doer(), ctx.User(), ctx.Repo())
 	if err != nil {
 		ctx.ServerError("hasReadPerms", err)
@@ -162,6 +165,9 @@ func ReqProjectReadPermissions(ctx *APIContext) {
 }
 
 func ReqProjectWritePermissions(ctx *APIContext) {
+	if ctx.IsUserSiteAdmin() {
+		return
+	}
 	hasWrite, err := hasWriteProjectPermission(ctx, ctx.Project().APIOwnerType, ctx.Doer(), ctx.User(), ctx.Repo())
 	if err != nil {
 		ctx.ServerError("hasWritePerms", err)
@@ -183,10 +189,6 @@ func hasReadProjectPermission(ctx go_ctx.Context, ownerType any, doer, contextUs
 }
 
 func hasProjectPermission(ctx go_ctx.Context, ownerType any, doer, contextUser *user_model.User, repo *Repository, p perm.AccessMode) (bool, error) {
-	if doer.IsAdmin {
-		// All perms granted
-		return true, nil
-	}
 	var hasPerm bool
 	switch ownerType {
 	// If creation target is org, doer must be org owner, org admin, team member with valid team perms or site admin
