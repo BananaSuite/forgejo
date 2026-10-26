@@ -39,6 +39,116 @@ func NewNotifier() notify_service.Notifier {
 	return &webhookNotifier{}
 }
 
+type payloadOpts struct {
+	oldContent string
+	prInfo     *issues_model.PRNotificationInfo
+	review     *issues_model.Review
+	perm       access_model.Permission
+}
+
+func addParticipants(ctx context.Context, pr *issues_model.PullRequest, payload *api.PullRequestPayload) error {
+	participants, err := pr.Issue.GetParticipantIDsByIssue(ctx)
+	if err != nil {
+		log.Error("issue.GetParticipantIDsByIssue: %v", err)
+		return err
+	}
+	users, err := user_model.GetUserByIDs(ctx, participants)
+	if err != nil {
+		log.Error("getPullRequestPayloadInfo:", err)
+		return err
+	}
+	var userNames []string
+	for _, u := range users {
+		userNames = append(userNames, u.Name)
+	}
+	payload.ParticipantNames = &userNames
+	return nil
+}
+
+func newPullrequestPayload(
+	ctx context.Context,
+	action api.HookIssueAction,
+	idx int64,
+	pr *issues_model.PullRequest,
+	repo *repo_model.Repository,
+	permission access_model.Permission,
+	sender *user_model.User,
+	oldContent string,
+	prInfo *issues_model.PRNotificationInfo,
+	review *issues_model.Review,
+	doer *user_model.User,
+) (*api.PullRequestPayload, error) {
+
+	res := &api.PullRequestPayload{
+		Action:      action,
+		Index:       idx,
+		PullRequest: convert.ToAPIPullRequest(ctx, pr, doer),
+		Repository:  convert.ToRepo(ctx, repo, permission),
+		Sender:      convert.ToUser(ctx, sender, nil),
+	}
+
+	switch action {
+	case api.HookIssueReviewed:
+		var reviewHookType webhook_module.HookEventType
+		switch review.Type {
+		case issues_model.ReviewTypeApprove:
+			reviewHookType = webhook_module.HookEventPullRequestReviewApproved
+		case issues_model.ReviewTypeComment:
+			reviewHookType = webhook_module.HookEventPullRequestReviewComment
+		case issues_model.ReviewTypeReject:
+			reviewHookType = webhook_module.HookEventPullRequestReviewRejected
+		case issues_model.ReviewTypePending, issues_model.ReviewTypeRequest, issues_model.ReviewTypeUnknown:
+			log.Trace("Ignoring review type %v", review.Type)
+			return nil, nil
+		default:
+			log.Error("Unhandled review type: %v", review.Type)
+			return nil, fmt.Errorf("Unhandled review type: %v", review.Type)
+		}
+		err := addParticipants(ctx, pr, res)
+		if err != nil {
+			return nil, err
+		}
+		res.Review = &api.ReviewPayload{
+			Type:    string(reviewHookType),
+			Content: review.Content,
+		}
+		res.PullRequest = convert.ToAPIPullRequest(ctx, pr, review.Reviewer)
+		res.Sender = convert.ToUser(ctx, review.Reviewer, nil)
+		res.RequestedReviewer = convert.ToUser(ctx, review.Reviewer, nil)
+		break
+	case api.HookIssueReviewRequested, api.HookIssueReviewRequestRemoved:
+		res.RequestedReviewer = convert.ToUser(ctx, review.Reviewer, nil)
+		break
+	case api.HookIssueAction(api.HookIssueCommentCreated):
+		err := addParticipants(ctx, pr, res)
+		if err != nil {
+			return nil, err
+		}
+		res.CommitID = prInfo.MergedCommitID
+	case api.HookIssueClosed, api.HookIssueReOpened:
+		err := addParticipants(ctx, pr, res)
+		if err != nil {
+			return nil, err
+		}
+		res.CommitID = prInfo.MergedCommitID
+	case api.HookIssueOpened:
+		res.Sender = convert.ToUser(ctx, pr.Issue.Poster, nil)
+		res.PullRequest = convert.ToAPIPullRequest(ctx, pr, pr.Issue.Poster)
+	case api.HookIssueEdited:
+		err := addParticipants(ctx, pr, res)
+		if err != nil {
+			return nil, err
+		}
+		res.Changes = &api.ChangesPayload{
+			Body: &api.ChangesFromPayload{
+				From: oldContent,
+			},
+		}
+
+	}
+	return res, nil
+}
+
 func (m *webhookNotifier) IssueClearLabels(ctx context.Context, doer *user_model.User, issue *issues_model.Issue) {
 	if err := issue.LoadPoster(ctx); err != nil {
 		log.Error("LoadPoster: %v", err)
