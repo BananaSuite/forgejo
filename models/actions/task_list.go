@@ -43,6 +43,27 @@ func (tasks TaskList) LoadJobs(ctx context.Context) error {
 	return jobsList.LoadAttributes(ctx, true)
 }
 
+// GetRunnerIDs returns the distinct IDs of the runners that picked up the tasks.
+func (tasks TaskList) GetRunnerIDs() []int64 {
+	return container.FilterSlice(tasks, func(t *ActionTask) (int64, bool) {
+		return t.RunnerID, t.RunnerID != 0
+	})
+}
+
+// LoadRunners returns the runners of the tasks, keyed by runner ID. Deleted
+// runners are included, so that old tasks still show which runner ran them.
+func (tasks TaskList) LoadRunners(ctx context.Context) (map[int64]*ActionRunner, error) {
+	runnerIDs := tasks.GetRunnerIDs()
+	runners := make(map[int64]*ActionRunner, len(runnerIDs))
+	if len(runnerIDs) == 0 {
+		return runners, nil
+	}
+	if err := db.GetEngine(ctx).In("id", runnerIDs).Unscoped().Find(&runners); err != nil {
+		return nil, err
+	}
+	return runners, nil
+}
+
 func (tasks TaskList) LoadAttributes(ctx context.Context) error {
 	return tasks.LoadJobs(ctx)
 }
