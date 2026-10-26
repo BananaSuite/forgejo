@@ -12,10 +12,9 @@ import (
 	"forgejo.org/services/context"
 )
 
-const (
-	tplAdminActions base.TplName = "admin/actions"
-	tasksPageSize                = 30
-)
+const tplAdminActions base.TplName = "admin/actions"
+
+const tasksPageSize = 30
 
 // ActionsTasks shows the tasks of all runners on the instance, newest first:
 // waiting, running and finished ones.
