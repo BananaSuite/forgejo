@@ -149,10 +149,9 @@ func ProjectAssignment(ctx *APIContext) {
 }
 
 func ReqProjectReadPermissions(ctx *APIContext) {
-	if ctx.IsUserSiteAdmin() {
-		return
-	}
-	hasRead, err := hasReadProjectPermission(ctx, ctx.Project().APIOwnerType, ctx.Doer(), ctx.User(), ctx.Repo())
+	hasRead, err := hasReadProjectPermission(ctx,
+		ctx.Project().APIOwnerType, ctx.Doer(), ctx.User(), ctx.Repo(),
+		ctx.IsUserSiteAdmin())
 	if err != nil {
 		ctx.ServerError("hasReadPerms", err)
 		return
@@ -165,10 +164,9 @@ func ReqProjectReadPermissions(ctx *APIContext) {
 }
 
 func ReqProjectWritePermissions(ctx *APIContext) {
-	if ctx.IsUserSiteAdmin() {
-		return
-	}
-	hasWrite, err := hasWriteProjectPermission(ctx, ctx.Project().APIOwnerType, ctx.Doer(), ctx.User(), ctx.Repo())
+	hasWrite, err := hasWriteProjectPermission(ctx,
+		ctx.Project().APIOwnerType, ctx.Doer(), ctx.User(), ctx.Repo(),
+		ctx.IsUserSiteAdmin())
 	if err != nil {
 		ctx.ServerError("hasWritePerms", err)
 		return
@@ -180,15 +178,24 @@ func ReqProjectWritePermissions(ctx *APIContext) {
 	}
 }
 
-func hasWriteProjectPermission(ctx go_ctx.Context, ownerType any, doer, contextUser *user_model.User, repo *Repository) (bool, error) {
-	return hasProjectPermission(ctx, ownerType, doer, contextUser, repo, perm.AccessModeWrite)
+func hasWriteProjectPermission(ctx go_ctx.Context, ownerType any, doer,
+	contextUser *user_model.User, repo *Repository, isUserSiteAdmin bool,
+) (bool, error) {
+	return hasProjectPermission(ctx, ownerType, doer, contextUser, repo, perm.AccessModeWrite, isUserSiteAdmin)
 }
 
-func hasReadProjectPermission(ctx go_ctx.Context, ownerType any, doer, contextUser *user_model.User, repo *Repository) (bool, error) {
-	return hasProjectPermission(ctx, ownerType, doer, contextUser, repo, perm.AccessModeRead)
+func hasReadProjectPermission(ctx go_ctx.Context, ownerType any, doer,
+	contextUser *user_model.User, repo *Repository, isUserSiteAdmin bool,
+) (bool, error) {
+	return hasProjectPermission(ctx, ownerType, doer, contextUser, repo, perm.AccessModeRead, isUserSiteAdmin)
 }
 
-func hasProjectPermission(ctx go_ctx.Context, ownerType any, doer, contextUser *user_model.User, repo *Repository, p perm.AccessMode) (bool, error) {
+func hasProjectPermission(ctx go_ctx.Context, ownerType any, doer,
+	contextUser *user_model.User, repo *Repository, p perm.AccessMode, isUserSiteAdmin bool,
+) (bool, error) {
+	if isUserSiteAdmin {
+		return true, nil
+	}
 	var hasPerm bool
 	switch ownerType {
 	// If creation target is org, doer must be org owner, org admin, team member with valid team perms or site admin
