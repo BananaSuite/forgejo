@@ -3128,10 +3128,25 @@ func NewComment(ctx *context.Context) {
 		return
 	}
 
-	// Can't re-open a merged pull request.
-	if form.Status == "reopen" && issue.IsPull && issue.PullRequest.HasMerged {
-		ctx.JSONError(ctx.Tr("repo.issues.change_status.reopen_merged"))
-		return
+	if form.Status == "reopen" && issue.IsPull {
+		// Can't re-open a merged pull request.
+		if issue.PullRequest.HasMerged {
+			ctx.JSONError(ctx.Tr("repo.issues.change_status.reopen_merged"))
+			return
+		}
+
+		// Can't re-open a pull request for which an open pull request that
+		// matches (base_repo, head_repo, head_branch, base_branch, flow) exists.
+		var err error
+		pr, err := issues_model.GetUnmergedPullRequest(ctx, issue.PullRequest.HeadRepoID, issue.PullRequest.BaseRepoID, issue.PullRequest.HeadBranch, issue.PullRequest.BaseBranch, issue.PullRequest.Flow)
+		if err != nil && !issues_model.IsErrPullRequestNotExist(err) {
+			ctx.ServerError("GetUnmergedPullRequest", err)
+			return
+		}
+		if pr != nil {
+			ctx.JSONError(ctx.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
+			return
+		}
 	}
 
 	var attachments []string
@@ -3142,24 +3157,12 @@ func NewComment(ctx *context.Context) {
 	var comment *issues_model.Comment
 	defer func() {
 		// Duplication and conflict check should apply to reopen pull request.
-		var pr *issues_model.PullRequest
-
 		if form.Status == "reopen" && issue.IsPull {
 			pull := issue.PullRequest
-			var err error
-			pr, err = issues_model.GetUnmergedPullRequest(ctx, pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch, pull.Flow)
-			if err != nil {
-				if !issues_model.IsErrPullRequestNotExist(err) {
-					ctx.JSONError(ctx.Tr("repo.issues.dependency.pr_close_blocked"))
-					return
-				}
-			}
 
 			// Regenerate patch and test conflict.
-			if pr == nil {
-				issue.PullRequest.HeadCommitID = ""
-				pull_service.AddToTaskQueue(ctx, issue.PullRequest)
-			}
+			issue.PullRequest.HeadCommitID = ""
+			pull_service.AddToTaskQueue(ctx, issue.PullRequest)
 
 			// check whether the ref of PR <refs/pulls/pr_index/head> in base repo is consistent with the head commit of head branch in the head repo
 			// get head commit of PR
@@ -3215,38 +3218,34 @@ func NewComment(ctx *context.Context) {
 			}
 		}
 
-		if pr != nil {
-			ctx.Flash.Info(ctx.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
-		} else {
-			isClosed := form.Status == "close"
-			if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer, &issues_model.PRNotificationInfo{MergedCommitID: ""}, isClosed); err != nil {
-				if errors.Is(err, user_model.ErrBlockedByUser) {
-					if issue.IsPull {
-						ctx.JSONError(ctx.Tr("repo.pulls.blocked_by_user"))
-					} else {
-						ctx.JSONError(ctx.Tr("repo.issues.blocked_by_user"))
-					}
-					return
+		isClosed := form.Status == "close"
+		if err := issue_service.ChangeStatus(ctx, issue, ctx.Doer, &issues_model.PRNotificationInfo{MergedCommitID: ""}, isClosed); err != nil {
+			if errors.Is(err, user_model.ErrBlockedByUser) {
+				if issue.IsPull {
+					ctx.JSONError(ctx.Tr("repo.pulls.blocked_by_user"))
+				} else {
+					ctx.JSONError(ctx.Tr("repo.issues.blocked_by_user"))
 				}
-
-				log.Error("ChangeStatus: %v", err)
-
-				if issues_model.IsErrDependenciesLeft(err) {
-					if issue.IsPull {
-						ctx.JSONError(ctx.Tr("repo.issues.dependency.pr_close_blocked"))
-					} else {
-						ctx.JSONError(ctx.Tr("repo.issues.dependency.issue_close_blocked"))
-					}
-					return
-				}
-			} else {
-				if err := stopTimerIfAvailable(ctx, ctx.Doer, issue); err != nil {
-					ctx.ServerError("CreateOrStopIssueStopwatch", err)
-					return
-				}
-
-				log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
+				return
 			}
+
+			log.Error("ChangeStatus: %v", err)
+
+			if issues_model.IsErrDependenciesLeft(err) {
+				if issue.IsPull {
+					ctx.JSONError(ctx.Tr("repo.issues.dependency.pr_close_blocked"))
+				} else {
+					ctx.JSONError(ctx.Tr("repo.issues.dependency.issue_close_blocked"))
+				}
+				return
+			}
+		} else {
+			if err := stopTimerIfAvailable(ctx, ctx.Doer, issue); err != nil {
+				ctx.ServerError("CreateOrStopIssueStopwatch", err)
+				return
+			}
+
+			log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
 		}
 
 		// Redirect to comment hashtag if there is any actual content.
