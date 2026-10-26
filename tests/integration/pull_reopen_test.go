@@ -203,6 +203,37 @@ func TestPullrequestReopen(t *testing.T) {
 			assert.EqualValues(t, translation.NewLocale("en-US").Tr("repo.pulls.reopen_failed.head_branch"), errorResp.Error)
 		})
 
+		t.Run("Already exists", func(t *testing.T) {
+			// Create a new pull request, same properties as previous PR.
+			pullIssue := &issues_model.Issue{
+				RepoID:   baseRepo.ID,
+				Title:    "Innocent other PR",
+				PosterID: user2.ID,
+				Poster:   user2,
+				IsPull:   true,
+			}
+			pullRequest := &issues_model.PullRequest{
+				HeadRepoID: headRepo.ID,
+				BaseRepoID: baseRepo.ID,
+				HeadBranch: "head-branch",
+				BaseBranch: "base-branch",
+				HeadRepo:   headRepo,
+				BaseRepo:   baseRepo,
+				Type:       issues_model.PullRequestGitea,
+			}
+			err = pull_service.NewPullRequest(t.Context(), baseRepo, pullIssue, nil, nil, pullRequest, nil)
+			require.NoError(t, err)
+
+			resp := reopenPR(t, http.StatusBadRequest)
+			var errorResp errorJSON
+			DecodeJSON(t, resp, &errorResp)
+			assert.Equal(t, "You cannot perform a reopen operation because there is a pending pull request (#2) with identical properties.", errorResp.Error)
+
+			// Close it, so that the next test will go through.
+			issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{Title: "Innocent other PR"})
+			require.NoError(t, issue_service.ChangeStatus(t.Context(), issue, user2, &issues_model.PRNotificationInfo{MergedCommitID: ""}, true))
+		})
+
 		t.Run("Normal", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
