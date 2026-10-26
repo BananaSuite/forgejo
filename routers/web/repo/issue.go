@@ -3183,43 +3183,34 @@ func NewComment(ctx *context.Context) {
 	defer func() {
 		// Duplication and conflict check should apply to reopen pull request.
 		if form.Status == "reopen" && issue.IsPull {
-			pull := issue.PullRequest
-
-			// Regenerate patch and test conflict.
-			issue.PullRequest.HeadCommitID = ""
-			pull_service.AddToTaskQueue(ctx, issue.PullRequest)
-
 			// check whether the ref of PR <refs/pulls/pr_index/head> in base repo is consistent with the head commit of head branch in the head repo
 			// get head commit of PR
-			if pull.Flow == issues_model.PullRequestFlowGithub {
-				prHeadRef := pull.GetGitRefName()
-				prHeadCommitID, err := git.GetFullCommitID(ctx, pull.BaseRepo.RepoPath(), prHeadRef)
+			if issue.PullRequest.Flow == issues_model.PullRequestFlowGithub {
+				prHeadRef := issue.PullRequest.GetGitRefName()
+				prHeadCommitID, err := git.GetFullCommitID(ctx, issue.PullRequest.BaseRepo.RepoPath(), prHeadRef)
 				if err != nil {
 					ctx.ServerError("Get head commit Id of pr fail", err)
 					return
 				}
 
-				headBranchRef := pull.GetGitHeadBranchRefName()
-				headBranchCommitID, err := git.GetFullCommitID(ctx, pull.HeadRepo.RepoPath(), headBranchRef)
+				headBranchRef := issue.PullRequest.GetGitHeadBranchRefName()
+				headBranchCommitID, err := git.GetFullCommitID(ctx, issue.PullRequest.HeadRepo.RepoPath(), headBranchRef)
 				if err != nil {
 					ctx.ServerError("Get head commit Id of head branch fail", err)
 					return
 				}
 
-				err = pull.LoadIssue(ctx)
-				if err != nil {
-					ctx.ServerError("load the issue of pull request error", err)
-					return
-				}
-
 				if prHeadCommitID != headBranchCommitID {
 					// force push to base repo
-					if err := pull_service.PushToBaseRepo(ctx, pull); err != nil {
+					if err := pull_service.PushToBaseRepo(ctx, issue.PullRequest); err != nil {
 						ctx.ServerError("force push error", err)
 						return
 					}
 				}
 			}
+
+			// Regenerate patch and test conflict.
+			pull_service.AddToTaskQueue(ctx, issue.PullRequest)
 		}
 
 		isClosed := form.Status == "close"
