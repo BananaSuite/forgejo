@@ -19,6 +19,7 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
+	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/translation"
 	app_context "forgejo.org/services/context"
 	issue_service "forgejo.org/services/issue"
@@ -79,7 +80,7 @@ func TestPullrequestReopen(t *testing.T) {
 		assert.NotEmpty(t, headRepo)
 
 		// Add a change to the head repository, so a pull request can be opened.
-		_, err = files_service.ChangeRepoFiles(git.DefaultContext, headRepo, user2, &files_service.ChangeRepoFilesOptions{
+		fileResponse, err := files_service.ChangeRepoFiles(git.DefaultContext, headRepo, user2, &files_service.ChangeRepoFilesOptions{
 			Files: []*files_service.ChangeRepoFile{
 				{
 					Operation:     "update",
@@ -234,10 +235,51 @@ func TestPullrequestReopen(t *testing.T) {
 			require.NoError(t, issue_service.ChangeStatus(t.Context(), issue, user2, &issues_model.PRNotificationInfo{MergedCommitID: ""}, true))
 		})
 
+		// While it's closed, add a new commit to the head branch.
+		fileResponse, err = files_service.ChangeRepoFiles(t.Context(), headRepo, user2, &files_service.ChangeRepoFilesOptions{
+			Files: []*files_service.ChangeRepoFile{
+				{
+					Operation:     "update",
+					TreePath:      "README.md",
+					ContentReader: strings.NewReader("Updated README.md while it was closed!"),
+				},
+			},
+			Message:      "Modify README for head",
+			OldBranch:    "head-branch",
+			NewBranch:    "head-branch",
+			LastCommitID: fileResponse.Commit.SHA,
+			Author: &files_service.IdentityOptions{
+				Name:  user2.Name,
+				Email: user2.Email,
+			},
+			Committer: &files_service.IdentityOptions{
+				Name:  user2.Name,
+				Email: user2.Email,
+			},
+			Dates: &files_service.CommitDateOptions{
+				Author:    time.Now(),
+				Committer: time.Now(),
+			},
+		})
+		require.NoError(t, err)
+
 		t.Run("Normal", func(t *testing.T) {
 			defer tests.PrintCurrentTest(t)()
 
 			reopenPR(t, http.StatusOK)
+
+			t.Run("Pull request reference updated", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				gitRepo, err := gitrepo.OpenRepository(t.Context(), baseRepo)
+				require.NoError(t, err)
+				defer gitRepo.Close()
+
+				prRefCommitID, err := gitRepo.GetRefCommitID(pullRequest.GetGitRefName())
+				require.NoError(t, err)
+
+				assert.Equal(t, fileResponse.Commit.SHA, prRefCommitID)
+			})
 		})
 
 		t.Run("Merged", func(t *testing.T) {
