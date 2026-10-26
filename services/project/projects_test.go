@@ -495,7 +495,7 @@ func TestGetProjectByIDForOwner(t *testing.T) {
 	require.NoError(t, CreateProject(t.Context(), orgProject))
 
 	t.Run("valid project", func(t *testing.T) {
-		wantProject, err := GetProjectByIDForOwner(t.Context(), project.ID, ownerID)
+		wantProject, err := GetProjectByIDForOwner(t.Context(), project.ID, ownerID, nil)
 		require.NoError(t, err)
 		assert.Equal(t, wantProject.Title, projectTitle)
 	})

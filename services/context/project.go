@@ -16,7 +16,6 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
 	project_module "forgejo.org/modules/project"
-	project_service "forgejo.org/services/project"
 )
 
 // API interface for projects
@@ -79,11 +78,9 @@ func getProjectAndEnsureOwner(ctx *Context, projectID int64) *project_model.Proj
 	if project.Type == project_module.TypeRepository {
 		ownerID = ctx.Repo.Repository.ID
 	}
-	err = project_service.EnsureProjectOwnedBy(project, ownerID)
-	if err != nil {
+	if !project.CanBeAccessedByOwnerRepo(ownerID, ctx.Repo.Repository) {
 		log.Error("project_model.GetProjectByID(%d): %v", projectID, err)
 		ctx.NotFound(fmt.Sprintf("project %d did not belong to owner %d", projectID, ownerID), nil)
-		return nil
 	}
 	return project
 }

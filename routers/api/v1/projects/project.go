@@ -109,10 +109,10 @@ func GetProject(ctx *context.APIContext) {
 	var err error
 	var project *project_model.Project
 	if ownerType == project_module.APIOwnerTypeRepository {
-		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project().ProjectID, repo.ID)
+		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project().ProjectID, 0, repo)
 		project.Repo = repo
 	} else {
-		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project().ProjectID, owner.ID)
+		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project().ProjectID, owner.ID, nil)
 		project.Owner = owner
 	}
 	if err != nil {
@@ -134,9 +134,9 @@ func UpdateProject(ctx *context.APIContext) {
 	var err error
 	var project *project_model.Project
 	if ownerType == project_module.APIOwnerTypeRepository {
-		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project().ProjectID, repo.ID)
+		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project().ProjectID, 0, repo)
 	} else {
-		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project().ProjectID, owner.ID)
+		project, err = project_service.GetProjectByIDForOwner(ctx, ctx.Project().ProjectID, owner.ID, repo)
 	}
 	if err != nil {
 		if project_model.IsErrProjectNotExist(err) || project_module.IsErrMismatchedOwner(err) {
