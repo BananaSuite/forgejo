@@ -1,7 +1,3 @@
-#shortcuts[open] {
-  display: block;
-}
-
 #shortcuts ul {
   border: 2px solid var(--color-primary-contrast);
   grid-area: 1 / 1;

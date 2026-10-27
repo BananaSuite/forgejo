@@ -6,17 +6,12 @@
 // @watch end
 
 import {expect, type Response} from '@playwright/test';
-import {test, login_user, login} from './utils_e2e.ts';
+import {test} from './utils_e2e.ts';
 
+test.use({user: 'user2'});
 test.skip(({isMobile}) => isMobile, 'Desktop only');
 
-test.beforeAll(async ({browser}, workerInfo) => {
-  await login_user(browser, workerInfo, 'user2');
-});
-
-test('Code shortcuts', async ({browser}, workerInfo) => {
-  const page = await login({browser}, workerInfo);
-
+test('Code shortcuts', async ({page}) => {
   expect(
     (await page.goto('/user2/repo2/src/branch/master/test.xml'))?.status(),
   ).toBe(200);
@@ -36,10 +31,7 @@ test('Code shortcuts', async ({browser}, workerInfo) => {
   await expect(search).not.toBeFocused();
 });
 
-test('Open dialog and persist enable setting', async ({
-  browser,
-}, workerInfo) => {
-  const page = await login({browser}, workerInfo);
+test('Open dialog and persist enable setting', async ({page}) => {
   await page.goto('/');
   await page.keyboard.press('Shift+?');
   const dialog = page.locator('#shortcuts');

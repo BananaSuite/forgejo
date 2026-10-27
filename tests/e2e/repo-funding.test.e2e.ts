@@ -259,7 +259,7 @@ for (const run of [
       await page.getByRole('button').filter({hasText: 'Donate'}).click();
       await expect(fundingModal).toBeVisible();
 
-      await page.getByLabel('Close').click();
+      await fundingModal.getByLabel('Close').click();
       await expect(fundingModal).toBeHidden();
     });
   });

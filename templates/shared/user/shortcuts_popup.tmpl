@@ -1,7 +1,7 @@
 <dialog id="shortcuts" class="modal">
 	<header>
 		<span>{{ctx.Locale.Tr "shortcuts.title"}}</span>
-		<button type="button" class="ui compact icon button" aria-label="Close" command="close" commandfor="shortcuts">{{svg "octicon-x" 16}}</button>
+		<button type="button" class="ui compact icon button" aria-label="{{ctx.Locale.Tr "modal.close"}}" command="close" commandfor="shortcuts">{{svg "octicon-x" 16}}</button>
 	</header>
 	<article class="content">
 		<div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
@@ -32,11 +32,11 @@
 		</div>
 		<div class="tw-mt-4">
 			{{if .IsSigned}}
-				<input type="checkbox"{{if .SignedUser.EnableShortcuts}} checked{{end}}>
+				<input id="enable-shortcuts" type="checkbox"{{if .SignedUser.EnableShortcuts}} checked{{end}}>
 			{{else}}
-				<input type="checkbox" checked>
+				<input id="enable-shortcuts" type="checkbox" checked>
 			{{end}}
-			<label>{{ctx.Locale.Tr "shortcuts.enable"}}</label>
+			<label for="enable-shortcuts">{{ctx.Locale.Tr "shortcuts.enable"}}</label>
 		</div>
 	</article>
 </dialog>
