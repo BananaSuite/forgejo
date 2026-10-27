@@ -61,7 +61,7 @@ func EnumeratePackages(ctx *context.Context) {
 		Info          Info                    `json:"info"`
 		Packages      map[string]*PackageInfo `json:"packages"`
 		PackagesConda map[string]*PackageInfo `json:"packages.conda"`
-		Removed       map[string]*PackageInfo `json:"removed"`
+		Removed       []string                `json:"removed"`
 	}
 
 	repoData := &RepoData{
@@ -70,7 +70,7 @@ func EnumeratePackages(ctx *context.Context) {
 		},
 		Packages:      make(map[string]*PackageInfo),
 		PackagesConda: make(map[string]*PackageInfo),
-		Removed:       make(map[string]*PackageInfo),
+		Removed:       []string{},
 	}
 
 	pfs, err := conda_model.SearchFiles(ctx, &conda_model.FileSearchOptions{
