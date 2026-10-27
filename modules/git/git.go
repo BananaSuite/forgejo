@@ -405,7 +405,7 @@ func configSetNonExist(key, value string) error {
 }
 
 func configAddNonExist(key, value string) error {
-	_, _, err := NewCommand(DefaultContext, "config", "--global", "--get").AddDynamicArguments(key, value).RunStdString(nil)
+	_, _, err := NewCommand(DefaultContext, "config", "--global", "--get", "--fixed-value").AddDynamicArguments(key, value).RunStdString(nil)
 	if err == nil {
 		// already exist
 		return nil
