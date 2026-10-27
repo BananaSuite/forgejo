@@ -41,7 +41,7 @@ function onKeydown(e: KeyboardEvent) {
   ) return;
 
   switch (e.key) {
-    case 's':
+    case '/':
       document.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
       e.preventDefault();
       break;
