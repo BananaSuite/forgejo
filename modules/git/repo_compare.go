@@ -43,7 +43,7 @@ func (repo *Repository) GetMergeBase(base, head string) (string, error) {
 func (repo *Repository) GetCompareInfo(basePath, baseBranch, headBranch string, directComparison, fileOnly bool) (_ *CompareInfo, err error) {
 	if repo.Path != basePath {
 		// FIXME: eventually remove `basePath` as an option
-		return nil, errors.New("cross-repository comparison is not possible via GetCompareInfo")
+		return nil, errors.New("cross-repository comparison is not possible via GetCompareInfo; use NewCrossRepositoryCompare")
 	}
 
 	compareInfo := new(CompareInfo)
