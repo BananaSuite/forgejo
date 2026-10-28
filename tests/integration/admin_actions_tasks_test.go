@@ -55,6 +55,10 @@ func TestAdminActionsTasks(t *testing.T) {
 		link := doc.Find(`.flex-container-nav a.active.item[href="/admin/actions/tasks"]`)
 		assert.Equal(t, 1, link.Length())
 
+		// The header shows the number of tasks on all pages.
+		header := strings.TrimSpace(doc.Find(".task-list-container h4.header").Text())
+		assert.Contains(t, header, fmt.Sprintf("(Total: %d)", total))
+
 		rows := doc.Find(".task-list-container table tbody tr")
 		assert.Equal(t, 30, rows.Length())
 

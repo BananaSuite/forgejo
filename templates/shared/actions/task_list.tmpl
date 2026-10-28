@@ -1,6 +1,6 @@
 <div class="task-list-container">
 	<h4 class="ui top attached header">
-		{{ctx.Locale.Tr "actions.tasks.list_title"}}
+		{{ctx.Locale.Tr "actions.tasks.list_title"}} ({{ctx.Locale.Tr "admin.total" .Total}})
 	</h4>
 	<div class="ui attached segment">
 		{{template "shared/actions/task_table" .}}

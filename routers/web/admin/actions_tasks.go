@@ -51,6 +51,7 @@ func ActionsTasks(ctx *context.Context) {
 	ctx.Data["Tasks"] = tasks
 	ctx.Data["TaskRunners"] = runners
 	ctx.Data["ShowTaskRunner"] = true
+	ctx.Data["Total"] = count
 
 	pager := context.NewPagination(int(count), opts.PageSize, opts.Page, 5)
 	ctx.Data["Page"] = pager
