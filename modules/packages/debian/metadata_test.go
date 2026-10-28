@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
+	"strings"
 	"testing"
 
 	"forgejo.org/modules/zstd"
@@ -21,11 +22,35 @@ import (
 const (
 	packageName         = "gitea"
 	packageVersion      = "0:1.0.1-te~st"
+	version             = "1.0.1-te~st"
 	packageArchitecture = "amd64"
 	packageAuthor       = "KN4CK3R"
-	packageDescription  = "single line synopsis\n extended description\n with multiple\n lines.\n .\n New paragraph!\n With verbatim list:\n  * item a\n  * item b\n extending b\n .\n    indented with 4 spaces"
-	description         = "single line synopsis\n\nextended description with multiple lines.\n\nNew paragraph! With verbatim list:\n* item a\n* item b extending b\n\n  indented with 4 spaces"
-	projectURL          = "https://gitea.io"
+	packageDescription  = `single line synopsis
+ extended description
+ with multiple
+ lines.
+ .
+ New paragraph!
+ With verbatim list:
+  * item a
+  * item b
+ extending b
+ .
+    indented with 4 spaces`
+	description = `single line synopsis
+extended description
+with multiple
+lines.
+
+New paragraph!
+With verbatim list:
+ * item a
+ * item b
+extending b
+
+   indented with 4 spaces`
+	projectURL     = "https://gitea.io"
+	packageDepends = "a (>= 1.0) | b, c"
 )
 
 func TestParsePackage(t *testing.T) {
@@ -142,7 +167,7 @@ func (nopCloser) Close() error {
 func TestParseControlFile(t *testing.T) {
 	buildContent := func(name, version, architecture, description string) *bytes.Buffer {
 		var buf bytes.Buffer
-		buf.WriteString("Package: " + name + "\nVersion: " + version + "\nArchitecture: " + architecture + "\nMaintainer: " + packageAuthor + " <kn4ck3r@gitea.io>\nHomepage: " + projectURL + "\nDepends: a,\n b\nDescription: " + description)
+		buf.WriteString("Package: " + name + "\nVersion: " + version + "\nArchitecture: " + architecture + "\nMaintainer: " + packageAuthor + " <kn4ck3r@gitea.io>\nHomepage: " + projectURL + "\nDepends: " + packageDepends + "\nDescription: " + description)
 		return &buf
 	}
 
@@ -158,7 +183,7 @@ func TestParseControlFile(t *testing.T) {
 		for _, version := range []string{"", "1-", ":1.0", "1_0"} {
 			p, err := ParseControlFile(buildContent(packageName, version, packageArchitecture, packageDescription))
 			assert.Nil(t, p)
-			require.ErrorIs(t, err, ErrInvalidVersion)
+			require.Error(t, err)
 		}
 	})
 
@@ -176,37 +201,6 @@ func TestParseControlFile(t *testing.T) {
 		}
 	})
 
-	t.Run("ValidPackageDescription", func(t *testing.T) {
-		p, err := ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A"))
-		require.NoError(t, err)
-		assert.NotNil(t, p)
-		assert.Equal(t, "A", p.Metadata.Description)
-		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n B\n C"))
-		require.NoError(t, err)
-		assert.NotNil(t, p)
-		assert.Equal(t, "A\n\nB C", p.Metadata.Description)
-		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n B\n  C\n  D\n    E\n F"))
-		require.NoError(t, err)
-		assert.NotNil(t, p)
-		assert.Equal(t, "A\n\nB\nC\nD\n  E F", p.Metadata.Description)
-		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n B\n .\n C"))
-		require.NoError(t, err)
-		assert.NotNil(t, p)
-		assert.Equal(t, "A\n\nB\n\nC", p.Metadata.Description)
-		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n\tB\n\tC"))
-		require.NoError(t, err)
-		assert.NotNil(t, p)
-		assert.Equal(t, "A\n\nB\tC", p.Metadata.Description)
-		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n\tB\n\t\tC\n\t\tD\n\t\t\t\tE\n\tF"))
-		require.NoError(t, err)
-		assert.NotNil(t, p)
-		assert.Equal(t, "A\n\nB\nC\nD\n\t\tE\tF", p.Metadata.Description)
-		p, err = ParseControlFile(buildContent(packageName, packageVersion, packageArchitecture, "A\n\tB\n\t.\n\tC"))
-		require.NoError(t, err)
-		assert.NotNil(t, p)
-		assert.Equal(t, "A\n\nB\n\nC", p.Metadata.Description)
-	})
-
 	t.Run("Valid", func(t *testing.T) {
 		content := buildContent(packageName, packageVersion, packageArchitecture, packageDescription)
 		full := content.String()
@@ -216,12 +210,86 @@ func TestParseControlFile(t *testing.T) {
 		assert.NotNil(t, p)
 
 		assert.Equal(t, packageName, p.Name)
-		assert.Equal(t, packageVersion, p.Version)
+		assert.Equal(t, version, p.Version)
 		assert.Equal(t, packageArchitecture, p.Architecture)
 		assert.Equal(t, description, p.Metadata.Description)
 		assert.Equal(t, projectURL, p.Metadata.ProjectURL)
 		assert.Equal(t, packageAuthor, p.Metadata.Maintainer)
-		assert.Equal(t, []string{"a", "b"}, p.Metadata.Dependencies)
+		assert.Len(t, p.Metadata.Depends, 3)
+		assert.Equal(t, "a", p.Metadata.Depends[0].Name)
+		assert.Equal(t, "(>= 1.0)", p.Metadata.Depends[0].VersionRequirement)
+		assert.False(t, p.Metadata.Depends[0].IsAlternative)
+		assert.Equal(t, "b", p.Metadata.Depends[1].Name)
+		assert.Empty(t, p.Metadata.Depends[1].VersionRequirement)
+		assert.True(t, p.Metadata.Depends[1].IsAlternative)
+		assert.Equal(t, "c", p.Metadata.Depends[2].Name)
+		assert.Empty(t, p.Metadata.Depends[2].VersionRequirement)
+		assert.False(t, p.Metadata.Depends[2].IsAlternative)
 		assert.Equal(t, full, p.Control)
 	})
+}
+
+func TestDebianDescriptionSynopsisAndBody(t *testing.T) {
+	for description, expected := range map[string]Description{
+		"only synopsis": {
+			Synopsis:     "only synopsis",
+			BodyMarkdown: "",
+		},
+		"\nonly body": {
+			Synopsis:     "",
+			BodyMarkdown: "only body",
+		},
+		"synopsis\nbody first\nparagraph\n\nsecond paragraph": {
+			Synopsis:     "synopsis",
+			BodyMarkdown: "body first\nparagraph\n\nsecond paragraph",
+		},
+		"synopsis\n indented\n  more indented\nnormal paragraph": {
+			Synopsis:     "synopsis",
+			BodyMarkdown: "```\n indented\n  more indented\n```\n\nnormal paragraph",
+		},
+	} {
+		assert.Equal(t, expected, (&Metadata{
+			Description: description,
+		}).DescriptionSynopsisAndBody())
+	}
+}
+
+func TestDebianGetDepends(t *testing.T) {
+	a := Dependency{
+		Name:               "a",
+		VersionRequirement: "(>= 1.0)",
+	}
+	b := Dependency{
+		Name:          "b",
+		IsAlternative: true,
+	}
+	c := Dependency{
+		Name: "c",
+	}
+	// include a broken dependency for testing the manual dependency parsing
+	broken := Dependency{
+		Name:               "broken",
+		VersionRequirement: "(",
+	}
+	for dependencies, expected := range map[string][]*Dependency{
+		"a (>= 1.0)": {
+			&a,
+		},
+		"a (>= 1.0) | b, c": {
+			&a,
+			&b,
+			&c,
+		},
+		"a (>= 1.0) | b, c, broken (": {
+			&a,
+			&b,
+			&c,
+			&broken,
+		},
+		"": nil,
+	} {
+		assert.Equal(t, expected, (&Metadata{
+			Dependencies: strings.Split(dependencies, ","),
+		}).GetDepends())
+	}
 }

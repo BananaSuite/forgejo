@@ -22,7 +22,7 @@ require (
 	github.com/42wim/httpsig v1.3.0
 	github.com/42wim/sshsig v0.0.0-20250502153856-5100632e8920
 	github.com/Azure/go-ntlmssp v0.1.1
-	github.com/ProtonMail/go-crypto v1.4.1
+	github.com/ProtonMail/go-crypto v1.5.2
 	github.com/PuerkitoBio/goquery v1.13.0
 	github.com/SaveTheRbtz/zstd-seekable-format-go/pkg v0.9.0
 	github.com/alecthomas/chroma/v2 v2.27.0
@@ -112,6 +112,7 @@ require (
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.67.3
 	mvdan.cc/xurls/v2 v2.6.0
+	pault.ag/go/debian v0.21.2
 	xorm.io/builder v0.3.13
 )
 
@@ -157,7 +158,7 @@ require (
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
-	github.com/cloudflare/circl v1.6.3 // indirect
+	github.com/cloudflare/circl v1.6.5 // indirect
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
@@ -256,6 +257,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/grpc v1.83.2 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	pault.ag/go/topsort v0.1.1 // indirect
 )
 
 replace github.com/hashicorp/go-version => github.com/6543/go-version v1.3.1

@@ -18,6 +18,8 @@ import (
 
 	"github.com/blakesmith/ar"
 	"github.com/ulikunitz/xz"
+	"pault.ag/go/debian/control"
+	"pault.ag/go/debian/dependency"
 )
 
 const (
@@ -38,15 +40,13 @@ const (
 
 var (
 	ErrMissingControlFile     = util.NewInvalidArgumentErrorf("control file is missing")
+	ErrMissingBinaryIndex     = util.NewInvalidArgumentErrorf("binary index is missing in control file")
 	ErrUnsupportedCompression = util.NewInvalidArgumentErrorf("unsupported compression algorithm")
 	ErrInvalidName            = util.NewInvalidArgumentErrorf("package name is invalid")
-	ErrInvalidVersion         = util.NewInvalidArgumentErrorf("package version is invalid")
 	ErrInvalidArchitecture    = util.NewInvalidArgumentErrorf("package architecture is invalid")
 
 	// https://www.debian.org/doc/debian-policy/ch-controlfields.html#source
 	namePattern = regexp.MustCompile(`\A[a-z0-9][a-z0-9+-.]+\z`)
-	// https://www.debian.org/doc/debian-policy/ch-controlfields.html#version
-	versionPattern = regexp.MustCompile(`\A(?:[1-9]?[0-9]:)?[a-zA-Z0-9.+~]+(?:-[a-zA-Z0-9.+-~]+)?\z`)
 )
 
 type Package struct {
@@ -58,10 +58,86 @@ type Package struct {
 }
 
 type Metadata struct {
-	Maintainer   string   `json:"maintainer,omitempty"`
-	ProjectURL   string   `json:"project_url,omitempty"`
-	Description  string   `json:"description,omitempty"`
-	Dependencies []string `json:"dependencies,omitempty"`
+	Maintainer   string        `json:"maintainer,omitempty"`
+	ProjectURL   string        `json:"project_url,omitempty"`
+	Description  string        `json:"description,omitempty"`
+	Dependencies []string      `json:"dependencies,omitempty"`
+	Depends      []*Dependency `json:"depends,omitempty"`
+	Suggests     []*Dependency `json:"suggests,omitempty"`
+	Recommends   []*Dependency `json:"recommends,omitempty"`
+	PreDepends   []*Dependency `json:"pre_depends,omitempty"`
+	Breaks       []*Dependency `json:"breaks,omitempty"`
+	Conflicts    []*Dependency `json:"conflicts,omitempty"`
+	Replaces     []*Dependency `json:"replaces,omitempty"`
+	Enhances     []*Dependency `json:"enhances,omitempty"`
+	Provides     []*Dependency `json:"provides,omitempty"`
+	BuiltUsing   []*Dependency `json:"built_using,omitempty"`
+}
+
+type Dependency struct {
+	Name               string `json:"name"`
+	VersionRequirement string `json:"version_requirement,omitempty"`
+	IsAlternative      bool   `json:"is_alternative,omitempty"`
+}
+
+type Description struct {
+	Synopsis     string
+	BodyMarkdown string
+}
+
+// DescriptionSynopsisAndBody separates the synopsis from the body and marks up latter in Markdown format
+func (m *Metadata) DescriptionSynopsisAndBody() Description {
+	descriptionSplit := strings.Split(m.Description, "\n")
+	synopsis := strings.TrimSpace(descriptionSplit[0])
+	var bodyMarkdown strings.Builder
+	inPre := false
+	for _, line := range descriptionSplit[1:] {
+		if len(line) != 0 && line[0] == ' ' {
+			if !inPre {
+				bodyMarkdown.WriteString("\n```\n")
+				inPre = true
+			}
+		} else if inPre {
+			bodyMarkdown.WriteString("```\n\n")
+			inPre = false
+		}
+		bodyMarkdown.WriteString(line + "\n")
+	}
+	return Description{
+		Synopsis:     synopsis,
+		BodyMarkdown: strings.Trim(bodyMarkdown.String(), "\n"),
+	}
+}
+
+// GetDepends returns the dependencies prepared for the output table
+// from the new Metadata.Depends or the legacy Metadata.Dependencies field
+func (m *Metadata) GetDepends() (dependencies []*Dependency) {
+	// first, check if Metadata.Depends is set (for new packages)
+	if m.Depends != nil {
+		return m.Depends
+	}
+	// second, try go-debian package parsing for old packages
+	dep, err := dependency.Parse(strings.Join(m.Dependencies, ","))
+	if err == nil {
+		return getDependencies(*dep)
+	}
+	// third, if it fails, parse manually for old packages
+	for _, dependencyLine := range m.Dependencies {
+		dependencyAlternatives := strings.Split(dependencyLine, "|")
+		for i, dep := range dependencyAlternatives {
+			depSplit := strings.SplitN(strings.TrimSpace(dep), " ", 2)
+			versionRequirement := ""
+			if len(depSplit) == 2 {
+				versionRequirement = depSplit[1]
+			}
+			dependencies = append(dependencies, &Dependency{
+				Name:               depSplit[0],
+				VersionRequirement: versionRequirement,
+				IsAlternative:      i != 0,
+			})
+		}
+	}
+	return dependencies
 }
 
 // ParsePackage parses the Debian package file
@@ -138,109 +214,71 @@ func ParsePackage(r io.Reader) (*Package, error) {
 
 // ParseControlFile parses a Debian control file to retrieve the metadata
 func ParseControlFile(r io.Reader) (*Package, error) {
-	p := &Package{
-		Metadata: &Metadata{},
-	}
-
-	key := ""
-	descParagraph := true
-	description := ""
-	var depends strings.Builder
-	var control strings.Builder
-
-	s := bufio.NewScanner(io.TeeReader(r, &control))
-	for s.Scan() {
-		line := s.Text()
-
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-
-		if line[0] == ' ' || line[0] == '\t' {
-			switch key {
-			case "Description":
-				// From https://www.debian.org/doc/debian-policy/ch-controlfields.html#description
-				// Point 2, if the line starts with '  ', then interpret as new line
-				if line[:2] == "  " || line[:2] == "\t\t" {
-					description += "\n" + strings.TrimPrefix(strings.TrimPrefix(line, "  "), "\t\t")
-					descParagraph = false
-					continue
-				}
-				// Point 3, if the line is ' .', then interpret it as a blank line.
-				if line == " ." || line == "\t." {
-					// The first newline is to end the current line, the second newline is
-					// to indicate the blank line.
-					description += "\n\n"
-					descParagraph = true
-					continue
-				}
-				if descParagraph {
-					// New paragraph is started, strip the leading space.
-					descParagraph = false
-					description += strings.TrimPrefix(strings.TrimPrefix(line, " "), "\t")
-				} else {
-					description += line
-				}
-			case "Depends":
-				depends.WriteString(trimmed)
-			}
-		} else {
-			parts := strings.SplitN(trimmed, ":", 2)
-			if len(parts) < 2 {
-				continue
-			}
-
-			key = parts[0]
-			value := strings.TrimSpace(parts[1])
-			switch key {
-			case "Package":
-				p.Name = value
-			case "Version":
-				p.Version = value
-			case "Architecture":
-				p.Architecture = value
-			case "Maintainer":
-				a, err := mail.ParseAddress(value)
-				if err != nil || a.Name == "" {
-					p.Metadata.Maintainer = value
-				} else {
-					p.Metadata.Maintainer = a.Name
-				}
-			case "Description":
-				description = value + "\n\n"
-			case "Depends":
-				depends.WriteString(value)
-			case "Homepage":
-				if validation.IsValidURL(value) {
-					p.Metadata.ProjectURL = value
-				}
-			}
-		}
-	}
-	if err := s.Err(); err != nil {
+	var controlBuilder strings.Builder
+	binaryIndices, err := control.ParseBinaryIndex(bufio.NewReader(io.TeeReader(r, &controlBuilder)))
+	if err != nil {
 		return nil, err
+	}
+
+	if len(binaryIndices) == 0 {
+		return nil, ErrMissingBinaryIndex
+	}
+	binaryIndex := binaryIndices[0]
+
+	p := &Package{
+		Name:         binaryIndex.Package,
+		Version:      binaryIndex.Version.String(),
+		Architecture: binaryIndex.Architecture.String(),
+		Control:      strings.TrimSpace(controlBuilder.String()),
+		Metadata: &Metadata{
+			Maintainer:  binaryIndex.Maintainer,
+			ProjectURL:  binaryIndex.Homepage,
+			Description: strings.TrimSpace(binaryIndex.Description),
+			Depends:     getDependencies(binaryIndex.GetDepends()),
+			Suggests:    getDependencies(binaryIndex.GetSuggests()),
+			Recommends:  getDependencies(binaryIndex.GetRecommends()),
+			PreDepends:  getDependencies(binaryIndex.GetPreDepends()),
+			Breaks:      getDependencies(binaryIndex.GetBreaks()),
+			Conflicts:   getDependencies(binaryIndex.GetConflicts()),
+			Replaces:    getDependencies(binaryIndex.GetReplaces()),
+			Enhances:    getDependencies(binaryIndex.GetEnhances()),
+			Provides:    getDependencies(binaryIndex.GetProvides()),
+			BuiltUsing:  getDependencies(binaryIndex.GetBuiltUsing()),
+		},
 	}
 
 	if !namePattern.MatchString(p.Name) {
 		return nil, ErrInvalidName
 	}
-	if !versionPattern.MatchString(p.Version) {
-		return nil, ErrInvalidVersion
-	}
 	if p.Architecture == "" {
 		return nil, ErrInvalidArchitecture
 	}
-
-	p.Metadata.Description = strings.TrimSpace(description)
-
-	dependencies := strings.Split(depends.String(), ",")
-	for i := range dependencies {
-		dependencies[i] = strings.TrimSpace(dependencies[i])
+	address, err := mail.ParseAddress(p.Metadata.Maintainer)
+	if err == nil && address.Name != "" {
+		p.Metadata.Maintainer = address.Name
 	}
-	p.Metadata.Dependencies = dependencies
-
-	p.Control = strings.TrimSpace(control.String())
+	if !validation.IsValidURL(p.Metadata.ProjectURL) {
+		p.Metadata.ProjectURL = ""
+	}
 
 	return p, nil
+}
+
+// getDependencies returns the dependencies prepared for the output table with name,
+// version and whether it is an alternative dependency
+func getDependencies(dep dependency.Dependency) (dependencies []*Dependency) {
+	for _, relation := range dep.Relations {
+		for i, possibility := range relation.Possibilities {
+			versionRequirement := ""
+			if possibility.Version != nil {
+				versionRequirement = possibility.Version.String()
+			}
+			dependencies = append(dependencies, &Dependency{
+				Name:               possibility.Name,
+				VersionRequirement: versionRequirement,
+				IsAlternative:      i != 0,
+			})
+		}
+	}
+	return dependencies
 }

@@ -41,25 +41,92 @@ sudo apt update</code></pre></div>
 		</table>
 	</div>
 
-	{{if .PackageDescriptor.Metadata.Description}}
+	{{$description := .PackageDescriptor.Metadata.DescriptionSynopsisAndBody}}
+	{{if or $description.Synopsis $description.BodyMarkdown}}
 		<h4 class="ui top attached header">{{ctx.Locale.Tr "packages.about"}}</h4>
-		<div class="ui attached segment">
-			<span class="tw-whitespace-break-spaces">{{.PackageDescriptor.Metadata.Description}}</span>
-		</div>
+		{{if $description.Synopsis -}}
+			<div class="ui attached segment">{{$description.Synopsis}}</div>
+		{{- end}}
+		{{- if $description.BodyMarkdown -}}
+			<div class="ui attached segment markup">{{RenderMarkdownToHtml $.Context $description.BodyMarkdown}}</div>
+		{{- end}}
 	{{end}}
 
-	{{if .PackageDescriptor.Metadata.Dependencies}}
+	{{$depends := .PackageDescriptor.Metadata.GetDepends}}
+	{{if or $depends .PackageDescriptor.Metadata.Suggests .PackageDescriptor.Metadata.PreDepends .PackageDescriptor.Metadata.Breaks .PackageDescriptor.Metadata.Conflicts .PackageDescriptor.Metadata.BuiltUsing}}
 		<h4 class="ui top attached header">{{ctx.Locale.Tr "packages.dependencies"}}</h4>
-		<div class="ui attached segment">
-			<table class="ui single line very basic table">
-				<tbody>
-					{{range .PackageDescriptor.Metadata.Dependencies}}
-						<tr>
-							<td>{{.}}</td>
-						</tr>
-					{{end}}
-				</tbody>
-			</table>
-		</div>
+		{{if $depends}}
+			<div class="ui attached segment">
+				<h5>Depends</h5>
+				{{template "dependencies" $depends}}
+			</div>
+		{{end}}
+		{{if .PackageDescriptor.Metadata.Suggests}}
+			<div class="ui attached segment">
+				<h5>Suggests</h5>
+				{{template "dependencies" .PackageDescriptor.Metadata.Suggests}}
+			</div>
+		{{end}}
+		{{if .PackageDescriptor.Metadata.Recommends}}
+			<div class="ui attached segment">
+				<h5>Recommends</h5>
+				{{template "dependencies" .PackageDescriptor.Metadata.Recommends}}
+			</div>
+		{{end}}
+		{{if .PackageDescriptor.Metadata.PreDepends}}
+			<div class="ui attached segment">
+				<h5>Pre-Depends</h5>
+				{{template "dependencies" .PackageDescriptor.Metadata.PreDepends}}
+			</div>
+		{{end}}
+		{{if .PackageDescriptor.Metadata.Breaks}}
+			<div class="ui attached segment">
+				<h5>Breaks</h5>
+				{{template "dependencies" .PackageDescriptor.Metadata.Breaks}}
+			</div>
+		{{end}}
+		{{if .PackageDescriptor.Metadata.Conflicts}}
+			<div class="ui attached segment">
+				<h5>Conflicts</h5>
+				{{template "dependencies" .PackageDescriptor.Metadata.Conflicts}}
+			</div>
+		{{end}}
+		{{if .PackageDescriptor.Metadata.Enhances}}
+			<div class="ui attached segment">
+				<h5>Enhances</h5>
+				{{template "dependencies" .PackageDescriptor.Metadata.Enhances}}
+			</div>
+		{{end}}
+		{{if .PackageDescriptor.Metadata.Provides}}
+			<div class="ui attached segment">
+				<h5>Provides</h5>
+				{{template "dependencies" .PackageDescriptor.Metadata.Provides}}
+			</div>
+		{{end}}
+		{{if .PackageDescriptor.Metadata.BuiltUsing}}
+			<div class="ui attached segment">
+				<h5>Built-Using</h5>
+				{{template "dependencies" .PackageDescriptor.Metadata.BuiltUsing}}
+			</div>
+		{{end}}
 	{{end}}
+{{end}}
+
+{{define "dependencies"}}
+	<table class="ui single line very basic table">
+		<thead>
+			<tr>
+				<th class="ten wide">{{ctx.Locale.Tr "packages.dependency.id"}}</th>
+				<th class="six wide">{{ctx.Locale.Tr "packages.dependency.version"}}</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{range .}}
+			<tr>
+				<td>{{if .IsAlternative}}<strong>or</strong> {{end}}{{.Name}}</td>
+				<td>{{.VersionRequirement}}</td>
+			</tr>
+			{{end}}
+		</tbody>
+	</table>
 {{end}}
