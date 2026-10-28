@@ -1166,7 +1166,6 @@
 	"graphs.recent_commits.title": "Number of commits in the past year",
 	"graphs.code_frequency.title": "Code frequency over the history of {0}",
 	"shortcuts.title": "Keyboard shortcuts",
-	"shortcuts.hint": "Navigate with arrow keys",
 	"shortcuts.enable": "Enable keyboard shortcuts",
 	"shortcuts.button.global": "Global",
 	"shortcuts.button.repo": "Repository",
