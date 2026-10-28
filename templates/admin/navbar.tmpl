@@ -65,7 +65,7 @@
 			{{end}}
 		{{end}}
 		{{if .EnableActions}}
-		<details class="item toggleable-item" {{if or .PageIsSharedSettingsRunners .PageIsSharedSettingsVariables .PageIsSharedSettingsTasks}}open{{end}}>
+		<details class="item toggleable-item" {{if or .PageIsSharedSettingsRunners .PageIsSharedSettingsVariables .PageIsSharedSettingsTasks .PageIsSharedSettingsJobs}}open{{end}}>
 			<summary>{{ctx.Locale.Tr "actions.actions"}}</summary>
 			<div class="menu">
 				<a class="{{if .PageIsSharedSettingsRunners}}active {{end}}item" href="{{AppSubUrl}}/admin/actions/runners">
@@ -76,6 +76,9 @@
 				</a>
 				<a class="{{if .PageIsSharedSettingsTasks}}active {{end}}item" href="{{AppSubUrl}}/admin/actions/tasks">
 					{{ctx.Locale.Tr "actions.tasks"}}
+				</a>
+				<a class="{{if .PageIsSharedSettingsJobs}}active {{end}}item" href="{{AppSubUrl}}/admin/actions/jobs">
+					{{ctx.Locale.Tr "actions.jobs"}}
 				</a>
 			</div>
 		</details>

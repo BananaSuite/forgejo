@@ -9,5 +9,8 @@
 	{{if eq .PageType "tasks"}}
 		{{template "shared/actions/task_list" .}}
 	{{end}}
+	{{if eq .PageType "jobs"}}
+		{{template "shared/actions/job_list" .}}
+	{{end}}
 	</div>
 {{template "admin/layout_footer" .}}

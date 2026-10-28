@@ -55,6 +55,49 @@ func (jobs ActionJobList) LoadAttributes(ctx context.Context, withRepo bool) err
 	return jobs.LoadRuns(ctx, withRepo)
 }
 
+// GetTaskIDs returns the IDs of the tasks that run the jobs. A job that no
+// runner has taken yet has no task.
+func (jobs ActionJobList) GetTaskIDs() []int64 {
+	return container.FilterSlice(jobs, func(j *ActionRunJob) (int64, bool) {
+		return j.TaskID, j.TaskID != 0
+	})
+}
+
+// LoadRunners returns the runner that took each job, keyed by job ID. Jobs
+// that no runner has taken yet are not in the map. Deleted runners are
+// included.
+func (jobs ActionJobList) LoadRunners(ctx context.Context) (map[int64]*ActionRunner, error) {
+	jobRunners := make(map[int64]*ActionRunner)
+	taskIDs := jobs.GetTaskIDs()
+	if len(taskIDs) == 0 {
+		return jobRunners, nil
+	}
+
+	tasks := make(map[int64]*ActionTask, len(taskIDs))
+	if err := db.GetEngine(ctx).Cols("id", "runner_id").In("id", taskIDs).Find(&tasks); err != nil {
+		return nil, err
+	}
+	taskList := make(TaskList, 0, len(tasks))
+	for _, task := range tasks {
+		taskList = append(taskList, task)
+	}
+	runners, err := taskList.LoadRunners(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, job := range jobs {
+		task, ok := tasks[job.TaskID]
+		if !ok {
+			continue
+		}
+		if runner, ok := runners[task.RunnerID]; ok {
+			jobRunners[job.ID] = runner
+		}
+	}
+	return jobRunners, nil
+}
+
 type FindRunJobOptions struct {
 	db.ListOptions
 	RunID            int64

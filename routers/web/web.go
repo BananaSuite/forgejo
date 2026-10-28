@@ -1024,6 +1024,7 @@ func registerRoutes(m *web.Route) {
 			addSettingsRunnersRoutes()
 			addSettingsVariablesRoutes()
 			m.Get("/tasks", admin.ActionsTasks)
+			m.Get("/jobs", admin.ActionsJobs)
 		})
 
 		if setting.Moderation.Enabled {
