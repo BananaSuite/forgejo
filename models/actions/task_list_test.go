@@ -4,6 +4,7 @@
 package actions
 
 import (
+	"context"
 	"testing"
 
 	"forgejo.org/models/db"
@@ -46,4 +47,16 @@ func TestTaskList_LoadRunners(t *testing.T) {
 	empty, err := TaskList{}.LoadRunners(ctx)
 	require.NoError(t, err)
 	assert.Empty(t, empty)
+}
+
+func TestTaskList_LoadRunnersDatabaseError(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// A cancelled context makes the database query fail.
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	runners, err := TaskList{{ID: 1, RunnerID: 1}}.LoadRunners(ctx)
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Nil(t, runners)
 }
