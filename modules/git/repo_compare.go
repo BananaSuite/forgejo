@@ -16,9 +16,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
-
-	logger "forgejo.org/modules/log"
 )
 
 // CompareInfo represents needed information for comparing references.
@@ -62,18 +59,9 @@ func (repo *Repository) GetCompareInfo(basePath, baseBranch, headBranch string, 
 		tmpRemote    string
 	)
 
-	// We don't need a temporary remote for same repository.
 	if repo.Path != basePath {
-		// Add a temporary remote
-		tmpRemote = strconv.FormatInt(time.Now().UnixNano(), 10)
-		if err = repo.AddRemote(tmpRemote, basePath, false); err != nil {
-			return nil, fmt.Errorf("AddRemote: %w", err)
-		}
-		defer func() {
-			if err := repo.RemoveRemote(tmpRemote); err != nil {
-				logger.Error("GetPullRequestInfo: RemoveRemote: %v", err)
-			}
-		}()
+		// FIXME: eventually remove `basePath` as an option
+		return nil, errors.New("cross-repository comparison is not possible via GetCompareInfo")
 	}
 
 	compareInfo := new(CompareInfo)
