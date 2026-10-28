@@ -39,14 +39,14 @@ type NotificationCount struct {
 type NotifySubjectType string
 
 const (
-	// NotifySubjectIssue an issue is subject of an notification
+	// NotifySubjectIssue an issue is subject of a notification
 	NotifySubjectIssue NotifySubjectType = "Issue"
-	// NotifySubjectPull an pull is subject of an notification
+	// NotifySubjectPull a pull is subject of a notification
 	NotifySubjectPull NotifySubjectType = "Pull"
-	// NotifySubjectCommit an commit is subject of an notification
+	// NotifySubjectCommit a commit is subject of a notification
 	NotifySubjectCommit NotifySubjectType = "Commit"
-	// NotifySubjectRepository an repository is subject of an notification
+	// NotifySubjectRepository a repository is subject of a notification
 	NotifySubjectRepository NotifySubjectType = "Repository"
-	// NotifySubjectRelease an release is subject of an notification
+	// NotifySubjectRelease a release is subject of a notification
 	NotifySubjectRelease NotifySubjectType = "Release"
 )

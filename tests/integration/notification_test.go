@@ -64,5 +64,18 @@ func TestReleaseNotification(t *testing.T) {
 	resp := sessionUser5.MakeRequest(t, req, http.StatusOK)
 	htmlDoc := NewHTMLParser(t, resp.Body)
 
+	// there is a notification about the release
 	htmlDoc.AssertElement(t, ".notifications-link[href='/user2/repo1/releases/tag/releaseName']", true)
+
+	// visit the release page as the notified user
+	req = NewRequest(t, "GET", "/user2/repo1/releases/tag/releaseName")
+	sessionUser5.MakeRequest(t, req, http.StatusOK)
+
+	// check the in-app notifications of user5 again
+	req = NewRequest(t, "GET", "/notifications")
+	resp = sessionUser5.MakeRequest(t, req, http.StatusOK)
+	htmlDoc = NewHTMLParser(t, resp.Body)
+
+	// there is no longer a notification about the release
+	htmlDoc.AssertElement(t, ".notifications-link[href='/user2/repo1/releases/tag/releaseName']", false)
 }

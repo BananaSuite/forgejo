@@ -24,6 +24,7 @@ type FindNotificationOptions struct {
 	UserID            int64
 	RepoID            int64
 	IssueID           int64
+	ReleaseID         int64
 	Status            []NotificationStatus
 	Source            []NotificationSource
 	UpdatedAfterUnix  int64
@@ -41,6 +42,9 @@ func (opts FindNotificationOptions) ToConds() builder.Cond {
 	}
 	if opts.IssueID != 0 {
 		cond = cond.And(builder.Eq{"notification.issue_id": opts.IssueID})
+	}
+	if opts.ReleaseID != 0 {
+		cond = cond.And(builder.Eq{"notification.release_id": opts.ReleaseID})
 	}
 	if len(opts.Status) > 0 {
 		if len(opts.Status) == 1 {
@@ -411,7 +415,7 @@ func (nl NotificationList) LoadComments(ctx context.Context) ([]int, error) {
 func (nl NotificationList) getPendingReleaseIDs() []int64 {
 	ids := make(container.Set[int64], len(nl))
 	for _, notification := range nl {
-		if notification.Release != nil {
+		if !notification.ReleaseID.Has() || notification.Release != nil {
 			continue
 		}
 		ids.Add(notification.ReleaseID.ValueOrZeroValue())
@@ -434,14 +438,12 @@ func (nl NotificationList) LoadReleases(ctx context.Context) ([]int, error) {
 	failures := []int{}
 
 	for i, notification := range nl {
-		if notification.Release == nil {
+		if notification.Release == nil && notification.ReleaseID.Has() {
 			releaseID := notification.ReleaseID.ValueOrZeroValue()
 			notification.Release = releases[releaseID]
 			if notification.Release == nil {
-				if releaseID != 0 {
-					log.Error("Notification[%d]: ReleaseID: %d Not Found", notification.ID, notification.ReleaseID)
-					failures = append(failures, i)
-				}
+				log.Error("Notification[%d]: ReleaseID: %d Not Found", notification.ID, notification.ReleaseID)
+				failures = append(failures, i)
 				continue
 			}
 			notification.Release.Repo = notification.Repository
