@@ -17,10 +17,10 @@ import (
 )
 
 func ProcessPersonInbox(ctx context.Context, user *user.User, activity *ap.Activity, keyID string) (ServiceResult, error) {
-	err := AuthorizeKeyID(keyID, activity)
+	err := AuthorizeKeyID(ctx, keyID, activity)
 	if err != nil {
 		log.Error("%v", err)
-		return ServiceResult{}, err
+		return ServiceResult{}, NewErrUnauthorized("Unauthorized: %v", err)
 	}
 	switch activity.Type {
 	case ap.CreateType:

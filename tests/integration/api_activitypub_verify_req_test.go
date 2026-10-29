@@ -123,6 +123,9 @@ func TestActivityPubVeryfiyReqDigest(t *testing.T) {
 	federatedSrv := mock.DistantServer(t)
 	defer federatedSrv.Close()
 
+	distantURL := federatedSrv.URL
+	distantUser15URL := fmt.Sprintf("%s/api/v1/activitypub/user-id/15", distantURL)
+
 	onApplicationRun(t, func(t *testing.T, localUrl *url.URL) {
 		defer test.MockVariableValue(&setting.AppURL, localUrl.String())()
 		localUser2Inbox := localUrl.JoinPath("/api/v1/activitypub/user-id/2/inbox").String()
@@ -132,7 +135,7 @@ func TestActivityPubVeryfiyReqDigest(t *testing.T) {
 			`{"type":"Follow",`+
 				`"actor":"%s",`+
 				`"object":"%s"}`,
-			mock.Persons[0].KeyID(federatedSrv.URL),
+			distantUser15URL,
 			localUser2Inbox,
 		)
 		req, err := test.CreateFederationPostReq(

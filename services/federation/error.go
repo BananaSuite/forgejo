@@ -38,6 +38,8 @@ func HTTPStatus(err error) int {
 	switch err.(type) {
 	case ErrNotAcceptable:
 		return http.StatusNotAcceptable
+	case ErrUnauthorized:
+		return http.StatusUnauthorized
 	default:
 		return http.StatusInternalServerError
 	}
@@ -49,4 +51,17 @@ type ErrKeyNotFound struct {
 
 func (err ErrKeyNotFound) Error() string {
 	return fmt.Sprintf("No key found for key ID: %s", err.KeyID)
+}
+
+type ErrUnauthorized struct {
+	Message string
+}
+
+func NewErrUnauthorized(format string, a ...any) ErrUnauthorized {
+	message := fmt.Sprintf(format, a...)
+	return ErrUnauthorized{Message: message}
+}
+
+func (err ErrUnauthorized) Error() string {
+	return fmt.Sprintf("Unauthorized: %v", err.Message)
 }

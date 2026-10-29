@@ -12,10 +12,10 @@ import (
 )
 
 func ProcessRepositoryInbox(ctx context.Context, activity *ap.Activity, repositoryID int64, keyID string) (ServiceResult, error) {
-	err := AuthorizeKeyID(keyID, activity)
+	err := AuthorizeKeyID(ctx, keyID, activity)
 	if err != nil {
 		log.Error("%v", err)
-		return ServiceResult{}, err
+		return ServiceResult{}, NewErrUnauthorized("Unauthorized: %v", err)
 	}
 	switch activity.Type {
 	case ap.LikeType:

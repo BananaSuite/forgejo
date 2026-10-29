@@ -214,28 +214,23 @@ func decodePublicKeyPem(pubKeyPem string) ([]byte, error) {
 
 // Finds the ID of requester and actor and compares them
 // This function should only be called **after** http signature verification
-func AuthorizeKeyID(keyID string, activity *ap.Activity) error {
+func AuthorizeKeyID(ctx context.Context, keyID string, activity *ap.Activity) error {
 	// skip if key veryfication is not enforced
 	if !setting.Federation.SignatureEnforced {
 		return nil
-	}
-
-	keyURL, err := url.Parse(keyID)
-	if err != nil {
-		return err
 	}
 
 	if activity.Actor == nil {
 		return fmt.Errorf("Invalid getting actor from request")
 	}
 
-	actorURL, err := url.Parse(activity.Actor.GetLink().String())
+	_, signedFedUser, err := user.FindFederatedUserByKeyID(ctx, keyID)
 	if err != nil {
 		return err
 	}
 
-	if keyURL.Path != actorURL.Path {
-		return fmt.Errorf("KeyID (%v) in signature does not match ActorID in body (%v)", keyURL.Path, actorURL.Path)
+	if signedFedUser.NormalizedOriginalURL != activity.Actor.GetID().String() {
+		return fmt.Errorf("KeyID (%v) in signature does not match ActorID in body (%v)", signedFedUser.NormalizedOriginalURL, activity.Actor.GetID().String())
 	}
 
 	return nil

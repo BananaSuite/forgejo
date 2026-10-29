@@ -27,23 +27,31 @@ func TestAuhtorizeKeyID(t *testing.T) {
 	defer test.MockVariableValue(&setting.Federation.PostHeaders, []string{"(request-target)", "Date", "Host", "Digest"})()
 
 	mock := test.NewFederationServerMock()
-	federatedSrvURL := "https://127.0.0.1:12345"
+	federatedSrv := mock.DistantServer(t)
+	defer federatedSrv.Close()
+	federatedSrvURL := federatedSrv.URL
 
 	actor := ap.Actor{ID: ap.IRI(mock.Persons[0].ActorID(federatedSrvURL))}
 	activity := ap.Activity{Actor: actor}
 
+	// mock verifyHTTPSSignature
+	_, err := FindOrCreateActorKey(t.Context(), mock.Persons[0].KeyID(federatedSrvURL))
+	require.NoError(t, err)
+	_, err = FindOrCreateActorKey(t.Context(), mock.Persons[1].KeyID(federatedSrvURL))
+	require.NoError(t, err)
+
 	t.Run("valid_signed_with_user_key", func(t *testing.T) {
-		err := AuthorizeKeyID(mock.Persons[0].KeyID(federatedSrvURL), &activity)
+		err := AuthorizeKeyID(t.Context(), mock.Persons[0].KeyID(federatedSrvURL), &activity)
 		require.NoError(t, err)
 	})
 
 	t.Run("invalid_signed_with_host_key", func(t *testing.T) {
-		err := AuthorizeKeyID(mock.ApActor.KeyID(federatedSrvURL), &activity)
+		err := AuthorizeKeyID(t.Context(), mock.ApActor.KeyID(federatedSrvURL), &activity)
 		require.Error(t, err)
 	})
 
 	t.Run("invalid_request_false_keyid", func(t *testing.T) {
-		err := AuthorizeKeyID(mock.Persons[1].KeyID(federatedSrvURL), &activity)
+		err := AuthorizeKeyID(t.Context(), mock.Persons[1].KeyID(federatedSrvURL), &activity)
 		require.Error(t, err)
 	})
 }
