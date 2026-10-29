@@ -277,7 +277,7 @@ func TestValidatePackageSpec(t *testing.T) {
 		} {
 			p.Name = name
 			err := ValidatePackageSpec(&p)
-			require.NoErrorf(t, err, "name %s", name)
+			require.NoError(t, err, "name %s", name)
 		}
 	})
 
@@ -292,7 +292,7 @@ func TestValidatePackageSpec(t *testing.T) {
 		} {
 			p.Name = name
 			err := ValidatePackageSpec(&p)
-			require.Errorf(t, err, "name %s", name)
+			require.Error(t, err, "name %s", name)
 			require.Contains(t, err.Error(), "invalid package name")
 		}
 	})
@@ -321,13 +321,15 @@ func TestValidatePackageSpec(t *testing.T) {
 		p := newpkg()
 		for _, version := range []string{
 			"1.2.3-1",
+			"0:1.2.3-1",
+			"123:1.2.3-1",
 			"1.2.3-10.2",
 			"Frogejo-1",
 			"!\"#$%&'()*+,.;<=>?@[\\]^_`{|}~-1",
 		} {
 			p.Version = version
 			err := ValidatePackageSpec(&p)
-			require.NoErrorf(t, err, "version %s", version)
+			require.NoError(t, err, "version %s", version)
 		}
 	})
 
@@ -341,6 +343,8 @@ func TestValidatePackageSpec(t *testing.T) {
 			"🐸-1",
 			"1.2.3-a",
 			"1.2.3-1.2.3",
+			"-123:1.2.3-1",
+			"abc:1.2.3-1",
 			"1",
 			"-",
 			"1-",
@@ -348,7 +352,7 @@ func TestValidatePackageSpec(t *testing.T) {
 		} {
 			p.Version = version
 			err := ValidatePackageSpec(&p)
-			require.Errorf(t, err, "version %s", version)
+			require.Error(t, err, "version %s", version)
 			require.Contains(t, err.Error(), "invalid package version")
 		}
 	})

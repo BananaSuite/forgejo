@@ -968,9 +968,10 @@ mail@domain.com
 `
 	input = strings.ReplaceAll(input, "${SPACE}", " ") // replace ${SPACE} with " ", to avoid some editor's auto-trimming
 	cases := []struct {
-		Links    markup.Links
-		IsWiki   bool
-		Expected string
+		Links        markup.Links
+		IsWiki       bool
+		RelativePath string
+		Expected     string
 	}{
 		{ // 0
 			Links:  markup.Links{},
@@ -1009,7 +1010,7 @@ space</p>
 /just/a/path.bin<br/>
 <a href="https://example.com/file.bin" rel="nofollow">https://example.com/file.bin</a><br/>
 <a href="/wiki/file.bin" rel="nofollow">local link</a><br/>
-<a href="/wiki/path/file" rel="nofollow">root link</a><br/>
+<a href="/path/file" rel="nofollow">root link</a><br/>
 <a href="/wiki/path/file" rel="nofollow">local link</a><br/>
 <a href="https://example.com" rel="nofollow">remote link</a><br/>
 <a href="/wiki/file.bin" rel="nofollow">local link</a><br/>
@@ -1073,7 +1074,7 @@ space</p>
 /just/a/path.bin<br/>
 <a href="https://example.com/file.bin" rel="nofollow">https://example.com/file.bin</a><br/>
 <a href="https://gitea.io/wiki/file.bin" rel="nofollow">local link</a><br/>
-<a href="https://gitea.io/wiki/path/file" rel="nofollow">root link</a><br/>
+<a href="https://gitea.io/path/file" rel="nofollow">root link</a><br/>
 <a href="https://gitea.io/wiki/path/file" rel="nofollow">local link</a><br/>
 <a href="https://example.com" rel="nofollow">remote link</a><br/>
 <a href="https://gitea.io/wiki/file.bin" rel="nofollow">local link</a><br/>
@@ -1105,7 +1106,7 @@ space</p>
 /just/a/path.bin<br/>
 <a href="https://example.com/file.bin" rel="nofollow">https://example.com/file.bin</a><br/>
 <a href="/relative/path/file.bin" rel="nofollow">local link</a><br/>
-<a href="/relative/path/path/file" rel="nofollow">root link</a><br/>
+<a href="/path/file" rel="nofollow">root link</a><br/>
 <a href="/relative/path/path/file" rel="nofollow">local link</a><br/>
 <a href="https://example.com" rel="nofollow">remote link</a><br/>
 <a href="/relative/path/src/file.bin" rel="nofollow">local link</a><br/>
@@ -1137,7 +1138,7 @@ space</p>
 /just/a/path.bin<br/>
 <a href="https://example.com/file.bin" rel="nofollow">https://example.com/file.bin</a><br/>
 <a href="/relative/path/wiki/file.bin" rel="nofollow">local link</a><br/>
-<a href="/relative/path/wiki/path/file" rel="nofollow">root link</a><br/>
+<a href="/path/file" rel="nofollow">root link</a><br/>
 <a href="/relative/path/wiki/path/file" rel="nofollow">local link</a><br/>
 <a href="https://example.com" rel="nofollow">remote link</a><br/>
 <a href="/relative/path/wiki/file.bin" rel="nofollow">local link</a><br/>
@@ -1170,7 +1171,7 @@ space</p>
 /just/a/path.bin<br/>
 <a href="https://example.com/file.bin" rel="nofollow">https://example.com/file.bin</a><br/>
 <a href="/user/repo/src/branch/main/file.bin" rel="nofollow">local link</a><br/>
-<a href="/user/repo/src/branch/main/path/file" rel="nofollow">root link</a><br/>
+<a href="/path/file" rel="nofollow">root link</a><br/>
 <a href="/user/repo/src/branch/main/path/file" rel="nofollow">local link</a><br/>
 <a href="https://example.com" rel="nofollow">remote link</a><br/>
 <a href="/user/repo/src/branch/main/file.bin" rel="nofollow">local link</a><br/>
@@ -1203,7 +1204,7 @@ space</p>
 /just/a/path.bin<br/>
 <a href="https://example.com/file.bin" rel="nofollow">https://example.com/file.bin</a><br/>
 <a href="/relative/path/wiki/file.bin" rel="nofollow">local link</a><br/>
-<a href="/relative/path/wiki/path/file" rel="nofollow">root link</a><br/>
+<a href="/path/file" rel="nofollow">root link</a><br/>
 <a href="/relative/path/wiki/path/file" rel="nofollow">local link</a><br/>
 <a href="https://example.com" rel="nofollow">remote link</a><br/>
 <a href="/relative/path/wiki/file.bin" rel="nofollow">local link</a><br/>
@@ -1236,7 +1237,7 @@ space</p>
 /just/a/path.bin<br/>
 <a href="https://example.com/file.bin" rel="nofollow">https://example.com/file.bin</a><br/>
 <a href="/user/repo/file.bin" rel="nofollow">local link</a><br/>
-<a href="/user/repo/path/file" rel="nofollow">root link</a><br/>
+<a href="/path/file" rel="nofollow">root link</a><br/>
 <a href="/user/repo/path/file" rel="nofollow">local link</a><br/>
 <a href="https://example.com" rel="nofollow">remote link</a><br/>
 <a href="/user/repo/src/sub/folder/file.bin" rel="nofollow">local link</a><br/>
@@ -1269,7 +1270,7 @@ space</p>
 /just/a/path.bin<br/>
 <a href="https://example.com/file.bin" rel="nofollow">https://example.com/file.bin</a><br/>
 <a href="/relative/path/wiki/file.bin" rel="nofollow">local link</a><br/>
-<a href="/relative/path/wiki/path/file" rel="nofollow">root link</a><br/>
+<a href="/path/file" rel="nofollow">root link</a><br/>
 <a href="/relative/path/wiki/path/file" rel="nofollow">local link</a><br/>
 <a href="https://example.com" rel="nofollow">remote link</a><br/>
 <a href="/relative/path/wiki/file.bin" rel="nofollow">local link</a><br/>
@@ -1298,7 +1299,8 @@ space</p>
 				BranchPath: "branch/main",
 				TreePath:   "sub/folder",
 			},
-			IsWiki: false,
+			IsWiki:       false,
+			RelativePath: "sub/folder/README.md",
 			Expected: `<p>space @mention-user<br/>
 /just/a/path.bin<br/>
 <a href="https://example.com/file.bin" rel="nofollow">https://example.com/file.bin</a><br/>
@@ -1337,7 +1339,7 @@ space</p>
 /just/a/path.bin<br/>
 <a href="https://example.com/file.bin" rel="nofollow">https://example.com/file.bin</a><br/>
 <a href="/relative/path/wiki/file.bin" rel="nofollow">local link</a><br/>
-<a href="/relative/path/wiki/path/file" rel="nofollow">root link</a><br/>
+<a href="/path/file" rel="nofollow">root link</a><br/>
 <a href="/relative/path/wiki/path/file" rel="nofollow">local link</a><br/>
 <a href="https://example.com" rel="nofollow">remote link</a><br/>
 <a href="/relative/path/wiki/file.bin" rel="nofollow">local link</a><br/>
@@ -1363,7 +1365,7 @@ space</p>
 	}
 
 	for i, c := range cases {
-		result, err := markdown.RenderString(&markup.RenderContext{Ctx: t.Context(), Links: c.Links, IsWiki: c.IsWiki}, input)
+		result, err := markdown.RenderString(&markup.RenderContext{Ctx: t.Context(), Links: c.Links, IsWiki: c.IsWiki, RelativePath: c.RelativePath}, input)
 		require.NoError(t, err, "Unexpected error in testcase: %v", i)
 		assert.Equal(t, template.HTML(c.Expected), result, "Unexpected result in testcase %v", i)
 	}
@@ -1549,8 +1551,8 @@ func TestCodeblockLanguageTransformation(t *testing.T) {
 		"```rust\n"+
 			"fn main() {}\n"+
 			"```",
-		`<pre class="code-block"><code class="chroma language-rust display"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span><span class="w">
-</span></code></pre>`,
+		`<div><pre class="code-block"><code class="chroma language-rust display"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span></code></pre></div>`,
 	)
 
 	// Comma stripped
@@ -1558,8 +1560,8 @@ func TestCodeblockLanguageTransformation(t *testing.T) {
 		"```rust,ignore\n"+
 			"fn main() {}\n"+
 			"```",
-		`<pre class="code-block"><code class="chroma language-rust display"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span><span class="w">
-</span></code></pre>`,
+		`<div><pre class="code-block"><code class="chroma language-rust display"><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span></code></pre></div>`,
 	)
 
 	// Pandoc stripping
@@ -1570,10 +1572,10 @@ func TestCodeblockLanguageTransformation(t *testing.T) {
 			"qsort (x:xs) = qsort (filter (< x) xs) ++ [x] ++\n"+
 			"               qsort (filter (>= x) xs)\n"+
 			"```",
-		`<pre class="code-block"><code class="chroma language-haskell display"><span class="nf">qsort</span> <span class="kt">[]</span>     <span class="ow">=</span> <span class="kt">[]</span>
+		`<div><pre class="code-block"><code class="chroma language-haskell display"><span class="nf">qsort</span> <span class="kt">[]</span>     <span class="ow">=</span> <span class="kt">[]</span>
 <span class="nf">qsort</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="n">qsort</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="o">&lt;</span> <span class="n">x</span><span class="p">)</span> <span class="n">xs</span><span class="p">)</span> <span class="o">++</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">++</span>
                <span class="n">qsort</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="o">&gt;=</span> <span class="n">x</span><span class="p">)</span> <span class="n">xs</span><span class="p">)</span>
-</code></pre>`,
+</code></pre></div>`,
 	)
 
 	// Pandoc language extracting
@@ -1584,10 +1586,10 @@ func TestCodeblockLanguageTransformation(t *testing.T) {
 			"qsort (x:xs) = qsort (filter (< x) xs) ++ [x] ++\n"+
 			"               qsort (filter (>= x) xs)\n"+
 			"```",
-		`<pre class="code-block"><code class="chroma language-haskell display"><span class="nf">qsort</span> <span class="kt">[]</span>     <span class="ow">=</span> <span class="kt">[]</span>
+		`<div><pre class="code-block"><code class="chroma language-haskell display"><span class="nf">qsort</span> <span class="kt">[]</span>     <span class="ow">=</span> <span class="kt">[]</span>
 <span class="nf">qsort</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="n">qsort</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="o">&lt;</span> <span class="n">x</span><span class="p">)</span> <span class="n">xs</span><span class="p">)</span> <span class="o">++</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">++</span>
                <span class="n">qsort</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="o">&gt;=</span> <span class="n">x</span><span class="p">)</span> <span class="n">xs</span><span class="p">)</span>
-</code></pre>`,
+</code></pre></div>`,
 	)
 
 	// No language identifier
@@ -1595,7 +1597,7 @@ func TestCodeblockLanguageTransformation(t *testing.T) {
 		"```\n"+
 			"fn main() {}\n"+
 			"```",
-		`<pre class="code-block"><code class="chroma language-text display">fn main() {}
-</code></pre>`,
+		`<div><pre class="code-block"><code class="chroma language-text display">fn main() {}
+</code></pre></div>`,
 	)
 }

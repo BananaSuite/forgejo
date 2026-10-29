@@ -12,6 +12,7 @@ import (
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/modules/setting"
+	"forgejo.org/modules/timeutil"
 
 	pingv1 "code.forgejo.org/forgejo/actions-proto/ping/v1"
 	"code.forgejo.org/forgejo/actions-proto/ping/v1/pingv1connect"
@@ -251,6 +252,9 @@ type mockTaskOutcome struct {
 	// TaskState.Steps. Lets tests exercise per-step LogIndex/LogLength
 	// (and other StepState fields) without reaching into the DB directly.
 	stepStates []*runnerv1.StepState
+	// sendEmptyUpdateLog changes the behaviour so that the last `UpdateLog()` API call is performed with Rows:[] and
+	// NoMore:true, rather than providing the last log line along with the NoMore flag.
+	sendEmptyUpdateLog bool
 }
 
 func (r *mockRunner) execTask(t *testing.T, task *runnerv1.Task, outcome *mockTaskOutcome) {
@@ -259,10 +263,28 @@ func (r *mockRunner) execTask(t *testing.T, task *runnerv1.Task, outcome *mockTa
 			TaskId: task.Id,
 			Index:  int64(idx),
 			Rows:   []*runnerv1.LogRow{lr},
-			NoMore: idx == len(outcome.logRows)-1,
+			NoMore: !outcome.sendEmptyUpdateLog && (idx == len(outcome.logRows)-1),
 		}))
 		require.NoError(t, err)
 		assert.EqualValues(t, idx+1, resp.Msg.AckIndex)
+	}
+	if outcome.sendEmptyUpdateLog {
+		// When a forgejo-runner completes a task, it will start a retry loop of sending UpdateLog & UpdateTask until
+		// both succeed, or the retries are exhausted, so that transient failures in a service call don't lose the final
+		// statuses of a task, or the final log uploads.  This can cause the final UpdateLog to be invoked multiple
+		// times.  In order to verify that this works and doesn't trigger any error cases, the mock runner always
+		// invokes the last UpdateLog twice and verifies that neither have errors. (retry reference:
+		// https://code.forgejo.org/forgejo/runner/src/commit/c4a92ffa5e3a400ae7e9c40a2914e649eb338ad7/internal/pkg/report/reporter.go#L400-L411)
+		for range 2 {
+			resp, err := r.client.runnerServiceClient.UpdateLog(t.Context(), connect.NewRequest(&runnerv1.UpdateLogRequest{
+				TaskId: task.Id,
+				Index:  int64(len(outcome.logRows)),
+				Rows:   []*runnerv1.LogRow{},
+				NoMore: true,
+			}))
+			require.NoError(t, err)
+			assert.EqualValues(t, len(outcome.logRows), resp.Msg.AckIndex)
+		}
 	}
 	sentOutputKeys := make([]string, 0, len(outcome.outputs))
 	for outputKey, outputValue := range outcome.outputs {
@@ -281,7 +303,7 @@ func (r *mockRunner) execTask(t *testing.T, task *runnerv1.Task, outcome *mockTa
 		State: &runnerv1.TaskState{
 			Id:        task.Id,
 			Result:    outcome.result,
-			StoppedAt: timestamppb.Now(),
+			StoppedAt: timestamppb.New(timeutil.TimeStampNow().AsTime()),
 			Steps:     outcome.stepStates,
 		},
 	}))
@@ -296,7 +318,7 @@ func (r *mockRunner) succeedAtTask(t *testing.T, task *runnerv1.Task) {
 		State: &runnerv1.TaskState{
 			Id:        task.Id,
 			Result:    runnerv1.Result_RESULT_SUCCESS,
-			StoppedAt: timestamppb.Now(),
+			StoppedAt: timestamppb.New(timeutil.TimeStampNow().AsTime()),
 		},
 	}))
 	require.NoError(t, err)
@@ -309,7 +331,7 @@ func (r *mockRunner) failAtTask(t *testing.T, task *runnerv1.Task) {
 		State: &runnerv1.TaskState{
 			Id:        task.Id,
 			Result:    runnerv1.Result_RESULT_FAILURE,
-			StoppedAt: timestamppb.Now(),
+			StoppedAt: timestamppb.New(timeutil.TimeStampNow().AsTime()),
 		},
 	}))
 	require.NoError(t, err)

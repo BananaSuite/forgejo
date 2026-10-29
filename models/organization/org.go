@@ -6,10 +6,12 @@ package organization
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"strings"
 
 	actions_model "forgejo.org/models/actions"
+	"forgejo.org/models/avatars"
 	"forgejo.org/models/db"
 	"forgejo.org/models/perm"
 	repo_model "forgejo.org/models/repo"
@@ -20,6 +22,7 @@ import (
 	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/structs"
+	"forgejo.org/modules/timeutil"
 	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
@@ -164,6 +167,16 @@ func (org *Organization) hasMemberWithUserID(ctx context.Context, userID int64) 
 // AvatarLink returns the full avatar link with http host
 func (org *Organization) AvatarLink(ctx context.Context) string {
 	return org.AsUser().AvatarLink(ctx)
+}
+
+// UploadedAvatarLink returns the organization's uploaded avatar link for the given display size,
+// or an empty string if no avatar was uploaded.
+func (org *Organization) UploadedAvatarLink(size int) string {
+	// Uploaded avatars use SHA-256 hashes; generated identicons use MD5 hashes.
+	if !org.UseCustomAvatar || len(org.Avatar) != sha256.Size*2 {
+		return ""
+	}
+	return avatars.GenerateUserResizedAvatarLink(org.Avatar, size*setting.Avatar.RenderedSizeFactor)
 }
 
 // HTMLURL returns the organization's full link.
@@ -368,9 +381,11 @@ func CreateOrganization(ctx context.Context, org *Organization, owner *user_mode
 	}
 
 	if err = db.Insert(ctx, &TeamUser{
-		UID:    owner.ID,
-		OrgID:  org.ID,
-		TeamID: t.ID,
+		UID:         owner.ID,
+		OrgID:       org.ID,
+		TeamID:      t.ID,
+		CreatedUnix: optional.Some(timeutil.TimeStampNow()),
+		Reason:      MembershipReasonOrgCreator,
 	}); err != nil {
 		return fmt.Errorf("insert team-user relation: %w", err)
 	}

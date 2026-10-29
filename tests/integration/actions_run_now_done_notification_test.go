@@ -6,7 +6,6 @@ package integration
 import (
 	"context"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
@@ -19,8 +18,7 @@ import (
 	"forgejo.org/modules/setting"
 	actions_service "forgejo.org/services/actions"
 	notify_service "forgejo.org/services/notify"
-	files_service "forgejo.org/services/repository/files"
-	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,23 +34,23 @@ type mockNotifier struct {
 
 var _ notify_service.Notifier = &mockNotifier{}
 
-func (m *mockNotifier) ActionRunNowDone(ctx context.Context, run *actions_model.ActionRun, priorStatus actions_model.Status) {
+func (m *mockNotifier) ActionRunNowDone(_ context.Context, run *actions_model.ActionRun, priorStatus actions_model.Status) {
 	switch m.testIdx {
 	case 0:
 		// we accept the first id as okay and just check that the following ones make sense
 		m.runID = run.ID
 		assert.Equal(m.t, actions_model.StatusSuccess, run.Status)
-		assert.Equal(m.t, actions_model.StatusWaiting, priorStatus)
+		assert.Equal(m.t, actions_model.StatusRunning, priorStatus)
 		assert.True(m.t, run.NotifyEmail)
 	case 1:
 		assert.Equal(m.t, m.runID, run.ID)
 		assert.Equal(m.t, actions_model.StatusFailure, run.Status)
-		assert.Equal(m.t, actions_model.StatusWaiting, priorStatus)
+		assert.Equal(m.t, actions_model.StatusRunning, priorStatus)
 		assert.True(m.t, run.NotifyEmail)
 	case 2:
 		assert.Equal(m.t, m.runID, run.ID)
 		assert.Equal(m.t, actions_model.StatusCancelled, run.Status)
-		assert.Equal(m.t, actions_model.StatusWaiting, priorStatus)
+		assert.Equal(m.t, actions_model.StatusRunning, priorStatus)
 		assert.True(m.t, run.NotifyEmail)
 	default:
 		assert.Fail(m.t, "too many notifications")
@@ -85,26 +83,23 @@ func TestActionNowDoneNotification(t *testing.T) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 
 		// create the repo
-		repo, sha, f := tests.CreateDeclarativeRepo(t, user2, "repo-workflow-dispatch",
-			[]unit_model.Type{unit_model.TypeActions}, nil,
-			[]*files_service.ChangeRepoFile{
-				{
-					Operation: "create",
-					TreePath:  ".forgejo/workflows/dispatch.yml",
-					ContentReader: strings.NewReader(
-						"name: test\n" +
-							"enable-email-notifications: true\n" +
-							"on: [workflow_dispatch]\n" +
-							"jobs:\n" +
-							"  test:\n" +
-							"    runs-on: ubuntu-latest\n" +
-							"    steps:\n" +
-							"      - run: echo helloworld\n",
-					),
-				},
+		var sha string
+		repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+			LatestSha: &sha,
+			Files: forgery.MapFS{
+				".forgejo/workflows/dispatch.yml": forgery.MapFile(
+					"name: test\n" +
+						"enable-email-notifications: true\n" +
+						"on: [workflow_dispatch]\n" +
+						"jobs:\n" +
+						"  test:\n" +
+						"    runs-on: ubuntu-latest\n" +
+						"    steps:\n" +
+						"      - run: echo helloworld\n",
+				),
 			},
-		)
-		defer f()
+		})
+		forgery.EnableRepoUnit(t, repo, unit_model.TypeActions, nil)
 
 		gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
 		require.NoError(t, err)

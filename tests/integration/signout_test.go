@@ -18,7 +18,7 @@ func TestSignOut(t *testing.T) {
 
 	session := loginUser(t, "user2")
 
-	req := NewRequest(t, "GET", "/user/logout")
+	req := NewRequest(t, "POST", "/user/logout")
 	resp := session.MakeRequest(t, req, http.StatusSeeOther)
 	assert.Equal(t, "/", test.RedirectURL(resp))
 

@@ -3,7 +3,7 @@
 
 // showModal will show the given modal and run `onApprove` if the approve/ok/yes
 // button is pressed.
-export function showModal(modalID: string | HTMLDialogElement, onApprove: () => void) {
+export function showModal(modalID: string | HTMLDialogElement, onApprove?: () => void) {
   let modal: HTMLDialogElement;
   if (typeof modalID === 'string') {
     modal = document.getElementById(modalID) as HTMLDialogElement;
@@ -18,12 +18,9 @@ export function showModal(modalID: string | HTMLDialogElement, onApprove: () => 
   // Close the modal if the cancel button is pressed.
   modal.querySelector('.cancel')?.addEventListener('click', () => {
     modal.close();
-    modal.querySelector('.ok')?.removeEventListener('click', onApprove);
+    modal.querySelector('.ok')?.removeEventListener('click', onApprove); // `undefined` onApprove is a no-op
   }, {once: true, passive: true});
   modal.querySelector('.ok')?.addEventListener('click', onApprove, {passive: true});
-
-  // Call a `onShow` callback if one is registered for this element.
-  modal?.$modal?.onShow();
 
   // The modal is ready to be shown.
   modal.showModal();
@@ -32,7 +29,7 @@ export function showModal(modalID: string | HTMLDialogElement, onApprove: () => 
 // NOTE: Can be replaced in late 2026 with `closedBy` attribute on `<dialog>` element.
 export function initModalClose() {
   document.addEventListener('click', (event) => {
-    const dialog = document.querySelector<HTMLDialogElement>('dialog[open]');
+    const dialog = document.querySelector<HTMLDialogElement>('dialog.modal[open]');
     // No open dialogs on page, nothing to do.
     if (dialog === null) return;
 

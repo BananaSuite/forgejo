@@ -6,9 +6,12 @@ package integration
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"testing"
+	"time"
 
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
@@ -17,7 +20,12 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
+	base "forgejo.org/modules/migration"
 	repo_module "forgejo.org/modules/repository"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
+	"forgejo.org/routers/private"
+	"forgejo.org/services/migrations/allowlist"
 	pull_service "forgejo.org/services/pull"
 	repo_service "forgejo.org/services/repository"
 	"forgejo.org/tests"
@@ -269,6 +277,7 @@ func testOptionsGitPush(t *testing.T, u *url.URL) {
 		doGitAddRemote(gitPath, "collaborator", u)(t)
 
 		t.Run("User without write access is not allowed to push", func(t *testing.T) {
+			defer test.MockVariableValue(&setting.AppDocsVer, func() string { return "v0.0" })()
 			branchName := "branch3"
 			doGitCreateBranch(gitPath, branchName)(t)
 			stderr := doGitPushTestRepositoryFail(t, gitPath, "collaborator", branchName)
@@ -277,7 +286,7 @@ func testOptionsGitPush(t *testing.T, u *url.URL) {
 			assert.Contains(t, stderr, `remote: If you instead wanted to create a pull request to the branch 'branch3', please use:`)
 			assert.Contains(t, stderr, `remote: git push origin HEAD:refs/for/branch3/choose-a-descriptor`)
 			assert.Contains(t, stderr, `remote: You might want to replace 'origin' with the name of your Git remote if it is different from origin. You can freely choose the descriptor to set it to a topic.`)
-			assert.Contains(t, stderr, `remote: You can learn about creating pull requests with AGit in the documentation: https://forgejo.org/docs/latest/user/git-cli/agit-support/`)
+			assert.Contains(t, stderr, `remote: You can learn about creating pull requests with AGit in the documentation: https://forgejo.org/docs/v0.0/user/git-cli/agit-support/`) // derived from setting.AppDocsVer
 		})
 
 		// give write access to the collaborator
@@ -395,32 +404,230 @@ func TestGitPushMirror(t *testing.T) {
 		u.User = url.UserPassword(owner.LowerName, userPassword)
 		doGitClone(repoPath, u)(t)
 
-		// create a PR
 		branchName := "local-branch"
 		doGitCreateBranch(repoPath, branchName)(t)
 		doGitAddSomeCommits(repoPath, branchName)(t)
+
+		// create an agit PR (1)
 		err := git.NewCommand(git.DefaultContext, "push", "origin").
 			AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/first-pr", branchName)).Run(&git.RunOpts{Dir: repoPath})
 		require.NoError(t, err)
+
+		// create a branch PR (2)
 		err = git.NewCommand(git.DefaultContext, "push", "origin").
-			AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/second-pr", branchName)).Run(&git.RunOpts{Dir: repoPath})
+			AddDynamicArguments(fmt.Sprintf("%s:remote-branch", branchName)).Run(&git.RunOpts{Dir: repoPath})
+		require.NoError(t, err)
+		pullIssue := &issues_model.Issue{
+			RepoID:   repo.ID,
+			Title:    "Branch Pull Request",
+			PosterID: owner.ID,
+			Poster:   owner,
+			IsPull:   true,
+		}
+		pullRequest := &issues_model.PullRequest{
+			HeadRepo:            repo,
+			HeadRepoID:          repo.ID,
+			HeadBranch:          "remote-branch",
+			BaseRepo:            repo,
+			BaseRepoID:          repo.ID,
+			BaseBranch:          repo.DefaultBranch,
+			Type:                issues_model.PullRequestGitea,
+			AllowMaintainerEdit: true,
+		}
+		err = pull_service.NewPullRequest(git.DefaultContext, repo, pullIssue, nil, nil, pullRequest, nil)
 		require.NoError(t, err)
 
 		// push --mirror
 		var stderr bytes.Buffer
 		err = git.NewCommand(git.DefaultContext, "push", "--mirror").Run(&git.RunOpts{Dir: repoPath, Stderr: &stderr})
 		assert.Contains(t, stderr.String(), "(Forgejo ignored PR deletion attempt)")
-		require.NoError(t, err)
+		require.NoError(t, err, stderr.String())
 
-		// ensure the PRs can still be fetched
+		// ensure both PRs can still be fetched
 		err = git.NewCommand(git.DefaultContext, "fetch", "origin").
 			AddDynamicArguments(fmt.Sprintf("refs/pull/%d/head:%s", 1, "first-agit-pr")).
 			Run(&git.RunOpts{Dir: repoPath})
 		require.NoError(t, err)
 		err = git.NewCommand(git.DefaultContext, "fetch", "origin").
-			AddDynamicArguments(fmt.Sprintf("refs/pull/%d/head:%s", 2, "second-agit-pr")).
+			AddDynamicArguments(fmt.Sprintf("refs/pull/%d/head:%s", 2, "second-branch-pr")).
 			Run(&git.RunOpts{Dir: repoPath})
 		require.NoError(t, err)
+
+		// Create a mirror (via a migration) and convert it to a pushed mirror
+		// https://codeberg.org/forgejo/forgejo/pulls/14885
+		t.Run("CloneMirror", func(t *testing.T) {
+			defer allowlist.Init() // reset allowlist to not disturb the other tests
+
+			defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
+			defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+			allowlist.Init() // reads the variables defined above
+
+			mirror := forgery.CreateRepository(t, owner, &forgery.CreateRepositoryOptions{})
+			mirror, err = repo_service.MigrateRepositoryGitData(t.Context(), mirror.Owner, mirror, base.MigrateOptions{
+				RepoName:  mirror.Name,
+				CloneAddr: repo.HTMLURL(),
+			}, http.DefaultTransport)
+			require.NoError(t, err)
+
+			// check that the refs got mirrored (shouldn't happen, but would invalidate the rest of the test)
+			// https://codeberg.org/forgejo/forgejo/pulls/14885
+			err = git.NewCommand(git.DefaultContext, "fetch").
+				AddDynamicArguments(
+					mirror.HTMLURL(),
+					fmt.Sprintf("refs/pull/%d/head:%s", 2, "second-branch-pr"),
+				).
+				Run(&git.RunOpts{Dir: repoPath})
+			require.NoError(t, err, "if exit code = 128, check if the rest of this test is still relevant")
+
+			// setup push mirror
+			session := loginUser(t, owner.Name)
+			session.MakeRequest(t, NewRequestWithValues(t, "POST", repo.HTMLURL()+"/settings", map[string]string{
+				"action":                     "push-mirror-add",
+				"push_mirror_address":        mirror.HTMLURL(),
+				"push_mirror_username":       owner.Name,
+				"push_mirror_password":       userPassword,
+				"push_mirror_sync_on_commit": "on",
+				"push_mirror_interval":       "8h0m0s",
+			}), http.StatusSeeOther)
+
+			// check initialSha of mirror
+			gitMirror, err := git.OpenRepository(git.DefaultContext, mirror.RepoPath())
+			require.NoError(t, err)
+			defer gitMirror.Close()
+
+			initialSha, err := gitMirror.GetBranchCommitID(mirror.DefaultBranch)
+			require.NoError(t, err)
+
+			// push some commits to original repo
+			err = git.NewCommand(git.DefaultContext, "push", "origin").
+				AddDynamicArguments(fmt.Sprintf("%s:%s", branchName, repo.DefaultBranch)).
+				Run(&git.RunOpts{Dir: repoPath})
+			require.NoError(t, err)
+
+			// wait for new commit to arrive to the mirror
+			start := time.Now()
+			for {
+				updatedSha, err := gitMirror.GetBranchCommitID(mirror.DefaultBranch)
+				require.NoError(t, err)
+				if updatedSha != initialSha {
+					break
+				}
+				const maxDelay = 5 * time.Second
+				if time.Since(start) >= maxDelay {
+					t.Errorf("mirror not updated within %s", maxDelay)
+					break
+				}
+				time.Sleep(time.Second)
+			}
+
+			// check that the refs got deleted from the mirror and cannot be fetched anymore
+			err = git.NewCommand(git.DefaultContext, "fetch").
+				AddDynamicArguments(
+					mirror.HTMLURL(),
+					fmt.Sprintf("refs/pull/%d/head:%s", 2, "second-branch-pr"),
+				).
+				Run(&git.RunOpts{Dir: repoPath})
+			require.Error(t, err)
+			require.True(t, git.IsErrorExitCode(err, 128), err)
+		})
+	})
+}
+
+// Two pushes to the same branch that are processed concurrently must not roll back the branch's commit ID in the
+// database.  This is tricky to test; `TestSeamPostReceiveSync` is used in the post-receive hook to cause a process to
+// stall to replicate the uncertain concurrency that occurs in reality.
+func TestGitPushConcurrentBranchUpdate(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		owner := forgery.CreateUser(t, &forgery.CreateUserOptions{})
+
+		repo := forgery.CreateRepository(t, owner, &forgery.CreateRepositoryOptions{
+			Files: forgery.FilesInit{},
+		})
+		branchName := repo.DefaultBranch
+
+		repoPath := t.TempDir()
+		u.Path = repo.FullName() + ".git"
+		u.User = url.UserPassword(owner.LowerName, userPassword)
+		doGitClone(repoPath, u)(t)
+
+		revParseHead := func() string {
+			stdout, _, err := git.NewCommand(git.DefaultContext, "rev-parse", "HEAD").RunStdString(&git.RunOpts{Dir: repoPath})
+			require.NoError(t, err)
+			return strings.TrimSpace(stdout)
+		}
+		initialCommitID := revParseHead()
+		doGitAddSomeCommits(repoPath, branchName)(t)
+		firstCommitID := revParseHead()
+		doGitAddSomeCommits(repoPath, branchName)(t)
+		secondCommitID := revParseHead()
+		t.Logf("initialCommitID = %q", initialCommitID)
+		t.Logf("firstCommitID = %q", firstCommitID)
+		t.Logf("secondCommitID = %q", secondCommitID)
+
+		pushCommit := func(commitID string) error {
+			_, stderr, err := git.NewCommand(git.DefaultContext, "push", "origin").
+				AddDynamicArguments(fmt.Sprintf("%s:refs/heads/%s", commitID, branchName)).
+				RunStdString(&git.RunOpts{Dir: repoPath})
+			if err != nil {
+				return fmt.Errorf("%s: %w", stderr, err)
+			}
+			return nil
+		}
+
+		assertBranchCommitInDB := func(expectedCommitID string) {
+			t.Helper()
+			branch, err := git_model.GetBranch(t.Context(), repo.ID, branchName)
+			require.NoError(t, err)
+			assert.Equal(t, expectedCommitID, branch.CommitID)
+		}
+
+		// Inject into the post-receive handler a function which recognizes when we're pushing the first commit, and
+		// freezes the goroutine until we want it to continue.
+		firstPostReceiveHookRunning := make(chan any, 1)
+		unblockFirstPostReceiveHook := make(chan any, 1)
+		defer test.MockVariableValue(&private.TestSeamPostReceiveSync, func(puo *repo_module.PushUpdateOptions) {
+			if puo.NewCommitID == firstCommitID {
+				close(firstPostReceiveHookRunning)
+				<-unblockFirstPostReceiveHook
+			}
+		})()
+
+		// Begin the first push of `firstCommitID`; runs in a goroutine because it will be blocked by the
+		// TestSeamPostReceiveSync implementation.
+		firstPushDone := make(chan error, 1)
+		go func() {
+			firstPushDone <- pushCommit(firstCommitID)
+		}()
+		firstPushReleased := false
+		finishFirstPush := func() {
+			if !firstPushReleased {
+				firstPushReleased = true
+				close(unblockFirstPostReceiveHook)
+				assert.NoError(t, <-firstPushDone)
+			}
+		}
+		defer finishFirstPush() // if test fails/exits, still try to cleanup the running goroutine
+
+		// Wait until the first post-receive hook is running, identified by firstPostReceiveHookRunning:
+		select {
+		case <-firstPostReceiveHookRunning:
+			// Expected - first push is now waiting on the post-receive hook to complete
+		case <-time.NewTimer(30 * time.Second).C:
+			assert.FailNow(t, "first push's post-receive hook never started")
+		case <-t.Context().Done():
+		}
+
+		// Test pre-condition: the first push, which should be stalled right now, should not have yet updated the
+		// database to the first commit ID.  If it has, something has gone wrong and the test scenario isn't valid.
+		assertBranchCommitInDB(initialCommitID)
+
+		// Second push: runs to completion while the first push is stalled.
+		require.NoError(t, pushCommit(secondCommitID))
+		assertBranchCommitInDB(secondCommitID)
+
+		// Allow the first push's post-receive to complete; it must not revert the branch to firstCommitID.
+		finishFirstPush()
+		assertBranchCommitInDB(secondCommitID)
 	})
 }
 

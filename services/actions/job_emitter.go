@@ -379,11 +379,14 @@ func prepareJobForEmitting(ctx context.Context, blockedJob *actions_model.Action
 		_, job := swf.Job()
 
 		ifPassed, err := job.EvaluateIf()
-		if errors.Is(err, jobparser.ErrCannotEvaluateInJobParser) {
-			// Fallback to sending the job to a runner.
+		if err != nil {
+			// Fallback to sending the job to a runner.  There are two classes of possible error:
+			// ErrCannotEvaluateInJobParser, in which we know we can't evaluate if server-side and must dispatch to the
+			// runner, and, all other errors which occur because the user made a mistake in their workflow.  As we don't
+			// have a convenient way to report the second class of errors to the user, we just dispatch all of them to a
+			// runner.
+			log.Trace("server-side evaluation of 'if' failed with an error; the job can be picked up by a runner: %s", err.Error())
 			return behaviourExecuteJob, nil
-		} else if err != nil {
-			return behaviourError, err
 		} else if !ifPassed {
 			return behaviorSkipJob, nil
 		}
@@ -717,10 +720,5 @@ func getRunInputs(run *actions_model.ActionRun) map[string]any {
 	if err != nil {
 		return nil
 	}
-	// transition from map[string]string to map[string]any...
-	inputs := make(map[string]any, len(dispatchPayload.Inputs))
-	for k, v := range dispatchPayload.Inputs {
-		inputs[k] = v
-	}
-	return inputs
+	return dispatchPayload.Inputs
 }
