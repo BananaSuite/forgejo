@@ -821,14 +821,21 @@ func CompareDiff(ctx *context.Context) {
 			}
 		}
 	}
-	beforeCommitID := ctx.Data["BeforeCommitID"].(string)
-	afterCommitID := ctx.Data["AfterCommitID"].(string)
 
 	separator := "..."
 	if ci.DirectComparison {
 		separator = ".."
 	}
-	ctx.Data["Comparing"] = base.ShortSha(beforeCommitID) + separator + base.ShortSha(afterCommitID)
+	// Reconstruct the full {:baseBranch}...{:headOwner}/{:headRepoName}:{:headBranch} for this compare, but with the
+	// specific commit IDs that the user is currently viewing as the branch names. This is used in the page title, but
+	// also in the download .diff & .patch links, where they must include the head owner/repo if different from the base
+	// to ensure that the cross-repository comparison works correctly (not all shas are available in the base repo).
+	ctx.Data["Comparing"] = fmt.Sprintf("%s%s%s/%s:%s",
+		base.ShortSha(ci.CompareInfo.BaseCommitID),
+		separator,
+		ci.HeadUser.Name,
+		ci.HeadRepo.Name,
+		base.ShortSha(ci.CompareInfo.HeadCommitID))
 	ctx.Data["Title"] = "Comparing " + ctx.Data["Comparing"].(string)
 
 	ctx.Data["IsDiffCompare"] = true
