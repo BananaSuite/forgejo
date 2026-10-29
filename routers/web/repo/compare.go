@@ -731,16 +731,16 @@ func CompareDiff(ctx *context.Context) {
 		err := git.GetRepoRawDiffForFile(ci.CompareInfo.CompareRepo(), ci.CompareInfo.BaseCommitID, ci.CompareInfo.HeadCommitID, git.RawDiffNormal, "", ctx.Resp)
 		if err != nil {
 			ctx.ServerError("ComparingDiff", err)
-			return
 		}
+		return
 	}
 
 	if ctx.Data["ComparingPatch"] != nil && ctx.Data["ComparingPatch"].(bool) {
 		err := git.GetRepoRawDiffForFile(ci.CompareInfo.CompareRepo(), ci.CompareInfo.BaseCommitID, ci.CompareInfo.HeadCommitID, git.RawDiffPatch, "", ctx.Resp)
 		if err != nil {
 			ctx.ServerError("ComparingPatch", err)
-			return
 		}
+		return
 	}
 
 	ctx.Data["PullRequestWorkInProgressPrefixes"] = setting.Repository.PullRequest.WorkInProgressPrefixes
