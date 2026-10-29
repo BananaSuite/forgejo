@@ -1501,9 +1501,9 @@ func GetPullRequestCommits(ctx *context.APIContext) {
 	defer closer.Close()
 
 	if pr.HasMerged {
-		prInfo, err = baseGitRepo.GetCompareInfo(pr.BaseRepo.RepoPath(), pr.MergeBase, pr.GetGitRefName(), false, false)
+		prInfo, err = baseGitRepo.GetCompareInfo(pr.MergeBase, pr.GetGitRefName(), false, false)
 	} else {
-		prInfo, err = baseGitRepo.GetCompareInfo(pr.BaseRepo.RepoPath(), pr.BaseBranch, pr.GetGitRefName(), false, false)
+		prInfo, err = baseGitRepo.GetCompareInfo(pr.BaseBranch, pr.GetGitRefName(), false, false)
 	}
 	if err != nil {
 		ctx.ServerError("GetCompareInfo", err)

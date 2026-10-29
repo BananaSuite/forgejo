@@ -194,13 +194,7 @@ func NewCrossRepositoryCompare(ctx context.Context, baseRepo, headRepo *git.Repo
 		return nil, fmt.Errorf("failed to get commit ID from base repo for ref %q: %w", baseRef, err)
 	}
 
-	innerCi, err := ci.CompareRepo().GetCompareInfo(
-		ci.CompareRepo().Path, // FIXME: remove this parameter
-		baseCommitID,
-		headCommitID,
-		directComparison,
-		fileOnly,
-	)
+	innerCi, err := ci.CompareRepo().GetCompareInfo(baseCommitID, headCommitID, directComparison, fileOnly)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get compare info: %w", err)
 	}

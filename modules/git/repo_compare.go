@@ -40,12 +40,7 @@ func (repo *Repository) GetMergeBase(base, head string) (string, error) {
 }
 
 // GetCompareInfo generates and returns compare information between base and head branches of repositories.
-func (repo *Repository) GetCompareInfo(basePath, baseBranch, headBranch string, directComparison, fileOnly bool) (_ *CompareInfo, err error) {
-	if repo.Path != basePath {
-		// FIXME: eventually remove `basePath` as an option
-		return nil, errors.New("cross-repository comparison is not possible via GetCompareInfo; use NewCrossRepositoryCompare")
-	}
-
+func (repo *Repository) GetCompareInfo(baseBranch, headBranch string, directComparison, fileOnly bool) (_ *CompareInfo, err error) {
 	compareInfo := new(CompareInfo)
 
 	compareInfo.HeadCommitID, err = repo.GetRefCommitID(headBranch)
