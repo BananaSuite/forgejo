@@ -195,13 +195,8 @@ func createOrUpdateReleaseNotificationForUser(ctx context.Context, userID int64,
 }
 
 // GetReleaseNotification return the notification about a release
-func GetReleaseNotification(ctx context.Context, userID, releaseID int64) (*Notification, error) {
-	notification := new(Notification)
-	_, err := db.GetEngine(ctx).
-		Where("user_id = ?", userID).
-		And("release_id = ?", releaseID).
-		Get(notification)
-	return notification, err
+func GetReleaseNotification(ctx context.Context, userID, releaseID int64) (*Notification, bool, error) {
+	return db.Get[Notification](ctx, FindNotificationOptions{UserID: userID, ReleaseID: releaseID}.ToConds())
 }
 
 // LoadAttributes load Repo Issue User and Comment if not loaded
@@ -401,12 +396,12 @@ func SetRepoReadBy(ctx context.Context, userID, repoID int64) error {
 
 // SetReleaseReadBy sets release to be read by given user.
 func SetReleaseReadBy(ctx context.Context, releaseID, userID int64) error {
-	notification, err := GetReleaseNotification(ctx, userID, releaseID)
+	notification, found, err := GetReleaseNotification(ctx, userID, releaseID)
 	if err != nil {
 		return err
 	}
 
-	if notification.Status != NotificationStatusUnread {
+	if !found || notification.Status != NotificationStatusUnread {
 		return nil
 	}
 
