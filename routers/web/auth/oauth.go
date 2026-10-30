@@ -1510,7 +1510,7 @@ func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model
 func generateCodeChallenge(ctx *context.Context, provider string) (codeChallenge string, err error) {
 	// the `code_verifier` is only forwarded by specific providers
 	// https://codeberg.org/forgejo/forgejo/issues/4033
-	p, ok := goth.GetProviders()[provider]
+	p, ok := oauth2.GetProviderFromGothic(provider)
 	if !ok {
 		return "", nil
 	}
@@ -1654,7 +1654,18 @@ func buildOIDCEndSessionURL(ctx *context.Context, doer *user_model.User) string 
 		return ""
 	}
 
-	endSessionEndpoint := oauth2.GetOIDCEndSessionEndpoint(authSource.Name)
+	// Get the end session URL
+	provider, ok := oauth2.GetProviderFromGothic(authSource.Name)
+	if !ok {
+		return ""
+	}
+
+	oidcProvider, ok := provider.(*openidConnect.Provider)
+	if !ok || oidcProvider.OpenIDConfig == nil {
+		return ""
+	}
+
+	endSessionEndpoint := oidcProvider.OpenIDConfig.EndSessionEndpoint
 	if endSessionEndpoint == "" {
 		return ""
 	}
