@@ -1353,6 +1353,10 @@ func updateSSHPubIfNeed(
 }
 
 func handleOAuth2SignIn(ctx *context.Context, source *auth.Source, u *user_model.User, gothUser goth.User) {
+	if err := rememberOIDCLogout(ctx, source, u.ID, gothUser.IDToken); err != nil {
+		ctx.ServerError("Store OIDC logout context", err)
+		return
+	}
 	updateAvatarIfNeed(ctx, gothUser.AvatarURL, u)
 	err := updateSSHPubIfNeed(ctx, source, &gothUser, u)
 	if err != nil {

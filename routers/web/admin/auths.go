@@ -178,6 +178,7 @@ func parseOAuth2Config(form forms.AuthenticationForm) *oauth2.Source {
 		ClientID:                      form.Oauth2Key,
 		ClientSecret:                  form.Oauth2Secret,
 		OpenIDConnectAutoDiscoveryURL: form.OpenIDConnectAutoDiscoveryURL,
+		OpenIDConnectEnableLogout:     form.Oauth2Provider == "openidConnect" && form.OpenIDConnectEnableLogout,
 		CustomURLMapping:              customURLMapping,
 		IconURL:                       form.Oauth2IconURL,
 		Scopes:                        scopes,

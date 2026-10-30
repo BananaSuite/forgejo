@@ -28,6 +28,13 @@
 		<label for="open_id_connect_auto_discovery_url">{{ctx.Locale.Tr "admin.auths.openIdConnectAutoDiscoveryURL"}}</label>
 		<input id="open_id_connect_auto_discovery_url" name="open_id_connect_auto_discovery_url" value="{{.open_id_connect_auto_discovery_url}}">
 	</div>
+	<div class="open_id_connect_logout optional field">
+		<div class="ui checkbox">
+			<label for="open_id_connect_enable_logout">{{ctx.Locale.Tr "admin.auths.openid_connect_enable_logout"}}</label>
+			<input id="open_id_connect_enable_logout" name="open_id_connect_enable_logout" type="checkbox" {{if .open_id_connect_enable_logout}}checked{{end}}>
+			<p class="help">{{ctx.Locale.Tr "admin.auths.openid_connect_enable_logout_helper"}}</p>
+		</div>
+	</div>
 	<div class="optional field">
 		<div class="ui checkbox">
 			<label for="skip_local_two_fa"><strong>{{ctx.Locale.Tr "admin.auths.skip_local_two_fa"}}</strong></label>

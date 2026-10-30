@@ -432,6 +432,7 @@ func HandleSignOut(ctx *context.Context) {
 
 // SignOut sign out from login status
 func SignOut(ctx *context.Context) {
+	endSessionURL := oidcLogoutRedirect(ctx)
 	if ctx.Doer != nil {
 		eventsource.GetManager().SendMessage(ctx.Doer.ID, &eventsource.Event{
 			Name: "logout",
@@ -439,6 +440,10 @@ func SignOut(ctx *context.Context) {
 		})
 	}
 	HandleSignOut(ctx)
+	if endSessionURL != "" {
+		ctx.Redirect(endSessionURL, http.StatusSeeOther)
+		return
+	}
 	ctx.Redirect(setting.AppSubURL + "/")
 }
 

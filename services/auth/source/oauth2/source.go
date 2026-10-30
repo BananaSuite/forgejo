@@ -16,6 +16,7 @@ type Source struct {
 	ClientID                      string
 	ClientSecret                  string
 	OpenIDConnectAutoDiscoveryURL string
+	OpenIDConnectEnableLogout     bool `json:",omitempty"`
 	CustomURLMapping              *CustomURLMapping
 	IconURL                       string
 

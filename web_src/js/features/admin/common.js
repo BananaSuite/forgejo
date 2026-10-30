@@ -62,7 +62,7 @@ export function initAdminCommon() {
   }
 
   function onOAuth2Change(applyDefaultValues) {
-    hideElem('.open_id_connect_auto_discovery_url, .oauth2_use_custom_url, .oauth2_attribute_ssh_public_key');
+    hideElem('.open_id_connect_auto_discovery_url, .open_id_connect_logout, .oauth2_use_custom_url, .oauth2_attribute_ssh_public_key');
     for (const input of document.querySelectorAll('.open_id_connect_auto_discovery_url input[required]')) {
       input.removeAttribute('required');
     }
@@ -73,7 +73,7 @@ export function initAdminCommon() {
         for (const input of document.querySelectorAll('.open_id_connect_auto_discovery_url input')) {
           input.setAttribute('required', 'required');
         }
-        showElem('.open_id_connect_auto_discovery_url');
+        showElem('.open_id_connect_auto_discovery_url, .open_id_connect_logout');
         break;
       default: {
         const customURLSettings = document.getElementById(`${provider}_customURLSettings`);

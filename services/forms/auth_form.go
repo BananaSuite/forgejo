@@ -60,6 +60,7 @@ type AuthenticationForm struct {
 	Oauth2Key                     string `preprocess:"TrimSpace"`
 	Oauth2Secret                  string `preprocess:"TrimSpace"`
 	OpenIDConnectAutoDiscoveryURL string
+	OpenIDConnectEnableLogout     bool
 	Oauth2UseCustomURL            bool
 	Oauth2TokenURL                string
 	Oauth2AuthURL                 string
