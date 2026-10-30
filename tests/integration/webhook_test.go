@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -267,6 +268,86 @@ func TestWebHooksDelivery(t *testing.T) {
 			// should be considered different from the first (stateKey)
 			assert.NotEqual(t, firstCommentURL, secondCommentURL)
 			assert.Equal(t, string(firstCommentPayload), string(secondCommentPayload))
+		})
+	})
+}
+
+func TestSlackWebHookSubscription(t *testing.T) {
+	requests := make(chan *http.Request, 5)
+	receiver := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		// the body can't be read when the handler returns
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		req.Body = io.NopCloser(bytes.NewReader(body))
+		requests <- req
+	}))
+	t.Cleanup(receiver.Close)
+	maxPayloadDelay := 1 * time.Second
+	receiveWebHook := func(t *testing.T) *http.Request {
+		select {
+		case req := <-requests:
+			return req
+		case <-time.After(maxPayloadDelay):
+			t.Fatalf("no webhook received within %v", maxPayloadDelay)
+			return nil
+		}
+	}
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		owner := forgery.CreateUser(t, nil)
+		session := loginUser(t, owner.Name)
+		repo := forgery.CreateRepository(t, owner, nil)
+		repoURL := repo.HTMLURL()
+
+		slackURL := receiver.URL + "/slack"
+		resp := session.MakeRequest(t, NewRequestWithValues(t, "POST", repoURL+"/settings/hooks/slack/new", map[string]string{
+			"payload_url": slackURL,
+			"channel":     "#general",
+			"events":      "send_everything",
+			"active":      "1",
+		}), http.StatusSeeOther)
+		assertHasFlashMessages(t, resp, "success")
+
+		// TODO: Add files etc for review comments to work properly
+		t.Run("PR/comments", func(t *testing.T) {
+			pr := forgery.CreatePullRequest(t, owner, repo, "PR 1", "Fixes #1")
+			reviewer := forgery.CreateUser(t, nil)
+			revSess := loginUser(t, reviewer.Name)
+			commenter := forgery.CreateUser(t, nil)
+			commentSess := loginUser(t, commenter.Name)
+
+			// Need to create by commentsURL to trigger webhook
+			var reviewPayload []byte
+
+			reviewsURL := fmt.Sprintf("%s/files/reviews", pr.Link())
+			req0 := NewRequest(t, "GET", reviewsURL+"/new_comment")
+			resp := revSess.MakeRequest(t, req0, http.StatusOK)
+			doc := NewHTMLParser(t, resp.Body)
+			req0 = NewRequestWithValues(t, "POST", reviewsURL+"/submit", map[string]string{
+				"commit_id": doc.GetInputValueByName("latest_commit_id"),
+				"content":   "looks odd to me",
+				"type":      "comment",
+			})
+			revSess.MakeRequest(t, req0, http.StatusOK)
+			req := receiveWebHook(t)
+			// Check if @owner is in body
+			reviewPayload, err := io.ReadAll(req.Body)
+			require.NoError(t, err)
+			assert.Contains(t, string(reviewPayload), "@"+owner.Name)
+
+			var secondCommentPayload []byte
+			commentsURL := fmt.Sprintf("%s/pulls/%d/comments", repoURL, pr.Index)
+			commentSess.MakeRequest(t, NewRequestWithValues(t, "POST", commentsURL, map[string]string{
+				"content": "lgtm",
+			}), http.StatusOK)
+			req = receiveWebHook(t)
+			secondCommentPayload, err = io.ReadAll(req.Body)
+			require.NoError(t, err)
+			assert.Contains(t, string(secondCommentPayload), "@"+owner.Name)
+			assert.Contains(t, string(secondCommentPayload), "@"+reviewer.Name)
 		})
 	})
 }
