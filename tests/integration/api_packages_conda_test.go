@@ -202,7 +202,7 @@ func TestPackageConda(t *testing.T) {
 			Info          Info                    `json:"info"`
 			Packages      map[string]*PackageInfo `json:"packages"`
 			PackagesConda map[string]*PackageInfo `json:"packages.conda"`
-			Removed       map[string]*PackageInfo `json:"removed"`
+			Removed       []string                `json:"removed"`
 		}
 
 		req := NewRequest(t, "GET", fmt.Sprintf("%s/noarch/repodata.json", root))
