@@ -14,7 +14,7 @@ The [contributor guide](https://forgejo.org/docs/next/contributor/) contains inf
 
 ### Compliance
 
-- [ ] I confirm that I make this contribution in accordance with [Forgejo's AI Agreement](https://codeberg.org/forgejo/governance/src/commit/9084720dc6a7fbf1d3f358919d46bd6adfb55287/AIAgreement.md).
+- [ ] I confirm that I make this contribution in accordance with [Forgejo's AI Agreement](https://codeberg.org/forgejo/governance/src/branch/main/AIAgreement.md).
 
 ### Tests for Go changes
 
