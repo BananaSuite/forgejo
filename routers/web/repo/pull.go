@@ -930,6 +930,18 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		prInfo = PrepareViewPullInfo(ctx, issue)
 	}
 
+	// PrepareMergedViewPullInfo/PrepareViewPullInfo return nil when the compare
+	// info could not be loaded (e.g. the client disconnected and the git command
+	// got killed), after either writing an error response or flagging the pull
+	// request as broken. The nil check must happen before prInfo is dereferenced
+	// below, matching the guard in ViewPullCommits.
+	if ctx.Written() {
+		return
+	} else if prInfo == nil {
+		ctx.NotFound("ViewPullFiles", nil)
+		return
+	}
+
 	// Validate the given commit sha to show (if any passed)
 	if willShowSpecifiedCommit || willShowSpecifiedCommitRange {
 		foundStartCommit := len(specifiedStartCommit) == 0
@@ -954,13 +966,6 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 			ctx.NotFound("Given SHA1 not found for this PR", nil)
 			return
 		}
-	}
-
-	if ctx.Written() {
-		return
-	} else if prInfo == nil {
-		ctx.NotFound("ViewPullFiles", nil)
-		return
 	}
 
 	headCommitID, err := gitRepo.GetRefCommitID(pull.GetGitRefName())
