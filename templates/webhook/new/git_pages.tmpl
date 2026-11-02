@@ -10,7 +10,7 @@
 	</div>
 	<div class="field {{if .Err_Server}}error{{end}}">
 		<label for="server">{{ctx.Locale.Tr "webhooks.git_pages.server.label"}}</label>
-		<input id="server" name="server" inputmode="url" pattern="(?!.{254,})(?:(?!-)(?:xn--[A-Za-z0-9_\-]{1,59}|(?!xn--)[A-Za-z0-9_\-]{1,63})(?&lt;!-)\.)*(?:xn--[A-Za-z0-9_\-]{1,59}|[A-Za-z]{2,63})(?::[0-9]{1,5})?" title="{{ctx.Locale.Tr "webhooks.git_pages.server.validation"}}" value="{{if $isNew}}{{.WebhookHandler.SettingGitPagesWebhook.DefaultServer}}{{else}}{{.HookMetadata.Server}}{{end}}" {{if .Err_Server}}autofocus{{end}}>
+		<input id="server" name="server" inputmode="url" pattern="(?!.{254,})(?:(?!-)(?:xn--[A-Za-z0-9_\-]{1,59}|(?!xn--)[A-Za-z0-9_\-]{1,63})(?&lt;!-)\.)*(?:xn--[A-Za-z0-9_\-]{1,59}|[A-Za-z]{2,63})(?::[0-9]{1,5})?" title="{{ctx.Locale.Tr "webhooks.git_pages.server.validation"}}" value="{{if .HookMetadata.Server}}{{.HookMetadata.Server}}{{else}}{{.WebhookHandler.SettingGitPagesWebhook.DefaultServer}}{{end}}" {{if .Err_Server}}autofocus{{end}}>
 		<span class="help">{{ctx.Locale.Tr "webhooks.git_pages.server.helper"}}</span>
 	</div>
 	<div class="field {{if .Err_Password}}error{{end}}">
