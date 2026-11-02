@@ -5,7 +5,7 @@
 	{{template "base/disable_form_autofill"}}
 	<div class="required field {{if .Err_SiteURL}}error{{end}}">
 		<label for="site_url">{{ctx.Locale.Tr "webhooks.git_pages.site_url.label"}}</label>
-		<input id="site_url" name="site_url" type="url" value="{{if .Webhook.URL}}{{.Webhook.URL}}{{else}}{{if .WebhookHandler.SettingGitPagesWebhook.WildcardDomain}}https://{{.Owner.LowerName}}.{{.WebhookHandler.SettingGitPagesWebhook.WildcardDomain}}/{{if ne .Repository.Name .WebhookHandler.SettingGitPagesWebhook.WildcardIndexRepo}}{{.Repository.Name}}/{{end}}{{end}}{{end}}" placeholder="https://example.org/" autofocus required>
+		<input id="site_url" name="site_url" type="url" value="{{if .Webhook.URL}}{{.Webhook.URL}}{{else if .WebhookHandler.SettingGitPagesWebhook.WildcardDomain}}https://{{.Owner.LowerName}}.{{.WebhookHandler.SettingGitPagesWebhook.WildcardDomain}}/{{if ne .Repository.Name .WebhookHandler.SettingGitPagesWebhook.WildcardIndexRepo}}{{.Repository.Name}}/{{end}}{{end}}" placeholder="https://example.org/" autofocus required>
 		<span class="help">{{ctx.Locale.Tr "webhooks.git_pages.site_url.helper"}}</span>
 	</div>
 	<div class="field {{if .Err_Server}}error{{end}}">
