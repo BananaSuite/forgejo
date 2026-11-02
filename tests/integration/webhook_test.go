@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
 	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
@@ -24,6 +25,7 @@ import (
 	"forgejo.org/modules/json"
 	webhook_module "forgejo.org/modules/webhook"
 	"forgejo.org/services/release"
+	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
 
@@ -299,8 +301,33 @@ func TestSlackWebHookSubscription(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		owner := forgery.CreateUser(t, nil)
 		session := loginUser(t, owner.Name)
-		repo := forgery.CreateRepository(t, owner, nil)
+		repoOpts := &forgery.CreateRepositoryOptions{
+			Name:  "org-repo",
+			Files: forgery.FilesInit{},
+		}
+		repo := forgery.CreateRepository(t, owner, repoOpts)
 		repoURL := repo.HTMLURL()
+
+		forker := forgery.CreateUser(t, nil)
+		forkerSess := loginUser(t, forker.Name)
+		// TODO Changing repo files is utterly complicated with forgery, just using the API for now
+		forkerToken := getTokenForLoggedInUser(t, forkerSess, auth_model.AccessTokenScopeWriteRepository)
+		fork := forgery.CreateRepoFork(t, forker, forker, repo)
+		//gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(t.Context(), repo)
+		//require.NoError(t, err)
+		//defer closer.Close()
+		//id, err := gitRepo.GetBranchCommitID(repo.DefaultBranch)
+		//require.NoError(t, err)
+		content := "# Updated Title"
+		//sum := git.ComputeBlobHash(git.Sha1ObjectFormat, []byte(content))
+		//blobSHA := sum.String()
+		files := []*files_service.ChangeRepoFile{
+			&files_service.ChangeRepoFile{
+				Operation:     "update",
+				TreePath:      "README.md",
+				ContentReader: strings.NewReader(content),
+			},
+		}
 
 		slackURL := receiver.URL + "/slack"
 		resp := session.MakeRequest(t, NewRequestWithValues(t, "POST", repoURL+"/settings/hooks/slack/new", map[string]string{
@@ -311,9 +338,9 @@ func TestSlackWebHookSubscription(t *testing.T) {
 		}), http.StatusSeeOther)
 		assertHasFlashMessages(t, resp, "success")
 
-		// TODO: Add files etc for review comments to work properly
 		t.Run("PR/comments", func(t *testing.T) {
-			pr := forgery.CreatePullRequest(t, owner, repo, "PR 1", "Fixes #1")
+			_, prIssue := forgery.CreatePRWithFork(t, forker, repo, fork)
+			//pr := forgery.CreatePullRequest(t, owner, repo, "PR 1", "Fixes #1")
 			reviewer := forgery.CreateUser(t, nil)
 			revSess := loginUser(t, reviewer.Name)
 			commenter := forgery.CreateUser(t, nil)
@@ -322,7 +349,7 @@ func TestSlackWebHookSubscription(t *testing.T) {
 			// Need to create by commentsURL to trigger webhook
 			var reviewPayload []byte
 
-			reviewsURL := fmt.Sprintf("%s/files/reviews", pr.Link())
+			reviewsURL := fmt.Sprintf("%s/files/README.md", prIssue.Link())
 			req0 := NewRequest(t, "GET", reviewsURL+"/new_comment")
 			resp := revSess.MakeRequest(t, req0, http.StatusOK)
 			doc := NewHTMLParser(t, resp.Body)
@@ -339,7 +366,7 @@ func TestSlackWebHookSubscription(t *testing.T) {
 			assert.Contains(t, string(reviewPayload), "@"+owner.Name)
 
 			var secondCommentPayload []byte
-			commentsURL := fmt.Sprintf("%s/pulls/%d/comments", repoURL, pr.Index)
+			commentsURL := fmt.Sprintf("%s/pulls/%d/comments", repoURL, prIssue.Index)
 			commentSess.MakeRequest(t, NewRequestWithValues(t, "POST", commentsURL, map[string]string{
 				"content": "lgtm",
 			}), http.StatusOK)

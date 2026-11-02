@@ -42,6 +42,7 @@ type CreateRepositoryOptions struct {
 
 // FilesInit specifies the templates to use upon repository initialization.
 type FilesInit struct {
+	// This describes a file name, when empty uses the default, empty README.md
 	Readme     string
 	Gitignores string
 	License    string
@@ -118,6 +119,18 @@ func CreateRepository(t testing.TB, owner *user_model.User, opts *CreateReposito
 	}
 
 	return repo
+}
+
+func CreateRepoFork(t testing.TB, doer, owner *user_model.User, base *repo_model.Repository) *repo_model.Repository {
+	t.Helper()
+	opts := repo_service.ForkRepoOptions{
+		BaseRepo:    base,
+		Name:        base.Name + "-fork",
+		Description: base.Description + "-fork",
+	}
+	fork, err := repo_service.ForkRepositoryAndUpdates(t.Context(), doer, owner, opts)
+	require.NoError(t, err)
+	return fork
 }
 
 func InitWiki(t testing.TB, repo *repo_model.Repository, branch string) {
