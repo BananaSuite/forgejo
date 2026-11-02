@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"strings"
 	"testing"
 
 	"forgejo.org/modules/zstd"
@@ -251,45 +250,5 @@ func TestDebianDescriptionSynopsisAndBody(t *testing.T) {
 		assert.Equal(t, expected, (&Metadata{
 			Description: description,
 		}).DescriptionSynopsisAndBody())
-	}
-}
-
-func TestDebianGetDepends(t *testing.T) {
-	a := Dependency{
-		Name:               "a",
-		VersionRequirement: "(>= 1.0)",
-	}
-	b := Dependency{
-		Name:          "b",
-		IsAlternative: true,
-	}
-	c := Dependency{
-		Name: "c",
-	}
-	// include a broken dependency for testing the manual dependency parsing
-	broken := Dependency{
-		Name:               "broken",
-		VersionRequirement: "(",
-	}
-	for dependencies, expected := range map[string][]*Dependency{
-		"a (>= 1.0)": {
-			&a,
-		},
-		"a (>= 1.0) | b, c": {
-			&a,
-			&b,
-			&c,
-		},
-		"a (>= 1.0) | b, c, broken (": {
-			&a,
-			&b,
-			&c,
-			&broken,
-		},
-		"": nil,
-	} {
-		assert.Equal(t, expected, (&Metadata{
-			Dependencies: strings.Split(dependencies, ","),
-		}).GetDepends())
 	}
 }

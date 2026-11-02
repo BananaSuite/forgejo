@@ -58,20 +58,19 @@ type Package struct {
 }
 
 type Metadata struct {
-	Maintainer   string        `json:"maintainer,omitempty"`
-	ProjectURL   string        `json:"project_url,omitempty"`
-	Description  string        `json:"description,omitempty"`
-	Dependencies []string      `json:"dependencies,omitempty"`
-	Depends      []*Dependency `json:"depends,omitempty"`
-	Suggests     []*Dependency `json:"suggests,omitempty"`
-	Recommends   []*Dependency `json:"recommends,omitempty"`
-	PreDepends   []*Dependency `json:"pre_depends,omitempty"`
-	Breaks       []*Dependency `json:"breaks,omitempty"`
-	Conflicts    []*Dependency `json:"conflicts,omitempty"`
-	Replaces     []*Dependency `json:"replaces,omitempty"`
-	Enhances     []*Dependency `json:"enhances,omitempty"`
-	Provides     []*Dependency `json:"provides,omitempty"`
-	BuiltUsing   []*Dependency `json:"built_using,omitempty"`
+	Maintainer  string        `json:"maintainer,omitempty"`
+	ProjectURL  string        `json:"project_url,omitempty"`
+	Description string        `json:"description,omitempty"`
+	Depends     []*Dependency `json:"depends,omitempty"`
+	Suggests    []*Dependency `json:"suggests,omitempty"`
+	Recommends  []*Dependency `json:"recommends,omitempty"`
+	PreDepends  []*Dependency `json:"pre_depends,omitempty"`
+	Breaks      []*Dependency `json:"breaks,omitempty"`
+	Conflicts   []*Dependency `json:"conflicts,omitempty"`
+	Replaces    []*Dependency `json:"replaces,omitempty"`
+	Enhances    []*Dependency `json:"enhances,omitempty"`
+	Provides    []*Dependency `json:"provides,omitempty"`
+	BuiltUsing  []*Dependency `json:"built_using,omitempty"`
 }
 
 type Dependency struct {
@@ -107,37 +106,6 @@ func (m *Metadata) DescriptionSynopsisAndBody() Description {
 		Synopsis:     synopsis,
 		BodyMarkdown: strings.Trim(bodyMarkdown.String(), "\n"),
 	}
-}
-
-// GetDepends returns the dependencies prepared for the output table
-// from the new Metadata.Depends or the legacy Metadata.Dependencies field
-func (m *Metadata) GetDepends() (dependencies []*Dependency) {
-	// first, check if Metadata.Depends is set (for new packages)
-	if m.Depends != nil {
-		return m.Depends
-	}
-	// second, try go-debian package parsing for old packages
-	dep, err := dependency.Parse(strings.Join(m.Dependencies, ","))
-	if err == nil {
-		return getDependencies(*dep)
-	}
-	// third, if it fails, parse manually for old packages
-	for _, dependencyLine := range m.Dependencies {
-		dependencyAlternatives := strings.Split(dependencyLine, "|")
-		for i, dep := range dependencyAlternatives {
-			depSplit := strings.SplitN(strings.TrimSpace(dep), " ", 2)
-			versionRequirement := ""
-			if len(depSplit) == 2 {
-				versionRequirement = depSplit[1]
-			}
-			dependencies = append(dependencies, &Dependency{
-				Name:               depSplit[0],
-				VersionRequirement: versionRequirement,
-				IsAlternative:      i != 0,
-			})
-		}
-	}
-	return dependencies
 }
 
 // ParsePackage parses the Debian package file

@@ -52,13 +52,12 @@ sudo apt update</code></pre></div>
 		{{- end}}
 	{{end}}
 
-	{{$depends := .PackageDescriptor.Metadata.GetDepends}}
-	{{if or $depends .PackageDescriptor.Metadata.Suggests .PackageDescriptor.Metadata.PreDepends .PackageDescriptor.Metadata.Breaks .PackageDescriptor.Metadata.Conflicts .PackageDescriptor.Metadata.BuiltUsing}}
+	{{if or .PackageDescriptor.Metadata.Depends .PackageDescriptor.Metadata.Suggests .PackageDescriptor.Metadata.PreDepends .PackageDescriptor.Metadata.Breaks .PackageDescriptor.Metadata.Conflicts .PackageDescriptor.Metadata.BuiltUsing}}
 		<h4 class="ui top attached header">{{ctx.Locale.Tr "packages.dependencies"}}</h4>
-		{{if $depends}}
+		{{if .PackageDescriptor.Metadata.Depends}}
 			<div class="ui attached segment">
 				<h5>Depends</h5>
-				{{template "dependencies" $depends}}
+				{{template "dependencies" .PackageDescriptor.Metadata.Depends}}
 			</div>
 		{{end}}
 		{{if .PackageDescriptor.Metadata.Suggests}}
