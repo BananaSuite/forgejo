@@ -655,6 +655,7 @@ func TestGitPushAGit(t *testing.T) {
 			matches := prRegex.FindStringSubmatch(stdErr)
 			require.Len(t, matches, 2, stdErr)
 
+			assert.Contains(t, stdErr, "Visit the created pull request:")
 			assert.Contains(t, stdErr, fmt.Sprintf("git config set branch.%s.merge %s", topicName, matches[0]))
 			return matches[1], nil
 		}
@@ -673,6 +674,7 @@ func TestGitPushAGit(t *testing.T) {
 			matches := prRegex.FindStringSubmatch(stdErr)
 			require.Len(t, matches, 2, stdErr)
 
+			assert.Contains(t, stdErr, "Visit the existing pull request")
 			assert.NotContains(t, stdErr, "git config set branch.")
 			return nil
 		}

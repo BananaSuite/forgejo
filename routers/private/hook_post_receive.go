@@ -39,6 +39,8 @@ import (
 var TestSeamPostReceiveSync func(*repo_module.PushUpdateOptions)
 
 // HookPostReceive updates services and users
+// https://git-scm.com/docs/githooks#post-receive
+// This hook does not affect the outcome of git receive-pack, as it is called after the real work is done.
 func HookPostReceive(ctx *app_context.PrivateContext) {
 	opts := web.GetForm(ctx).(*private.HookOptions)
 
@@ -196,19 +198,25 @@ func HookPostReceive(ctx *app_context.PrivateContext) {
 		}
 	}
 
+	if !setting.Git.PullRequestPushMessage {
+		ctx.JSON(http.StatusOK, private.HookPostReceiveResult{
+			RepoWasEmpty: wasEmpty,
+		})
+		return
+	}
+
 	messages := make([]private.HookPostReceiveMessage, 0, len(opts.OldCommitIDs))
 
 	// We have to reload the repo in case its state is changed above
 	repo = nil
 	var baseRepo *repo_model.Repository
 
-	// Now handle the pull request notification trailers
+	// Now handle the pull request push messages
 	for i := range opts.OldCommitIDs {
 		refFullName := opts.RefFullNames[i]
 		newCommitID := opts.NewCommitIDs[i]
 
-		// post update for agit pull request
-		// FIXME: use pr.Flow to test whether it's an Agit PR or a GH PR
+		// agit ref
 		if refFullName.IsPull() {
 			if repo == nil {
 				repo = loadRepository(ctx, ownerName, repoName)
@@ -218,38 +226,34 @@ func HookPostReceive(ctx *app_context.PrivateContext) {
 			}
 
 			pullIndex, _ := strconv.ParseInt(refFullName.PullName(), 10, 64)
-			if pullIndex <= 0 {
-				continue
-			}
 
-			pr, err := issues_model.GetPullRequestByIndex(ctx, repo.ID, pullIndex)
-			if err != nil && !issues_model.IsErrPullRequestNotExist(err) {
-				log.Error("Failed to get PR by index %v Error: %v", pullIndex, err)
-				ctx.JSON(http.StatusInternalServerError, private.Response{
-					Err: fmt.Sprintf("Failed to get PR by index %v Error: %v", pullIndex, err),
-				})
-				return
-			}
-			if pr == nil {
-				continue
-			}
-
-			if setting.Git.PullRequestPushMessage {
-				var fullRef, branch string
-
-				// only show the agit message (git config ...) upon creation
-				if git.IsEmptyCommitID(opts.OldCommitIDs[i], nil) {
-					fullRef = refFullName.String()
-					_, branch, _ = strings.Cut(pr.HeadBranch, "/")
-					branch = git.SanitizeRefPattern(branch)
-				}
+			// existing agit PR
+			if !git.IsEmptyCommitID(opts.OldCommitIDs[i], nil) {
 				messages = append(messages, private.HookPostReceiveMessage{
-					PullURLS:  []string{fmt.Sprintf("%s/pulls/%d", repo.HTMLURL(), pr.Index)},
-					Branch:    branch,
+					PullURLS:  []string{fmt.Sprintf("%s/pulls/%d", repo.HTMLURL(), pullIndex)},
+					Branch:    "",
 					CreateURL: "",
-					AgitRef:   fullRef,
+					AgitRef:   "",
 				})
+				continue
 			}
+
+			// freshly created agit PR, display: git config set branch...
+			pr, err := issues_model.GetPullRequestByIndex(ctx, repo.ID, pullIndex)
+			if err != nil {
+				log.Error("Failed to get PR by index %v Error: %v", pullIndex, err)
+				continue
+			}
+
+			_, branch, _ := strings.Cut(pr.HeadBranch, "/")
+			branch = git.SanitizeRefPattern(branch)
+
+			messages = append(messages, private.HookPostReceiveMessage{
+				PullURLS:  []string{fmt.Sprintf("%s/pulls/%d", repo.HTMLURL(), pullIndex)},
+				Branch:    branch,
+				CreateURL: "",
+				AgitRef:   refFullName.String(),
+			})
 			continue
 		}
 
@@ -339,14 +343,12 @@ func HookPostReceive(ctx *app_context.PrivateContext) {
 			if foundDefaultBranch {
 				createURL = ""
 			}
-			if setting.Git.PullRequestPushMessage && baseRepo.AllowsPulls(ctx) {
-				messages = append(messages, private.HookPostReceiveMessage{
-					PullURLS:  urls,
-					Branch:    branch,
-					CreateURL: createURL,
-					AgitRef:   "",
-				})
-			}
+			messages = append(messages, private.HookPostReceiveMessage{
+				PullURLS:  urls,
+				Branch:    branch,
+				CreateURL: createURL,
+				AgitRef:   "",
+			})
 		}
 	}
 	ctx.JSON(http.StatusOK, private.HookPostReceiveResult{
