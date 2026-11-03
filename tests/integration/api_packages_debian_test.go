@@ -29,15 +29,20 @@ import (
 )
 
 func createDebianArchive(name, version, architecture, packageDescription string) io.Reader {
+	var sbuf bytes.Buffer
+	fmt.Fprintf(&sbuf, "Package: %s\nVersion: %s\nArchitecture: %s\nDescription: %s\n", name, version, architecture, packageDescription)
+
 	var cbuf bytes.Buffer
 	zw := gzip.NewWriter(&cbuf)
+	defer zw.Close()
 	tw := tar.NewWriter(zw)
+	defer tw.Close()
 	tw.WriteHeader(&tar.Header{
 		Name: "control",
 		Mode: 0o600,
-		Size: 50,
+		Size: int64(sbuf.Len()),
 	})
-	fmt.Fprintf(tw, "Package: %s\nVersion: %s\nArchitecture: %s\nDescription: %s\n", name, version, architecture, packageDescription)
+	tw.Write(sbuf.Bytes())
 	tw.Close()
 	zw.Close()
 
