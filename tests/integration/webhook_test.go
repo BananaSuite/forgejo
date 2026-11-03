@@ -309,7 +309,7 @@ func TestSlackWebHookSubscription(t *testing.T) {
 		repo := forgery.CreateRepository(t, owner, repoOpts)
 		repoURL := repo.HTMLURL()
 
-		forker := forgery.CreateUser(t, nil)
+		forker := forgery.CreateUser(t, nil) // forker is also pr creator
 		forkerSess := loginUser(t, forker.Name)
 		forkerToken := getTokenForLoggedInUser(t, forkerSess, auth_model.AccessTokenScopeWriteRepository)
 		fork := forgery.CreateRepoFork(t, forker, forker, repo)
@@ -353,40 +353,65 @@ func TestSlackWebHookSubscription(t *testing.T) {
 
 		t.Run("PR/comments", func(t *testing.T) {
 			_, prIssue := forgery.CreatePRWithFork(t, forker, repo, fork)
-			//pr := forgery.CreatePullRequest(t, owner, repo, "PR 1", "Fixes #1")
 			reviewer := forgery.CreateUser(t, nil)
 			revSess := loginUser(t, reviewer.Name)
+			revToken := getTokenForLoggedInUser(t, revSess, auth_model.AccessTokenScopeWriteRepository)
 			commenter := forgery.CreateUser(t, nil)
-			commentSess := loginUser(t, commenter.Name)
+			comSess := loginUser(t, commenter.Name)
+			comToken := getTokenForLoggedInUser(t, comSess, auth_model.AccessTokenScopeWriteRepository)
+
+			// TODO can we clear the event queue?
+			var prPayload []byte // We'll be receiving a hook message for that as well
+			hookReq := receiveWebHook(t)
+			// Check if @owner is in body
+			prPayload, err = io.ReadAll(hookReq.Body)
+			require.NoError(t, err)
+			assert.NotContains(t, string(prPayload), "@"+forker.Name)
 
 			// Need to create by commentsURL to trigger webhook
+			// Check if the forker is mentioned on review
 			var reviewPayload []byte
-
-			reviewsURL := fmt.Sprintf("%s/files/devNotes.md", prIssue.Link())
-			req0 := NewRequest(t, "GET", reviewsURL+"/new_comment")
-			resp := revSess.MakeRequest(t, req0, http.StatusOK)
-			doc := NewHTMLParser(t, resp.Body)
-			req0 = NewRequestWithValues(t, "POST", reviewsURL+"/submit", map[string]string{
-				"commit_id": doc.GetInputValueByName("latest_commit_id"),
-				"content":   "looks odd to me",
-				"type":      "comment",
-			})
-			revSess.MakeRequest(t, req0, http.StatusOK)
-			req := receiveWebHook(t)
+			revPath := fmt.Sprintf("/api/v1/repos/%s/%s/pulls/%d/reviews", repo.OwnerName, repo.Name, prIssue.Index)
+			req = NewRequestWithJSON(t, http.MethodPost, revPath, &api.CreatePullReviewOptions{
+				Body:  "body1",
+				Event: "REQUEST_CHANGES",
+				Comments: []api.CreatePullReviewComment{
+					{
+						Path:       "devNotes.md",
+						Body:       "first new line",
+						OldLineNum: 0,
+						NewLineNum: 1,
+					},
+				},
+			}).AddTokenAuth(revToken)
+			resp = MakeRequest(t, req, http.StatusOK)
+			hookReq = receiveWebHook(t)
 			// Check if @owner is in body
-			reviewPayload, err := io.ReadAll(req.Body)
+			reviewPayload, err := io.ReadAll(hookReq.Body)
 			require.NoError(t, err)
-			assert.Contains(t, string(reviewPayload), "@"+owner.Name)
+			assert.Contains(t, string(reviewPayload), "@"+forker.Name)
 
+			// Check if the reviewer and the forker are mentioned on comment
 			var secondCommentPayload []byte
-			commentsURL := fmt.Sprintf("%s/pulls/%d/comments", repoURL, prIssue.Index)
-			commentSess.MakeRequest(t, NewRequestWithValues(t, "POST", commentsURL, map[string]string{
-				"content": "lgtm",
-			}), http.StatusOK)
-			req = receiveWebHook(t)
-			secondCommentPayload, err = io.ReadAll(req.Body)
+			comPath := fmt.Sprintf("/api/v1/repos/%s/%s/pulls/%d/reviews", repo.OwnerName, repo.Name, prIssue.Index)
+			req = NewRequestWithJSON(t, http.MethodPost, comPath, &api.CreatePullReviewOptions{
+				Body:  "body2",
+				Event: "COMMENT",
+				Comments: []api.CreatePullReviewComment{
+					{
+						Path:       "devNotes.md",
+						Body:       "first new line",
+						OldLineNum: 0,
+						NewLineNum: 1,
+					},
+				},
+			}).AddTokenAuth(comToken)
+			resp = MakeRequest(t, req, http.StatusOK)
+
+			hookReq = receiveWebHook(t)
+			secondCommentPayload, err = io.ReadAll(hookReq.Body)
 			require.NoError(t, err)
-			assert.Contains(t, string(secondCommentPayload), "@"+owner.Name)
+			assert.Contains(t, string(secondCommentPayload), "@"+forker.Name)
 			assert.Contains(t, string(secondCommentPayload), "@"+reviewer.Name)
 		})
 	})
