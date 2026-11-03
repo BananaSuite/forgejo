@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,9 +24,9 @@ import (
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
 	"forgejo.org/modules/json"
+	api "forgejo.org/modules/structs"
 	webhook_module "forgejo.org/modules/webhook"
 	"forgejo.org/services/release"
-	files_service "forgejo.org/services/repository/files"
 	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
 
@@ -310,27 +311,37 @@ func TestSlackWebHookSubscription(t *testing.T) {
 
 		forker := forgery.CreateUser(t, nil)
 		forkerSess := loginUser(t, forker.Name)
-		// TODO Changing repo files is utterly complicated with forgery, just using the API for now
 		forkerToken := getTokenForLoggedInUser(t, forkerSess, auth_model.AccessTokenScopeWriteRepository)
 		fork := forgery.CreateRepoFork(t, forker, forker, repo)
-		//gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(t.Context(), repo)
-		//require.NoError(t, err)
-		//defer closer.Close()
-		//id, err := gitRepo.GetBranchCommitID(repo.DefaultBranch)
-		//require.NoError(t, err)
-		content := "# Updated Title"
-		//sum := git.ComputeBlobHash(git.Sha1ObjectFormat, []byte(content))
-		//blobSHA := sum.String()
-		files := []*files_service.ChangeRepoFile{
-			&files_service.ChangeRepoFile{
-				Operation:     "update",
-				TreePath:      "README.md",
-				ContentReader: strings.NewReader(content),
+
+		//var fileResp api.FileResponse
+
+		content := "# Some Dev Notes"
+		enc := base64.StdEncoding.EncodeToString([]byte(content))
+
+		fileReq := api.CreateFileOptions{
+			FileOptions: api.FileOptions{
+				Message:    "Update",
+				BranchName: fork.DefaultBranch,
+				Author: api.Identity{
+					Name:  forker.Name,
+					Email: forker.Email,
+				},
+				Dates: api.CommitDateOptions{
+					Author: time.Now(),
+				},
 			},
+			ContentBase64: enc,
 		}
 
+		path := fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", fork.OwnerName, fork.Name, "devNotes.md")
+		req := NewRequestWithJSON(t, http.MethodPost, path, fileReq).AddTokenAuth(forkerToken)
+		resp := MakeRequest(t, req, http.StatusOK)
+		// DecodeJSON(t, resp, &fileResp)
+		// assert.Equal(t, fileResp.Content.Content, content)
+
 		slackURL := receiver.URL + "/slack"
-		resp := session.MakeRequest(t, NewRequestWithValues(t, "POST", repoURL+"/settings/hooks/slack/new", map[string]string{
+		resp = session.MakeRequest(t, NewRequestWithValues(t, "POST", repoURL+"/settings/hooks/slack/new", map[string]string{
 			"payload_url": slackURL,
 			"channel":     "#general",
 			"events":      "send_everything",
@@ -349,7 +360,7 @@ func TestSlackWebHookSubscription(t *testing.T) {
 			// Need to create by commentsURL to trigger webhook
 			var reviewPayload []byte
 
-			reviewsURL := fmt.Sprintf("%s/files/README.md", prIssue.Link())
+			reviewsURL := fmt.Sprintf("%s/files/devNotes.md", prIssue.Link())
 			req0 := NewRequest(t, "GET", reviewsURL+"/new_comment")
 			resp := revSess.MakeRequest(t, req0, http.StatusOK)
 			doc := NewHTMLParser(t, resp.Body)
