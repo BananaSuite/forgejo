@@ -294,6 +294,63 @@ func TestCompareBranches(t *testing.T) {
 	session.MakeRequest(t, req, http.StatusOK)
 }
 
+func TestCompareNothingToCompare(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user1")
+	testRepoFork(t, session, "user2", "repo1", "user1", "repo1-copy")
+
+	t.Run("head behind base offers to switch", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequest(t, "GET", "/user2/repo1/compare/home-md-img-check...master")
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, "#diff-file-boxes", false)
+		htmlDoc.AssertElement(t, "#nothing-to-compare a[href='/user2/repo1/compare/master...home-md-img-check']", true)
+
+		req = NewRequest(t, "GET", "/user2/repo1/compare/master...home-md-img-check")
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc = NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, "#nothing-to-compare", false)
+		htmlDoc.AssertElement(t, "#diff-file-boxes", true)
+	})
+
+	t.Run("head behind base across repositories offers to switch", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequest(t, "GET", "/user2/repo1/compare/home-md-img-check...user1/repo1-copy:master")
+		resp := session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, "#diff-file-boxes", false)
+		htmlDoc.AssertElement(t, "#nothing-to-compare a[href='/user1/repo1-copy/compare/master...user2/repo1:home-md-img-check']", true)
+
+		req = NewRequest(t, "GET", "/user1/repo1-copy/compare/master...user2/repo1:home-md-img-check")
+		resp = session.MakeRequest(t, req, http.StatusOK)
+		htmlDoc = NewHTMLParser(t, resp.Body)
+		htmlDoc.AssertElement(t, "#nothing-to-compare", false)
+		htmlDoc.AssertElement(t, "#diff-file-boxes", true)
+	})
+
+	// Switching head and base of two branches at the same commit is redundant, so we shouldn't show it
+	t.Run("equal references do not offer to switch", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		for _, path := range []string{
+			"/user2/repo1/compare/master...master",
+			"/user2/repo1/compare/master...develop",
+			"/user2/repo1/compare/master..develop",
+			"/user2/repo1/compare/master...user1/repo1-copy:master",
+		} {
+			req := NewRequest(t, "GET", path)
+			resp := session.MakeRequest(t, req, http.StatusOK)
+			htmlDoc := NewHTMLParser(t, resp.Body)
+			htmlDoc.AssertElement(t, "#nothing-to-compare", true)
+			htmlDoc.AssertElement(t, "#nothing-to-compare a", false)
+		}
+	})
+}
+
 func TestCompareBranchesPaginatesDiff(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	defer func(old int) {
