@@ -33,12 +33,12 @@ func updateDebianPackageMetadata(x *xorm.Engine) error {
 	var pcs []PackageControl
 	if err := session.SQL(`SELECT package_version.id, package_property.value
 FROM package, package_file, package_property, package_version
-WHERE package.type == "debian"
+WHERE package.type = 'debian'
 AND NOT package.is_internal
-AND package.id == package_version.package_id
-AND package_version.id == package_file.version_id
-AND package_file.id == package_property.ref_id
-AND package_property.name = "debian.control"`).Find(&pcs); err != nil {
+AND package.id = package_version.package_id
+AND package_version.id = package_file.version_id
+AND package_file.id = package_property.ref_id
+AND package_property.name = 'debian.control'`).Find(&pcs); err != nil {
 		return err
 	}
 
