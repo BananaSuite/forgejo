@@ -211,7 +211,6 @@ export function DoUpdateRelativeTime(object: HTMLElement, now?: number): number 
   if (years >= 2) {
     // Datetime is more than two years ago.
     object.textContent = GetPluralizedStringOrFallback('relativetime.years', years, 'year');
-    }
     return ONE_DAY;
   }
 
