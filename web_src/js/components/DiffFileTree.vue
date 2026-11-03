@@ -3,6 +3,7 @@ import DiffFileTreeItem from './DiffFileTreeItem.vue';
 import {toggleElem} from '../utils/dom.ts';
 import {diffTreeStore} from '../modules/stores.js';
 import {setFileFolding} from '../features/file-fold.js';
+import {loadMoreFiles, retriggerTarget} from '../features/repo-diff.js';
 
 const LOCAL_STORAGE_KEY = 'diff_file_tree_visible';
 
@@ -88,9 +89,24 @@ export default {
     window.removeEventListener('hashchange', this.hashChangeListener);
   },
   methods: {
-    hashChangeListener() {
+    async hashChangeListener() {
+      if (this.store.selectedItem === window.location.hash || window.location.hash === '__target_reset') {
+        return;
+      }
       this.store.selectedItem = window.location.hash;
-      this.expandSelectedFile();
+
+      const targetOnPage = this.store.files.find(
+        (item) => item.NameHash === window.location.hash.substring('#diff-'.length),
+      )?.OnPage;
+
+      if (targetOnPage) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('file-only', true);
+        params.set('diff-page', targetOnPage);
+        await loadMoreFiles(`?${params.toString()}`);
+        retriggerTarget(window.location.hash);
+        this.expandSelectedFile();
+      }
     },
     expandSelectedFile() {
       // expand file if the selected file is folded

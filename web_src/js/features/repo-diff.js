@@ -199,7 +199,7 @@ function onShowMoreFiles() {
   htmx.process(document.body);
 }
 
-function retriggerTarget(id) {
+export function retriggerTarget(id) {
   const url = new URL(window.location.href);
 
   url.hash = '__target_reset';
@@ -207,26 +207,6 @@ function retriggerTarget(id) {
 
   url.hash = id;
   window.location.replace(url);
-}
-
-async function initSkipToSelectedFile() {
-  if (!window.location.hash) {
-    return;
-  }
-
-  const targetOnPage = pageData.diffFileInfo.files.find(
-    (item) => item.NameHash === window.location.hash.substring('#diff-'.length),
-  )?.OnPage;
-
-  if (pageData.diffFileInfo.currentPage === targetOnPage) {
-    return;
-  }
-
-  const params = new URLSearchParams(window.location.search);
-  params.set('file-only', true);
-  params.set('diff-page', targetOnPage);
-  await loadMoreFiles(`?${params.toString()}`);
-  retriggerTarget(window.location.hash);
 }
 
 export async function loadMoreFiles(url) {
@@ -244,17 +224,17 @@ export async function loadMoreFiles(url) {
     const $resp = $(resp);
     // the response is a full HTML page, we need to extract the relevant contents:
     // 1. insert the newly loaded file list items to the existing list
+    const diffPageIdPrefixLength = 'diff-page-'.length;
     const $newPage = $resp.find('[id^="diff-page-"]')[0];
-    const pageNumber = $newPage.id.substring('diff-page-'.length);
-
+    const pageNumber = $newPage.id.substring(diffPageIdPrefixLength);
     const $loadedPages = $(`[id^="diff-page-"]`);
 
     const $anchor = $loadedPages
       .filter((_, el) => Number(el.id.slice('diff-page-'.length)) > pageNumber)
       .first();
 
+    $(`#diff-incomplete-skip-${pageNumber}`).remove();
     if ($anchor.length) {
-      $('#diff-incomplete-skip').remove();
       $anchor.before($newPage);
     } else {
       $('#diff-file-boxes').append($newPage);
@@ -267,19 +247,21 @@ export async function loadMoreFiles(url) {
       }
     }
 
-    const $prevPage = $(`#${$newPage.id}`).prev('[id^="diff-page-"]');
-
     // 3. if the dom indicates that there are still some pages missing, show the load more button
-    if ($prevPage.length && $prevPage[0].id.substring('diff-page-'.length) !== `${pageNumber - 1}`) {
-      // eslint-disable-next-line no-jquery/no-append-html -- static block
-      $prevPage.after(
-        `<div class="diff-file-box diff-box file-content tw-mt-2" id="diff-incomplete-skip">
-                <h4 class="ui top attached header tw-font-normal tw-flex tw-items-center tw-justify-between">
-                  ${pageData.diffFileInfo.tooManyFilesMessage}
-                  <a class="ui basic tiny button" id="diff-show-more-files" data-href="?diff-page=${pageNumber - 1}&file-only=true">${pageData.diffFileInfo.showMoreMessage}</a>
-                </h4>
+    const $reloadedPages = $(`[id^="diff-page-"]`);
+    for (let i = 0; i < $reloadedPages.length - 1; i++) {
+      const nextPage = Number($reloadedPages[i].id.substring(diffPageIdPrefixLength)) + 1;
+      if (nextPage !== Number($reloadedPages[i + 1].id.substring(diffPageIdPrefixLength)) && !$(`#diff-incomplete-skip-${nextPage}`).length) {
+        // eslint-disable-next-line no-jquery/no-append-html -- static block
+        $reloadedPages.eq(i).after(
+          `<div class="diff-file-box diff-box file-content tw-mt-2" id="diff-incomplete-skip-${nextPage}">
+                  <h4 class="ui top attached header tw-font-normal tw-flex tw-items-center tw-justify-between">
+                    ${pageData.diffFileInfo.tooManyFilesMessage}
+                    <a class="ui basic tiny button" id="diff-show-more-files" data-href="?diff-page=${nextPage}&file-only=true">${pageData.diffFileInfo.showMoreMessage}</a>
+                  </h4>
           </div>`,
-      );
+        );
+      }
     }
 
     // 4. re-execute the script to append the newly loaded items to the JS variables to refresh the DiffFileTree
@@ -337,7 +319,6 @@ export function initRepoDiffView() {
   if (!$('#diff-file-boxes').length) return;
   initDiffFileTree();
   initDiffCommitSelect();
-  initSkipToSelectedFile();
   initRepoDiffShowMore();
   initRepoDiffReviewButton();
   initRepoDiffFileViewToggle();
