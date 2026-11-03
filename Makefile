@@ -23,6 +23,7 @@ SHASUM ?= shasum -a 256
 HAS_GO := $(shell hash $(GO) > /dev/null 2>&1 && echo yes)
 COMMA := ,
 DIFF ?= diff --unified
+USE_GOTESTSUM ?= yes
 
 ifeq ($(USE_GOTESTSUM), yes)
 	GOTEST ?= go tool gotestsum --format testname --
