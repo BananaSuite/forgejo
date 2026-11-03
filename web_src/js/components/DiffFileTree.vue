@@ -99,7 +99,7 @@ export default {
         (item) => item.NameHash === window.location.hash.substring('#diff-'.length),
       )?.OnPage;
 
-      if (targetOnPage) {
+      if (targetOnPage && !document.getElementById(`diff-page-${targetOnPage}`)) {
         const params = new URLSearchParams(window.location.search);
         params.set('file-only', true);
         params.set('diff-page', targetOnPage);
