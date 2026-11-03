@@ -185,7 +185,7 @@ func ParseControlFile(r io.Reader) (*Package, error) {
 	var controlBuilder strings.Builder
 	binaryIndices, err := control.ParseBinaryIndex(bufio.NewReader(io.TeeReader(r, &controlBuilder)))
 	if err != nil {
-		return nil, err
+		return nil, util.NewInvalidArgumentErrorf("control file parsing failed: %s", err)
 	}
 
 	if len(binaryIndices) == 0 {

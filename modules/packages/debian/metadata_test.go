@@ -183,6 +183,7 @@ func TestParseControlFile(t *testing.T) {
 			p, err := ParseControlFile(buildContent(packageName, version, packageArchitecture, packageDescription))
 			assert.Nil(t, p)
 			require.Error(t, err)
+			require.ErrorContains(t, err, "control file parsing failed: ")
 		}
 	})
 
