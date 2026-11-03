@@ -314,7 +314,7 @@ func TestSlackWebHookSubscription(t *testing.T) {
 		forkerToken := getTokenForLoggedInUser(t, forkerSess, auth_model.AccessTokenScopeWriteRepository)
 		fork := forgery.CreateRepoFork(t, forker, forker, repo)
 
-		//var fileResp api.FileResponse
+		var fileResp api.FileResponse
 
 		content := "# Some Dev Notes"
 		enc := base64.StdEncoding.EncodeToString([]byte(content))
@@ -336,9 +336,11 @@ func TestSlackWebHookSubscription(t *testing.T) {
 
 		path := fmt.Sprintf("/api/v1/repos/%s/%s/contents/%s", fork.OwnerName, fork.Name, "devNotes.md")
 		req := NewRequestWithJSON(t, http.MethodPost, path, fileReq).AddTokenAuth(forkerToken)
-		resp := MakeRequest(t, req, http.StatusOK)
-		// DecodeJSON(t, resp, &fileResp)
-		// assert.Equal(t, fileResp.Content.Content, content)
+		resp := MakeRequest(t, req, http.StatusCreated)
+		DecodeJSON(t, resp, &fileResp)
+		strResp, err := base64.StdEncoding.DecodeString(*fileResp.Content.Content)
+		require.NoError(t, err)
+		assert.Equal(t, content, string(strResp))
 
 		slackURL := receiver.URL + "/slack"
 		resp = session.MakeRequest(t, NewRequestWithValues(t, "POST", repoURL+"/settings/hooks/slack/new", map[string]string{
