@@ -390,6 +390,7 @@ func TestSlackWebHookSubscription(t *testing.T) {
 			reviewPayload, err := io.ReadAll(hookReq.Body)
 			require.NoError(t, err)
 			assert.Contains(t, string(reviewPayload), "@"+forker.Name)
+			assert.NotContains(t, string(reviewPayload), "@"+reviewer.Name)
 
 			// Check if the reviewer and the forker are mentioned on comment
 			var secondCommentPayload []byte
@@ -413,6 +414,7 @@ func TestSlackWebHookSubscription(t *testing.T) {
 			require.NoError(t, err)
 			assert.Contains(t, string(secondCommentPayload), "@"+forker.Name)
 			assert.Contains(t, string(secondCommentPayload), "@"+reviewer.Name)
+			assert.NotContains(t, string(secondCommentPayload), "@"+commenter.Name)
 		})
 	})
 }

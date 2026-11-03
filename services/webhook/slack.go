@@ -297,6 +297,9 @@ func (s slackConvertor) Review(p *api.PullRequestPayload, event webhook_module.H
 	var mentions []string
 	if p.ParticipantNames != nil {
 		for _, name := range *p.ParticipantNames {
+			if name == p.Sender.UserName { // don't mention the user who performed the action
+				continue
+			}
 			m := "@" + name
 			mentions = append(mentions, SlackNameFormatter(m))
 		}
