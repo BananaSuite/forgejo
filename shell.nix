@@ -21,7 +21,6 @@ pkgs.mkShell {
     sqlite-interactive
     go
     gopls
-    gotestsum
 
     # tests
     openssh

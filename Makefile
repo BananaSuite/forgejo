@@ -25,7 +25,7 @@ COMMA := ,
 DIFF ?= diff --unified
 
 ifeq ($(USE_GOTESTSUM), yes)
-	GOTEST ?= gotestsum --format testname --
+	GOTEST ?= go tool gotestsum --format testname --
 	GOTESTFLAGS ?= -timeout=2h
 else
 	GOTEST ?= $(GO) test
