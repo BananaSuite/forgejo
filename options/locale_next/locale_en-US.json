@@ -31,31 +31,31 @@
 	"followers.incoming.list.none": "No one is following this user.",
 	"followers.outgoing.list.self.none": "You are not following anyone.",
 	"followers.outgoing.list.none": "%s isn't following anyone.",
-	"relativetime.now": "now",
+	"relativetime.now": "a few seconds ago",
 	"relativetime.future": "in future",
 	"relativetime.mins": {
-		"one": "%d minute ago",
+		"one": "a minute ago",
 		"other": "%d minutes ago"
 	},
 	"relativetime.hours": {
-		"one": "%d hour ago",
-		"other": "%d hours ago"
+		"one": "over an hour ago",
+		"other": "over %d hours ago"
 	},
 	"relativetime.days": {
-		"one": "%d day ago",
-		"other": "%d days ago"
+		"one": "over %d day ago",
+		"other": "over %d days ago"
 	},
 	"relativetime.weeks": {
-		"one": "%d week ago",
-		"other": "%d weeks ago"
+		"one": "over %d week ago",
+		"other": "over %d weeks ago"
 	},
 	"relativetime.months": {
-		"one": "%d month ago",
-		"other": "%d months ago"
+		"one": "over %d month ago",
+		"other": "over %d months ago"
 	},
 	"relativetime.years": {
-		"one": "%d year ago",
-		"other": "%d years ago"
+		"one": "over %d year ago",
+		"other": "over %d years ago"
 	},
 	"relativetime.duration.secs": {
 		"one": "%d second",
@@ -85,10 +85,6 @@
 		"one": "%d year",
 		"other": "%d years"
 	},
-	"relativetime.1day": "yesterday",
-	"relativetime.1week": "last week",
-	"relativetime.1month": "last month",
-	"relativetime.1year": "last year",
 	"repo.contributors.heading": "Contributors to this repository",
 	"repo.contributors_between.heading": "Contributors between {0} and {1}",
 	"repo.contributors_since.heading": "Contributors since {0}",

@@ -208,59 +208,37 @@ export function DoUpdateRelativeTime(object: HTMLElement, now?: number): number 
   }
 
   const years = Math.floor(nowJS.diff(thenJS, 'year'));
-  if (years >= 1) {
-    // Datetime is at least one year ago.
-    if (years === 1 && pageData.DATETIMESTRINGS['relativetime.1year']) {
-      // Datetime is one year ago.
-      object.textContent = pageData.DATETIMESTRINGS['relativetime.1year'];
-    } else {
-      // Datetime is more than a year ago.
-      object.textContent = GetPluralizedStringOrFallback('relativetime.years', years, 'year');
+  if (years >= 2) {
+    // Datetime is more than two years ago.
+    object.textContent = GetPluralizedStringOrFallback('relativetime.years', years, 'year');
     }
     return ONE_DAY;
   }
 
   const months = Math.floor(nowJS.diff(thenJS, 'month'));
-  if (months >= 1) {
-    // Datetime is at least one month but less than a year ago.
-    if (months === 1 && pageData.DATETIMESTRINGS['relativetime.1month']) {
-      // Datetime is one month ago.
-      object.textContent = pageData.DATETIMESTRINGS['relativetime.1month'];
-    } else {
-      // Datetime is several months ago (but less than a year).
-      object.textContent = GetPluralizedStringOrFallback('relativetime.months', months, 'month');
-    }
+  if (months >= 2) {
+    // Datetime is more than two months but less than two years ago.
+    object.textContent = GetPluralizedStringOrFallback('relativetime.months', months, 'month');
     return ONE_DAY;
   }
 
   const weeks = Math.floor(nowJS.diff(thenJS, 'week'));
-  if (weeks >= 1) {
-    // Datetime is at least one week but less than a month ago.
-    if (weeks === 1 && pageData.DATETIMESTRINGS['relativetime.1week']) {
-      // Datetime is one week ago.
-      object.textContent = pageData.DATETIMESTRINGS['relativetime.1week'];
-    } else {
-      // Datetime is several weeks ago (but less than a month).
-      object.textContent = GetPluralizedStringOrFallback('relativetime.weeks', weeks, 'week');
-    }
+  if (weeks >= 2) {
+    // Datetime is more than two weeks but less than two months ago.
+    object.textContent = GetPluralizedStringOrFallback('relativetime.weeks', weeks, 'week');
     return ONE_DAY;
   }
 
   const days = Math.floor(nowJS.diff(thenJS, 'day'));
-  if (days >= 1) {
-    if (days === 1 && pageData.DATETIMESTRINGS['relativetime.1day']) {
-      // Datetime is one day ago.
-      object.textContent = pageData.DATETIMESTRINGS['relativetime.1day'];
-    } else {
-      // Datetime is several days but less than a week ago.
-      object.textContent = GetPluralizedStringOrFallback('relativetime.days', days, 'day');
-    }
+  if (days >= 2) {
+    // Datetime is more than two days but less than two weeks ago.
+    object.textContent = GetPluralizedStringOrFallback('relativetime.days', days, 'day');
     return ONE_DAY;
   }
 
   const hours = Math.floor(nowJS.diff(thenJS, 'hour'));
   if (hours >= 1) {
-    // Datetime is one or more hours but less than a day ago.
+    // Datetime is more than one hour but less than two days ago.
     object.textContent = GetPluralizedStringOrFallback('relativetime.hours', hours, 'hour');
     return ONE_HOUR;
   }
@@ -272,7 +250,7 @@ export function DoUpdateRelativeTime(object: HTMLElement, now?: number): number 
     return ONE_MINUTE;
   }
 
-  // Datetime is very recent.
+  // Datetime is within the last one minute.
   object.textContent = pageData.DATETIMESTRINGS.NOW;
   return HALF_MINUTE;
 }
