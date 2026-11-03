@@ -199,6 +199,36 @@ function onShowMoreFiles() {
   htmx.process(document.body);
 }
 
+function retriggerTarget(id) {
+  const url = new URL(window.location.href);
+
+  url.hash = '__target_reset';
+  window.history.replaceState(window.history.state, '', url);
+
+  url.hash = id;
+  window.location.replace(url);
+}
+
+async function initSkipToSelectedFile() {
+  if (!window.location.hash) {
+    return;
+  }
+
+  const targetOnPage = pageData.diffFileInfo.files.find(
+    (item) => item.NameHash === window.location.hash.substring('#diff-'.length),
+  )?.OnPage;
+
+  if (pageData.diffFileInfo.currentPage === targetOnPage) {
+    return;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  params.set('file-only', true);
+  params.set('diff-page', targetOnPage);
+  await loadMoreFiles(`?${params.toString()}`);
+  retriggerTarget(window.location.hash);
+}
+
 export async function loadMoreFiles(url) {
   const target = document.querySelector('a#diff-show-more-files');
   if (target?.classList.contains('disabled') || pageData.diffFileInfo.isLoadingNewData) {
@@ -213,17 +243,46 @@ export async function loadMoreFiles(url) {
     const resp = await response.text();
     const $resp = $(resp);
     // the response is a full HTML page, we need to extract the relevant contents:
-    // 1. append the newly loaded file list items to the existing list
-    $('#diff-file-boxes').append($resp.find('#diff-file-boxes').children());
+    // 1. insert the newly loaded file list items to the existing list
+    const $newPage = $resp.find('[id^="diff-page-"]')[0];
+    const pageNumber = $newPage.id.substring('diff-page-'.length);
 
-    // 2. if the response indicates the diff is incomplete show the load more button
-    $('#diff-incomplete').remove();
-    const $diffIncomplete = $resp.find('#diff-incomplete');
-    if ($diffIncomplete.length) {
-      $('#diff-content-container').append($diffIncomplete);
+    const $loadedPages = $(`[id^="diff-page-"]`);
+
+    const $anchor = $loadedPages
+      .filter((_, el) => Number(el.id.slice('diff-page-'.length)) > pageNumber)
+      .first();
+
+    if ($anchor.length) {
+      $('#diff-incomplete-skip').remove();
+      $anchor.before($newPage);
+    } else {
+      $('#diff-file-boxes').append($newPage);
+
+      // 2. if the response indicates the diff is incomplete show the load more button
+      $('#diff-incomplete').remove();
+      const $diffIncomplete = $resp.find('#diff-incomplete');
+      if ($diffIncomplete.length) {
+        $('#diff-content-container').append($diffIncomplete);
+      }
     }
 
-    // 3. re-execute the script to append the newly loaded items to the JS variables to refresh the DiffFileTree
+    const $prevPage = $(`#${$newPage.id}`).prev('[id^="diff-page-"]');
+
+    // 3. if the dom indicates that there are still some pages missing, show the load more button
+    if ($prevPage.length && $prevPage[0].id.substring('diff-page-'.length) !== `${pageNumber - 1}`) {
+      // eslint-disable-next-line no-jquery/no-append-html -- static block
+      $prevPage.after(
+        `<div class="diff-file-box diff-box file-content tw-mt-2" id="diff-incomplete-skip">
+                <h4 class="ui top attached header tw-font-normal tw-flex tw-items-center tw-justify-between">
+                  ${pageData.diffFileInfo.tooManyFilesMessage}
+                  <a class="ui basic tiny button" id="diff-show-more-files" data-href="?diff-page=${pageNumber - 1}&file-only=true">${pageData.diffFileInfo.showMoreMessage}</a>
+                </h4>
+          </div>`,
+      );
+    }
+
+    // 4. re-execute the script to append the newly loaded items to the JS variables to refresh the DiffFileTree
     $('body').append($resp.find('script#diff-data-script'));
 
     onShowMoreFiles();
@@ -278,6 +337,7 @@ export function initRepoDiffView() {
   if (!$('#diff-file-boxes').length) return;
   initDiffFileTree();
   initDiffCommitSelect();
+  initSkipToSelectedFile();
   initRepoDiffShowMore();
   initRepoDiffReviewButton();
   initRepoDiffFileViewToggle();
