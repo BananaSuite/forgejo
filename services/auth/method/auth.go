@@ -34,13 +34,8 @@ func handleSignIn(resp http.ResponseWriter, req *http.Request, sess auth.Session
 		sess = newSess
 	}
 
-	_ = sess.Delete("openid_verified_uri")
-	_ = sess.Delete("openid_signin_remember")
-	_ = sess.Delete("openid_determined_email")
-	_ = sess.Delete("openid_determined_username")
 	_ = sess.Delete("twofaUid")
 	_ = sess.Delete("twofaRemember")
-	_ = sess.Delete("twofaOpenID")
 	_ = sess.Delete("webauthnAssertion")
 	_ = sess.Delete("linkAccount")
 	err = sess.Set("uid", user.ID)

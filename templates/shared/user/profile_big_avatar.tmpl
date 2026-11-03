@@ -80,14 +80,6 @@
 					<div class="render-content markup">{{$.RenderedDescription}}</div>
 				</li>
 			{{end}}
-			{{range .OpenIDs}}
-				{{if .Show}}
-					<li>
-						{{svg "fontawesome-openid"}}
-						<a target="_blank" rel="noopener noreferrer" href="{{.URI}}">{{.URI}}</a>
-					</li>
-				{{end}}
-			{{end}}
 			<li>
 				{{svg "octicon-calendar"}}
 				<span>{{ctx.Locale.Tr "user.joined_on" (DateUtils.AbsoluteShort .ContextUser.CreatedUnix)}}</span>

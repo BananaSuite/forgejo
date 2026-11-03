@@ -350,16 +350,11 @@ func handleSignInFull(ctx *context.Context, u *user_model.User, remember, obeyRe
 	}
 
 	if err := updateSession(ctx, []string{
-		// Delete the openid, 2fa and linkaccount data
-		"openid_verified_uri",
-		"openid_signin_remember",
-		"openid_determined_email",
-		"openid_determined_username",
+		// Delete the 2fa and linkaccount data
 		"twofaUid",
 		"twofaRemember",
 		"twofaSSOLTA",
 		"twofaSSOLTASourceID",
-		"twofaOpenID",
 		"linkAccount",
 	}, map[string]any{
 		"uid": u.ID,

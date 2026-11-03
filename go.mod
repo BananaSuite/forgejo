@@ -94,7 +94,6 @@ require (
 	github.com/ulikunitz/xz v0.5.17
 	github.com/urfave/cli/v3 v3.9.1
 	github.com/valyala/fastjson v1.6.10
-	github.com/yohcop/openid-go v1.0.1
 	github.com/yuin/goldmark v1.8.6
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
 	gitlab.com/gitlab-org/api/client-go v1.46.0

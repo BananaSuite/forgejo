@@ -17,10 +17,12 @@ import (
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
+	"forgejo.org/services/auth/source/oauth2"
 	"forgejo.org/services/forms"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testLoginFailed(t *testing.T, username, password, message string) {
@@ -130,8 +132,22 @@ func TestProviderDisplayNameIsPathEscaped(t *testing.T) {
 func TestDisableSignin(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
 	// Mock alternative auth ways as enabled
-	defer test.MockVariableValue(&setting.Service.EnableOpenIDSignIn, true)()
-	defer test.MockVariableValue(&setting.Service.EnableOpenIDSignUp, true)()
+	makeOAuthLoginSource := func(name string) {
+		require.NoError(t, auth.CreateSource(t.Context(), &auth.Source{
+			Type:     auth.OAuth2,
+			Name:     name,
+			IsActive: true,
+			Cfg: &oauth2.Source{
+				Provider:     "github",
+				ClientID:     "test-client-id",
+				ClientSecret: "test-client-secret",
+			},
+		}))
+		t.Cleanup(func() { oauth2.RemoveProviderFromGothic(name) })
+	}
+	makeOAuthLoginSource("test-provider-1")
+	makeOAuthLoginSource("test-provider-2")
+
 	t.Run("Disabled", func(t *testing.T) {
 		defer test.MockVariableValue(&setting.Service.EnableInternalSignIn, false)()
 

@@ -28,11 +28,6 @@ func Security(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings.security")
 	ctx.Data["PageIsSettingsSecurity"] = true
 
-	if ctx.FormString("openid.return_to") != "" {
-		settingsOpenIDVerify(ctx)
-		return
-	}
-
 	loadSecurityData(ctx)
 
 	ctx.HTML(http.StatusOK, tplSettingsSecurity)
@@ -138,11 +133,4 @@ func loadSecurityData(ctx *context.Context) {
 
 	ctx.Data["OrderedOAuth2Names"] = orderedOAuth2Names
 	ctx.Data["OAuth2Providers"] = oauth2Providers
-
-	openid, err := user_model.GetUserOpenIDs(ctx, ctx.Doer.ID)
-	if err != nil {
-		ctx.ServerError("GetUserOpenIDs", err)
-		return
-	}
-	ctx.Data["OpenIDs"] = openid
 }

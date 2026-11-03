@@ -301,17 +301,6 @@ func (f *ChangePasswordForm) Validate(req *http.Request, errs binding.Errors) bi
 	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-// AddOpenIDForm is for changing openid uri
-type AddOpenIDForm struct {
-	Openid string `binding:"Required;MaxSize(256)"`
-}
-
-// Validate validates the fields
-func (f *AddOpenIDForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
-	ctx := context.GetValidateContext(req)
-	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 // AddKeyForm form for adding SSH/GPG key
 type AddKeyForm struct {
 	Type        string `binding:"OmitEmpty"`

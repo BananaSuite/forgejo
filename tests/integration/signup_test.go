@@ -10,15 +10,18 @@ import (
 	"strings"
 	"testing"
 
+	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/cache"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/modules/translation"
+	"forgejo.org/services/auth/source/oauth2"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSignup(t *testing.T) {
@@ -212,10 +215,23 @@ func TestSignupImageCaptcha(t *testing.T) {
 
 func TestSignupFormUI(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
+	// Mock alternative auth ways as enabled
+	makeOAuthLoginSource := func(name string) {
+		require.NoError(t, auth_model.CreateSource(t.Context(), &auth_model.Source{
+			Type:     auth_model.OAuth2,
+			Name:     name,
+			IsActive: true,
+			Cfg: &oauth2.Source{
+				Provider:     "github",
+				ClientID:     "test-client-id",
+				ClientSecret: "test-client-secret",
+			},
+		}))
+		t.Cleanup(func() { oauth2.RemoveProviderFromGothic(name) })
+	}
+	makeOAuthLoginSource("test-provider-1")
+
 	t.Run("UI", func(t *testing.T) {
-		// Mock alternative auth ways as enabled
-		defer test.MockVariableValue(&setting.Service.EnableOpenIDSignIn, true)()
-		defer test.MockVariableValue(&setting.Service.EnableOpenIDSignUp, true)()
 		t.Run("Internal registration enabled", func(t *testing.T) {
 			defer test.MockVariableValue(&setting.Service.AllowOnlyExternalRegistration, false)()
 			req := NewRequest(t, "GET", "/user/sign_up")

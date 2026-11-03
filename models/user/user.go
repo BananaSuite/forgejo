@@ -25,7 +25,6 @@ import (
 
 	"forgejo.org/models/auth"
 	"forgejo.org/models/db"
-	"forgejo.org/modules/auth/openid"
 	"forgejo.org/modules/auth/password/hash"
 	"forgejo.org/modules/base"
 	"forgejo.org/modules/container"
@@ -1314,32 +1313,6 @@ func GetUserByEmailSimple(ctx context.Context, email string) (*User, error) {
 // GetUser checks if a user already exists
 func GetUser(ctx context.Context, user *User) (bool, error) {
 	return db.GetEngine(ctx).Get(user)
-}
-
-// GetUserByOpenID returns the user object by given OpenID if exists.
-func GetUserByOpenID(ctx context.Context, uri string) (*User, error) {
-	if len(uri) == 0 {
-		return nil, ErrUserNotExist{Name: uri}
-	}
-
-	uri, err := openid.Normalize(uri)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Trace("Normalized OpenID URI: " + uri)
-
-	// Otherwise, check in openid table
-	oid := &UserOpenID{}
-	has, err := db.GetEngine(ctx).Where("uri=?", uri).Get(oid)
-	if err != nil {
-		return nil, err
-	}
-	if has {
-		return GetUserByID(ctx, oid.UID)
-	}
-
-	return nil, ErrUserNotExist{Name: uri}
 }
 
 // GetAdminUser returns the first administrator

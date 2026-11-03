@@ -7,9 +7,6 @@
 		{{template "user/settings/security/webauthn" .}}
 		{{if not .MustEnableTwoFactor}}
 			{{template "user/settings/security/accountlinks" .}}
-			{{if .EnableOpenIDSignIn}}
-				{{template "user/settings/security/openid" .}}
-			{{end}}
 		{{end}}
 	</div>
 

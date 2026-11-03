@@ -93,12 +93,6 @@ var Service = struct {
 	UsernameCooldownPeriod                  int64
 	MaxUserRedirects                        int64
 
-	// OpenID settings
-	EnableOpenIDSignIn bool
-	EnableOpenIDSignUp bool
-	OpenIDWhitelist    []*regexp.Regexp
-	OpenIDBlacklist    []*regexp.Regexp
-
 	// Explore page settings
 	Explore struct {
 		RequireSigninView        bool `ini:"REQUIRE_SIGNIN_VIEW"`
@@ -312,8 +306,6 @@ func loadServiceFrom(rootCfg ConfigProvider) {
 	Service.MaxUserRedirects = sec.Key("MAX_USER_REDIRECTS").MustInt64(maxUserRedirectsDefault)
 
 	mustMapSetting(rootCfg, "service.explore", &Service.Explore)
-
-	loadOpenIDSetting(rootCfg)
 }
 
 // Returns a regex pattern string based on the current value of
@@ -334,24 +326,4 @@ func ValidSiteURLPattern() string {
 	// We run the compiler against the initial config value anyway, so this string always works in production.
 	schemes := strings.Join(Service.ValidSiteURLSchemes, "|")
 	return `(` + schemes + `)://.+`
-}
-
-func loadOpenIDSetting(rootCfg ConfigProvider) {
-	sec := rootCfg.Section("openid")
-	Service.EnableOpenIDSignIn = sec.Key("ENABLE_OPENID_SIGNIN").MustBool(!InstallLock)
-	Service.EnableOpenIDSignUp = sec.Key("ENABLE_OPENID_SIGNUP").MustBool(!Service.DisableRegistration && Service.EnableOpenIDSignIn)
-	pats := sec.Key("WHITELISTED_URIS").Strings(" ")
-	if len(pats) != 0 {
-		Service.OpenIDWhitelist = make([]*regexp.Regexp, len(pats))
-		for i, p := range pats {
-			Service.OpenIDWhitelist[i] = regexp.MustCompilePOSIX(p)
-		}
-	}
-	pats = sec.Key("BLACKLISTED_URIS").Strings(" ")
-	if len(pats) != 0 {
-		Service.OpenIDBlacklist = make([]*regexp.Regexp, len(pats))
-		for i, p := range pats {
-			Service.OpenIDBlacklist[i] = regexp.MustCompilePOSIX(p)
-		}
-	}
 }

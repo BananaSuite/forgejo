@@ -48,13 +48,6 @@ func PrepareContextForProfileBigAvatar(ctx *context.Context) {
 	if setting.Service.UserLocationMapURL != "" {
 		ctx.Data["ContextUserLocationMapURL"] = setting.Service.UserLocationMapURL + url.QueryEscape(ctx.ContextUser.Location)
 	}
-	// Show OpenID URIs
-	openIDs, err := user_model.GetUserOpenIDs(ctx, ctx.ContextUser.ID)
-	if err != nil {
-		ctx.ServerError("GetUserOpenIDs", err)
-		return
-	}
-	ctx.Data["OpenIDs"] = openIDs
 	if len(ctx.ContextUser.Description) != 0 {
 		content, err := markdown.RenderString(&markup.RenderContext{
 			Metas: map[string]string{"mode": "document"},

@@ -81,14 +81,6 @@ func TwoFactorPost(ctx *context.Context) {
 			}
 		}
 
-		// Handle OpenID linking to user.
-		if oid, ok := ctx.Session.Get("twofaOpenID").(string); ok {
-			if err := user_model.AddUserOpenID(ctx, &user_model.UserOpenID{UID: u.ID, URI: oid}); err != nil {
-				ctx.ServerError("AddUserOpenID", err)
-				return
-			}
-		}
-
 		twofa.LastUsedPasscode = form.Passcode
 		if err = auth.UpdateTwoFactor(ctx, twofa); err != nil {
 			ctx.ServerError("UserSignIn", err)
@@ -152,14 +144,6 @@ func TwoFactorScratchPost(ctx *context.Context) {
 		if err != nil {
 			ctx.ServerError("UserSignIn", err)
 			return
-		}
-
-		// Handle OpenID linking to user.
-		if oid, ok := ctx.Session.Get("twofaOpenID").(string); ok {
-			if err := user_model.AddUserOpenID(ctx, &user_model.UserOpenID{UID: u.ID, URI: oid}); err != nil {
-				ctx.ServerError("AddUserOpenID", err)
-				return
-			}
 		}
 
 		handleSignInFull(ctx, u, remember, false)

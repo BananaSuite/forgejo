@@ -505,7 +505,7 @@ var (
 	reqRepoDelegateActionTrust = context.RequireRepoDelegateActionTrust()
 
 	linkAccountEnabled = func(ctx *context.Context) {
-		if !setting.Service.EnableOpenIDSignIn && !setting.Service.EnableOpenIDSignUp && !setting.OAuth2.Enabled {
+		if !setting.OAuth2.Enabled {
 			ctx.Error(http.StatusForbidden)
 			return
 		}
@@ -523,20 +523,6 @@ var (
 		}
 		ctx.Data["MustEnableTwoFactor"] = !hasTwoFactor
 		ctx.Data["HideNavbarLinks"] = !hasTwoFactor
-	}
-
-	openIDSignInEnabled = func(ctx *context.Context) {
-		if !setting.Service.EnableOpenIDSignIn {
-			ctx.Error(http.StatusForbidden)
-			return
-		}
-	}
-
-	openIDSignUpEnabled = func(ctx *context.Context) {
-		if !setting.Service.EnableOpenIDSignUp {
-			ctx.Error(http.StatusForbidden)
-			return
-		}
 	}
 
 	oauth2Enabled = func(ctx *context.Context) {
@@ -701,21 +687,6 @@ func registerRoutes(m *web.Route) {
 	m.Get("/user/login", auth.SignIn)
 	m.Group("/user", func() {
 		m.Post("/login", web.Bind(forms.SignInForm{}), auth.SignInPost)
-		m.Group("", func() {
-			m.Combo("/login/openid").
-				Get(auth.SignInOpenID).
-				Post(web.Bind(forms.SignInOpenIDForm{}), auth.SignInOpenIDPost)
-		}, openIDSignInEnabled)
-		m.Group("/openid", func() {
-			m.Combo("/connect").
-				Get(auth.ConnectOpenID).
-				Post(web.Bind(forms.ConnectOpenIDForm{}), auth.ConnectOpenIDPost)
-			m.Group("/register", func() {
-				m.Combo("").
-					Get(auth.RegisterOpenID, openIDSignUpEnabled).
-					Post(web.Bind(forms.SignUpOpenIDForm{}), auth.RegisterOpenIDPost)
-			}, openIDSignUpEnabled)
-		}, openIDSignInEnabled)
 		m.Get("/sign_up", auth.SignUp)
 		m.Post("/sign_up", web.Bind(forms.RegisterForm{}), auth.SignUpPost)
 		m.Get("/link_account", linkAccountEnabled, auth.LinkAccount)
@@ -786,11 +757,6 @@ func registerRoutes(m *web.Route) {
 				m.Post("/register", security.WebauthnRegisterPost)
 				m.Post("/delete", web.Bind(forms.WebauthnDeleteForm{}), security.WebauthnDelete)
 			})
-			m.Group("/openid", func() {
-				m.Post("", web.Bind(forms.AddOpenIDForm{}), security.OpenIDPost)
-				m.Post("/delete", security.DeleteOpenID)
-				m.Post("/toggle_visibility", security.ToggleOpenIDVisibility)
-			}, openIDSignInEnabled)
 			m.Post("/account_link", linkAccountEnabled, security.DeleteAccountLink)
 		}, requiredTwoFactor)
 

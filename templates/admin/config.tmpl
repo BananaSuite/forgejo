@@ -155,10 +155,6 @@
 				<dd>{{if .Service.AllowOnlyExternalRegistration}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
 				<dt>{{ctx.Locale.Tr "admin.config.show_registration_button"}}</dt>
 				<dd>{{if .Service.ShowRegistrationButton}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
-				<dt>{{ctx.Locale.Tr "admin.config.enable_openid_signup"}}</dt>
-				<dd>{{if .Service.EnableOpenIDSignUp}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
-				<dt>{{ctx.Locale.Tr "admin.config.enable_openid_signin"}}</dt>
-				<dd>{{if .Service.EnableOpenIDSignIn}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
 				<dt>{{ctx.Locale.Tr "admin.config.require_sign_in_view"}}</dt>
 				<dd>{{if .Service.RequireSignInView}}{{svg "octicon-check"}}{{else}}{{svg "octicon-x"}}{{end}}</dd>
 				<dt>{{ctx.Locale.Tr "admin.config.mail_notify"}}</dt>

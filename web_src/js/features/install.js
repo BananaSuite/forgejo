@@ -80,9 +80,6 @@ function initPreInstall() {
   document.querySelector('#disable-registration input').addEventListener('change', function () {
     if (this.checked) {
       document.querySelector('#enable-captcha input').checked = false;
-      document.querySelector('#enable-openid-signup input').checked = false;
-    } else {
-      document.querySelector('#enable-openid-signup input').checked = true;
     }
   });
   document.querySelector('#enable-captcha input').addEventListener('change', function () {

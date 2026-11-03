@@ -1,4 +1,4 @@
-{{if or .OAuth2Providers .EnableOpenIDSignIn}}
+{{if .OAuth2Providers}}
 {{if or (and .PageIsSignUp (not .DisableRegistration)) (and .PageIsSignIn .EnableInternalSignIn)}}
 	<div class="divider divider-text">
 		{{ctx.Locale.Tr "sign_in_or"}}
@@ -11,12 +11,6 @@
 				<a class="{{$provider.Name}} ui button tw-flex tw-items-center tw-justify-center tw-py-2 tw-w-full oauth-login-link" href="{{AppSubUrl}}/user/oauth2/{{$provider.DisplayName | PathEscape}}">
 					{{$provider.IconHTML 28}}
 					{{ctx.Locale.Tr "sign_in_with_provider" $provider.DisplayName}}
-				</a>
-			{{end}}
-			{{if .EnableOpenIDSignIn}}
-				<a class="openid ui button tw-flex tw-items-center tw-justify-center tw-py-2 tw-w-full" href="{{AppSubUrl}}/user/login/openid">
-				{{svg "fontawesome-openid" 28 "tw-mr-2"}}
-				{{ctx.Locale.Tr "auth.sign_in_openid"}}
 				</a>
 			{{end}}
 		</div>

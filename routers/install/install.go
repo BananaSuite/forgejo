@@ -457,8 +457,6 @@ func SubmitInstall(ctx *context.Context) {
 		return
 	}
 
-	cfg.Section("openid").Key("ENABLE_OPENID_SIGNIN").SetValue("false")
-	cfg.Section("openid").Key("ENABLE_OPENID_SIGNUP").SetValue("false")
 	cfg.Section("service").Key("DISABLE_REGISTRATION").SetValue(fmt.Sprint(form.DisableRegistration))
 	cfg.Section("service").Key("ALLOW_ONLY_EXTERNAL_REGISTRATION").SetValue(fmt.Sprint(form.AllowOnlyExternalRegistration))
 	cfg.Section("service").Key("ENABLE_CAPTCHA").SetValue(fmt.Sprint(form.EnableCaptcha))

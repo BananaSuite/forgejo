@@ -635,25 +635,6 @@ func TestNewUserRedirect3(t *testing.T) {
 	})
 }
 
-func TestGetUserByOpenID(t *testing.T) {
-	require.NoError(t, unittest.PrepareTestDatabase())
-
-	_, err := user_model.GetUserByOpenID(db.DefaultContext, "https://unknown")
-	if assert.Error(t, err) {
-		assert.True(t, user_model.IsErrUserNotExist(err))
-	}
-
-	user, err := user_model.GetUserByOpenID(db.DefaultContext, "https://user1.domain1.tld")
-	require.NoError(t, err)
-
-	assert.Equal(t, int64(1), user.ID)
-
-	user, err = user_model.GetUserByOpenID(db.DefaultContext, "https://domain1.tld/user2/")
-	require.NoError(t, err)
-
-	assert.Equal(t, int64(2), user.ID)
-}
-
 func TestFollowUser(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
