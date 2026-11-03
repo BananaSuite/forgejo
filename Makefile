@@ -25,8 +25,16 @@ COMMA := ,
 DIFF ?= diff --unified
 USE_GOTESTSUM ?= yes
 
+ifeq ($(CI), true)
+	GOTESTSUMFLAGS ?= --format=testname --max-fails=1
+else
+	GOTESTSUMFLAGS ?= --format=dots
+endif
+
 ifeq ($(USE_GOTESTSUM), yes)
-	GOTEST ?= go tool gotestsum --format testname --
+	# unset GITHUB_ACTIONS to have less log lines
+	# https://github.com/gotestyourself/gotestsum/blob/3cf14356a16c7931cfeacd7dfee585527618df3d/testjson/format.go#L442
+	GOTEST ?= GITHUB_ACTIONS=false go tool gotestsum $(GOTESTSUMFLAGS) --
 	GOTESTFLAGS ?= -timeout=2h
 else
 	GOTEST ?= $(GO) test

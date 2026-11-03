@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -e
 #set -x
@@ -37,7 +37,9 @@ function run_test() {
   mkdir -p $coverage
 
   set -o pipefail
-  run_verbose $GO test -timeout=120m -tags='sqlite sqlite_unlock_notify' -covermode atomic -cover $package -coverpkg $COVERED_PACKAGES $COVERAGE_TEST_ARGS -args -test.gocoverdir=$coverage |& grep --text -v 'warning: no packages being tested depend on matches for pattern'
+	# unset GITHUB_ACTIONS to have less log lines
+	# https://github.com/gotestyourself/gotestsum/blob/3cf14356a16c7931cfeacd7dfee585527618df3d/testjson/format.go#L442
+  GITHUB_ACTIONS=false run_verbose $GO tool gotestsum --format=testname --max-fails=1 -- -timeout=120m -tags='sqlite sqlite_unlock_notify' -covermode atomic -cover $package -coverpkg $COVERED_PACKAGES $COVERAGE_TEST_ARGS -args -test.gocoverdir=$coverage |& grep --text -v 'warning: no packages being tested depend on matches for pattern'
   set +o pipefail
 }
 
