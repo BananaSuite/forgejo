@@ -52,7 +52,7 @@ sudo apt update</code></pre></div>
 		{{- end}}
 	{{end}}
 
-	{{if or .PackageDescriptor.Metadata.Depends .PackageDescriptor.Metadata.Suggests .PackageDescriptor.Metadata.PreDepends .PackageDescriptor.Metadata.Breaks .PackageDescriptor.Metadata.Conflicts .PackageDescriptor.Metadata.BuiltUsing}}
+	{{if or .PackageDescriptor.Metadata.Depends .PackageDescriptor.Metadata.PreDepends .PackageDescriptor.Metadata.Recommends .PackageDescriptor.Metadata.Suggests .PackageDescriptor.Metadata.Breaks .PackageDescriptor.Metadata.Conflicts .PackageDescriptor.Metadata.Provides .PackageDescriptor.Metadata.Enhances}}
 		<h4 class="ui top attached header">{{ctx.Locale.Tr "packages.dependencies"}}</h4>
 		{{if .PackageDescriptor.Metadata.Depends}}
 			<div class="ui attached segment">
@@ -60,10 +60,10 @@ sudo apt update</code></pre></div>
 				{{template "dependencies" .PackageDescriptor.Metadata.Depends}}
 			</div>
 		{{end}}
-		{{if .PackageDescriptor.Metadata.Suggests}}
+		{{if .PackageDescriptor.Metadata.PreDepends}}
 			<div class="ui attached segment">
-				<h5>Suggests</h5>
-				{{template "dependencies" .PackageDescriptor.Metadata.Suggests}}
+				<h5>Pre-Depends</h5>
+				{{template "dependencies" .PackageDescriptor.Metadata.PreDepends}}
 			</div>
 		{{end}}
 		{{if .PackageDescriptor.Metadata.Recommends}}
@@ -72,10 +72,10 @@ sudo apt update</code></pre></div>
 				{{template "dependencies" .PackageDescriptor.Metadata.Recommends}}
 			</div>
 		{{end}}
-		{{if .PackageDescriptor.Metadata.PreDepends}}
+		{{if .PackageDescriptor.Metadata.Suggests}}
 			<div class="ui attached segment">
-				<h5>Pre-Depends</h5>
-				{{template "dependencies" .PackageDescriptor.Metadata.PreDepends}}
+				<h5>Suggests</h5>
+				{{template "dependencies" .PackageDescriptor.Metadata.Suggests}}
 			</div>
 		{{end}}
 		{{if .PackageDescriptor.Metadata.Breaks}}
@@ -90,22 +90,16 @@ sudo apt update</code></pre></div>
 				{{template "dependencies" .PackageDescriptor.Metadata.Conflicts}}
 			</div>
 		{{end}}
-		{{if .PackageDescriptor.Metadata.Enhances}}
-			<div class="ui attached segment">
-				<h5>Enhances</h5>
-				{{template "dependencies" .PackageDescriptor.Metadata.Enhances}}
-			</div>
-		{{end}}
 		{{if .PackageDescriptor.Metadata.Provides}}
 			<div class="ui attached segment">
 				<h5>Provides</h5>
 				{{template "dependencies" .PackageDescriptor.Metadata.Provides}}
 			</div>
 		{{end}}
-		{{if .PackageDescriptor.Metadata.BuiltUsing}}
+		{{if .PackageDescriptor.Metadata.Enhances}}
 			<div class="ui attached segment">
-				<h5>Built-Using</h5>
-				{{template "dependencies" .PackageDescriptor.Metadata.BuiltUsing}}
+				<h5>Enhances</h5>
+				{{template "dependencies" .PackageDescriptor.Metadata.Enhances}}
 			</div>
 		{{end}}
 	{{end}}
