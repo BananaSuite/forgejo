@@ -293,6 +293,16 @@ func (s slackConvertor) PullRequest(p *api.PullRequestPayload) (SlackPayload, er
 func (s slackConvertor) Review(p *api.PullRequestPayload, event webhook_module.HookEventType) (SlackPayload, error) {
 	title := fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title)
 	titleLink := fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index)
+
+	var mentions []string
+	if p.ParticipantNames != nil {
+		for _, name := range *p.ParticipantNames {
+			m := "@" + name
+			mentions = append(mentions, SlackNameFormatter(m))
+		}
+	}
+	mentionsString := strings.Join(mentions, ", ")
+
 	var text string
 
 	if p.Action == api.HookIssueReviewed {
@@ -302,6 +312,10 @@ func (s slackConvertor) Review(p *api.PullRequestPayload, event webhook_module.H
 		}
 
 		text = fmt.Sprintf("[%s] Pull request review %s: %s by %s", p.Repository.FullName, action, SlackLinkFormatter(titleLink, title), SlackNameFormatter(p.Sender.UserName))
+	}
+
+	if mentionsString != "" {
+		text += fmt.Sprintf(" Participants %s", mentionsString)
 	}
 
 	return s.createPayload(text, nil), nil

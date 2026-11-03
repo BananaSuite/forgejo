@@ -176,16 +176,6 @@ func (wpf webhookPayloadFormatter) getPullRequestPayloadInfo(p *api.PullRequestP
 	titleLink := wpf.linkFormatter(p.PullRequest.HTMLURL, issueTitle)
 	color = yellowColor
 
-	var mentions []string
-	for _, name := range *p.ParticipantNames {
-		if name == p.Sender.UserName { // don't mention the user who performed the action
-			continue
-		}
-		m := "@" + name
-		mentions = append(mentions, SlackNameFormatter(m))
-	}
-	mentionsString := strings.Join(mentions, ", ")
-
 	switch p.Action {
 	case api.HookIssueOpened:
 		text = fmt.Sprintf("Pull request opened: %s", titleLink)
@@ -236,9 +226,6 @@ func (wpf webhookPayloadFormatter) getPullRequestPayloadInfo(p *api.PullRequestP
 	}
 	if wpf.withSender {
 		text += fmt.Sprintf(" by %s", wpf.nameFormatter(p.Sender.UserName))
-	}
-	if mentionsString != "" {
-		text += fmt.Sprintf("Participants %s", mentionsString)
 	}
 
 	return text, issueTitle, attachmentText, color

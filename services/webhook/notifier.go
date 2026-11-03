@@ -39,11 +39,12 @@ func NewNotifier() notify_service.Notifier {
 	return &webhookNotifier{}
 }
 
+// TODO test&use these mechanics
 type payloadOpts struct {
 	oldContent string
 	prInfo     *issues_model.PRNotificationInfo
 	review     *issues_model.Review
-	perm       access_model.Permission
+	permission access_model.Permission
 }
 
 func addParticipants(ctx context.Context, pr *issues_model.PullRequest, payload *api.PullRequestPayload) error {
@@ -71,26 +72,23 @@ func newPullrequestPayload(
 	idx int64,
 	pr *issues_model.PullRequest,
 	repo *repo_model.Repository,
-	permission access_model.Permission,
-	sender *user_model.User,
-	oldContent string,
-	prInfo *issues_model.PRNotificationInfo,
-	review *issues_model.Review,
 	doer *user_model.User,
+	sender *user_model.User,
+	opts *payloadOpts,
 ) (*api.PullRequestPayload, error) {
 
 	res := &api.PullRequestPayload{
 		Action:      action,
 		Index:       idx,
 		PullRequest: convert.ToAPIPullRequest(ctx, pr, doer),
-		Repository:  convert.ToRepo(ctx, repo, permission),
+		Repository:  convert.ToRepo(ctx, repo, opts.permission),
 		Sender:      convert.ToUser(ctx, sender, nil),
 	}
 
 	switch action {
 	case api.HookIssueReviewed:
 		var reviewHookType webhook_module.HookEventType
-		switch review.Type {
+		switch opts.review.Type {
 		case issues_model.ReviewTypeApprove:
 			reviewHookType = webhook_module.HookEventPullRequestReviewApproved
 		case issues_model.ReviewTypeComment:
@@ -98,11 +96,11 @@ func newPullrequestPayload(
 		case issues_model.ReviewTypeReject:
 			reviewHookType = webhook_module.HookEventPullRequestReviewRejected
 		case issues_model.ReviewTypePending, issues_model.ReviewTypeRequest, issues_model.ReviewTypeUnknown:
-			log.Trace("Ignoring review type %v", review.Type)
+			log.Trace("Ignoring review type %v", opts.review.Type)
 			return nil, nil
 		default:
-			log.Error("Unhandled review type: %v", review.Type)
-			return nil, fmt.Errorf("Unhandled review type: %v", review.Type)
+			log.Error("Unhandled review type: %v", opts.review.Type)
+			return nil, fmt.Errorf("Unhandled review type: %v", opts.review.Type)
 		}
 		err := addParticipants(ctx, pr, res)
 		if err != nil {
@@ -110,27 +108,27 @@ func newPullrequestPayload(
 		}
 		res.Review = &api.ReviewPayload{
 			Type:    string(reviewHookType),
-			Content: review.Content,
+			Content: opts.review.Content,
 		}
-		res.PullRequest = convert.ToAPIPullRequest(ctx, pr, review.Reviewer)
-		res.Sender = convert.ToUser(ctx, review.Reviewer, nil)
-		res.RequestedReviewer = convert.ToUser(ctx, review.Reviewer, nil)
+		res.PullRequest = convert.ToAPIPullRequest(ctx, pr, opts.review.Reviewer)
+		res.Sender = convert.ToUser(ctx, opts.review.Reviewer, nil)
+		res.RequestedReviewer = convert.ToUser(ctx, opts.review.Reviewer, nil)
 		break
 	case api.HookIssueReviewRequested, api.HookIssueReviewRequestRemoved:
-		res.RequestedReviewer = convert.ToUser(ctx, review.Reviewer, nil)
+		res.RequestedReviewer = convert.ToUser(ctx, opts.review.Reviewer, nil)
 		break
 	case api.HookIssueAction(api.HookIssueCommentCreated):
 		err := addParticipants(ctx, pr, res)
 		if err != nil {
 			return nil, err
 		}
-		res.CommitID = prInfo.MergedCommitID
+		res.CommitID = opts.prInfo.MergedCommitID
 	case api.HookIssueClosed, api.HookIssueReOpened:
 		err := addParticipants(ctx, pr, res)
 		if err != nil {
 			return nil, err
 		}
-		res.CommitID = prInfo.MergedCommitID
+		res.CommitID = opts.prInfo.MergedCommitID
 	case api.HookIssueOpened:
 		res.Sender = convert.ToUser(ctx, pr.Issue.Poster, nil)
 		res.PullRequest = convert.ToAPIPullRequest(ctx, pr, pr.Issue.Poster)
@@ -141,7 +139,7 @@ func newPullrequestPayload(
 		}
 		res.Changes = &api.ChangesPayload{
 			Body: &api.ChangesFromPayload{
-				From: oldContent,
+				From: opts.oldContent,
 			},
 		}
 
