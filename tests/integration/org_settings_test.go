@@ -145,3 +145,43 @@ func TestOrgSettingsUpdateWebsite(t *testing.T) {
 		assertHasFlashMessages(t, resp, "success")
 	})
 }
+
+func TestOrgSettingsUpdateMembersTeamVisibilities(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	const orgName = "org3"
+	urlStr := fmt.Sprintf("/org/%s/settings", orgName)
+	session := loginUser(t, "user1")
+
+	req := NewRequest(t, "GET", urlStr)
+	doc := NewHTMLParser(t, session.MakeRequest(t, req, http.StatusOK).Body)
+	doc.AssertElement(t, "input[name=\"visible_members\"]:not([checked])", true)
+	doc.AssertElement(t, "input[name=\"visible_teams\"]:not([checked])", true)
+
+	req = NewRequestWithValues(t, "POST", urlStr, map[string]string{
+		"name":            orgName,
+		"visible_members": "true",
+		"visible_teams":   "true",
+	})
+	resp := session.MakeRequest(t, req, http.StatusSeeOther)
+	assertHasFlashMessages(t, resp, "success")
+
+	req = NewRequest(t, "GET", urlStr)
+	doc = NewHTMLParser(t, session.MakeRequest(t, req, http.StatusOK).Body)
+	doc.AssertElement(t, "input[name=\"visible_members\"][checked]", true)
+	doc.AssertElement(t, "input[name=\"visible_teams\"][checked]", true)
+
+	// change the visibility of the org to private
+	req = NewRequestWithValues(t, "POST", urlStr, map[string]string{
+		"name":       orgName,
+		"visibility": "private",
+	})
+	resp = session.MakeRequest(t, req, http.StatusSeeOther)
+	assertHasFlashMessages(t, resp, "success")
+
+	// this resets the members and teams visibilities
+	req = NewRequest(t, "GET", urlStr)
+	doc = NewHTMLParser(t, session.MakeRequest(t, req, http.StatusOK).Body)
+	doc.AssertElement(t, "input[name=\"visible_members\"]:not([checked])", true)
+	doc.AssertElement(t, "input[name=\"visible_teams\"]:not([checked])", true)
+}

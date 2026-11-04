@@ -55,6 +55,8 @@ func TestAPITeam(t *testing.T) {
 	assert.Equal(t, toOrg.Website, apiTeam.Organization.Website)
 	assert.Equal(t, toOrg.Location, apiTeam.Organization.Location)
 	assert.Equal(t, toOrg.Visibility, apiTeam.Organization.Visibility)
+	assert.Equal(t, toOrg.VisibleMembers, apiTeam.Organization.VisibleMembers)
+	assert.Equal(t, toOrg.VisibleTeams, apiTeam.Organization.VisibleTeams)
 	assert.Equal(t, toOrg.RepoAdminChangeTeamAccess, apiTeam.Organization.RepoAdminChangeTeamAccess)
 	assert.Equal(t, toOrg.Created.Local(), apiTeam.Organization.Created.Local())
 

@@ -266,6 +266,8 @@ func Create(ctx *context.APIContext) {
 		Type:                      user_model.UserTypeOrganization,
 		Visibility:                visibility,
 		RepoAdminChangeTeamAccess: form.RepoAdminChangeTeamAccess,
+		VisibleMembers:            form.VisibleMembers == nil || *form.VisibleMembers,
+		VisibleTeams:              form.VisibleTeams == nil || *form.VisibleTeams,
 	}
 	if err := organization.CreateOrganization(ctx, org, ctx.Doer()); err != nil {
 		if user_model.IsErrUserAlreadyExist(err) ||
@@ -408,6 +410,15 @@ func Edit(ctx *context.APIContext) {
 	if form.Visibility != nil {
 		changeVisibility = optional.Some(api.VisibilityModes[*form.Visibility])
 	}
+	// making those consistent with the org visibility is handled in user_service.UpdateUser below
+	changeVisibleMembers := optional.None[bool]()
+	if form.VisibleMembers != nil {
+		changeVisibleMembers = optional.Some(*form.VisibleMembers)
+	}
+	changeVisibleTeams := optional.None[bool]()
+	if form.VisibleTeams != nil {
+		changeVisibleTeams = optional.Some(*form.VisibleTeams)
+	}
 
 	opts := &user_service.UpdateOptions{
 		FullName:                  optional.FromPtr(form.FullName),
@@ -415,6 +426,8 @@ func Edit(ctx *context.APIContext) {
 		Website:                   optional.FromPtr(form.Website),
 		Location:                  optional.FromPtr(form.Location),
 		Visibility:                changeVisibility,
+		VisibleMembers:            changeVisibleMembers,
+		VisibleTeams:              changeVisibleTeams,
 		RepoAdminChangeTeamAccess: optional.FromPtr(form.RepoAdminChangeTeamAccess),
 	}
 	if err := user_service.UpdateUser(ctx, ctx.Org().Organization.AsUser(), opts); err != nil {

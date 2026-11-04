@@ -43,6 +43,8 @@ type UpdateOrgSettingForm struct {
 	Website                   string `binding:"ValidSiteUrl;MaxSize(255)"`
 	Location                  string `binding:"MaxSize(50)"`
 	Visibility                structs.VisibleType
+	VisibleMembers            bool
+	VisibleTeams              bool
 	MaxRepoCreation           int
 	OldQuotaGroups            []string
 	NewQuotaGroups            []string

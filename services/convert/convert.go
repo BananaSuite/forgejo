@@ -349,6 +349,8 @@ func ToOrganization(ctx context.Context, org *organization.Organization) *api.Or
 		Website:                   org.Website,
 		Location:                  org.Location,
 		Visibility:                org.Visibility.String(),
+		VisibleMembers:            org.VisibleMembers,
+		VisibleTeams:              org.VisibleTeams,
 		RepoAdminChangeTeamAccess: org.RepoAdminChangeTeamAccess,
 		Created:                   org.CreatedUnix.AsTime(),
 	}

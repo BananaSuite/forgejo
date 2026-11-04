@@ -49,6 +49,8 @@ func TestAPIOrgCreate(t *testing.T) {
 	assert.Equal(t, org.Website, apiOrg.Website)
 	assert.Equal(t, org.Location, apiOrg.Location)
 	assert.Equal(t, org.Visibility, apiOrg.Visibility)
+	assert.True(t, apiOrg.VisibleMembers)
+	assert.True(t, apiOrg.VisibleTeams)
 	assert.False(t, apiOrg.Created.IsZero())
 
 	unittest.AssertExistsAndLoadBean(t, &user_model.User{
@@ -98,6 +100,57 @@ func TestAPIOrgCreate(t *testing.T) {
 	DecodeJSON(t, resp, &users)
 	assert.Len(t, users, 1)
 	assert.Equal(t, "user1", users[0].UserName)
+}
+
+func TestAPIOrgCreatePrivate(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	token := getUserToken(t, "user1", auth_model.AccessTokenScopeWriteOrganization)
+	enabled := true
+
+	org := api.CreateOrgOption{
+		UserName:       "user1_org2",
+		FullName:       "User1's organization 2",
+		Description:    "This organization created by user1 again",
+		Visibility:     "private",
+		VisibleMembers: &enabled,
+		VisibleTeams:   &enabled,
+	}
+	req := NewRequestWithJSON(t, "POST", "/api/v1/orgs", &org).
+		AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusCreated)
+
+	var apiOrg api.Organization
+	DecodeJSON(t, resp, &apiOrg)
+
+	assert.Equal(t, org.Visibility, apiOrg.Visibility)
+	// despite being enabled in the request, those settings stay disabled as they are incompatible with private visibility
+	assert.False(t, apiOrg.VisibleMembers)
+	assert.False(t, apiOrg.VisibleTeams)
+}
+
+func TestAPIOrgCreatePublicWithHiddenTeamsAndMembers(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	token := getUserToken(t, "user1", auth_model.AccessTokenScopeWriteOrganization)
+	no := false
+
+	org := api.CreateOrgOption{
+		UserName:       "user1_org2",
+		FullName:       "User1's organization 2",
+		Description:    "This organization created by user1 again",
+		Visibility:     "public",
+		VisibleMembers: &no,
+		VisibleTeams:   &no,
+	}
+	req := NewRequestWithJSON(t, "POST", "/api/v1/orgs", &org).
+		AddTokenAuth(token)
+	resp := MakeRequest(t, req, http.StatusCreated)
+
+	var apiOrg api.Organization
+	DecodeJSON(t, resp, &apiOrg)
+
+	assert.Equal(t, org.Visibility, apiOrg.Visibility)
+	assert.False(t, apiOrg.VisibleMembers)
+	assert.False(t, apiOrg.VisibleTeams)
 }
 
 func TestAPIOrgCreateWithWebsite(t *testing.T) {
@@ -445,5 +498,49 @@ func TestAPIOrgChangeEmail(t *testing.T) {
 		DecodeJSON(t, resp, &org)
 
 		assert.Empty(t, org.Email)
+	})
+}
+
+func TestAPIOrgChangeMembersVisibility(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	session := loginUser(t, "user1")
+	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteOrganization)
+	enabled := true
+
+	t.Run("Make members public", func(t *testing.T) {
+		settings := api.EditOrgOption{VisibleMembers: &enabled}
+
+		resp := MakeRequest(t, NewRequestWithJSON(t, "PATCH", "/api/v1/orgs/org3", &settings).AddTokenAuth(token), http.StatusOK)
+
+		var org *api.Organization
+		DecodeJSON(t, resp, &org)
+
+		assert.True(t, org.VisibleMembers)
+		assert.False(t, org.VisibleTeams)
+	})
+
+	t.Run("Make teams public", func(t *testing.T) {
+		settings := api.EditOrgOption{VisibleTeams: &enabled}
+
+		resp := MakeRequest(t, NewRequestWithJSON(t, "PATCH", "/api/v1/orgs/org3", &settings).AddTokenAuth(token), http.StatusOK)
+
+		var org *api.Organization
+		DecodeJSON(t, resp, &org)
+
+		assert.True(t, org.VisibleTeams)
+	})
+
+	t.Run("Making org private resets members and teams visibility", func(t *testing.T) {
+		private := "private"
+		settings := api.EditOrgOption{Visibility: &private}
+
+		resp := MakeRequest(t, NewRequestWithJSON(t, "PATCH", "/api/v1/orgs/org3", &settings).AddTokenAuth(token), http.StatusOK)
+
+		var org *api.Organization
+		DecodeJSON(t, resp, &org)
+
+		assert.False(t, org.VisibleMembers)
+		assert.False(t, org.VisibleTeams)
 	})
 }

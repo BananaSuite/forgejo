@@ -152,6 +152,8 @@ type User struct {
 	NumTeams                  int
 	NumMembers                int
 	Visibility                structs.VisibleType `xorm:"NOT NULL DEFAULT 0"`
+	VisibleMembers            bool                `xorm:"NOT NULL DEFAULT false"`
+	VisibleTeams              bool                `xorm:"NOT NULL DEFAULT false"`
 	RepoAdminChangeTeamAccess bool                `xorm:"NOT NULL DEFAULT false"`
 
 	// Preferences
