@@ -82,11 +82,11 @@ test('CalculateRelativeTimes', () => {
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
   expect(mock.textContent).toEqual('over 25 hours ago');
 
-  mock.setAttribute('datetime', '2024-10-25T16:00:00+02:00');
+  mock.setAttribute('datetime', '2024-10-25T17:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
   expect(mock.textContent).toEqual('over 36 hours ago');
 
-  mock.setAttribute('datetime', '2024-10-25T02:00:00+02:00');
+  mock.setAttribute('datetime', '2024-10-25T06:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
   expect(mock.textContent).toEqual('over 47 hours ago');
 
