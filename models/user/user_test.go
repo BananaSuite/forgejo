@@ -249,6 +249,9 @@ func TestSearchUsers(t *testing.T) {
 
 	testUserSuccess(&user_model.SearchUserOptions{ListOptions: db.ListOptions{Page: 1}, IsTwoFactorEnabled: optional.Some(true)},
 		[]int64{24, 32})
+
+	testUserSuccess(&user_model.SearchUserOptions{ListOptions: db.ListOptions{Page: 1}, IsBot: optional.Some(true)},
+		[]int64{1042})
 }
 
 func TestEmailNotificationPreferences(t *testing.T) {
