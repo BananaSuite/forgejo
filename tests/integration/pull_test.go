@@ -4,8 +4,17 @@
 package integration
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"regexp"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
@@ -13,8 +22,12 @@ import (
 	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/git"
 	"forgejo.org/modules/json"
+	"forgejo.org/modules/setting"
+	"forgejo.org/modules/test"
 	"forgejo.org/tests"
+	"forgejo.org/tests/forgery"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -300,4 +313,219 @@ func TestPullUrlHandling(t *testing.T) {
 		req := NewRequest(t, "GET", "/user2/repo1/extra_text_pulls/5/content-history/overview")
 		MakeRequest(t, req, http.StatusNotFound)
 	})
+}
+
+func TestPullForcePushRef(t *testing.T) {
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		session := loginUser(t, user2.Name)
+
+		baseRepo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+			Files: forgery.MapFS{
+				"FUNFACT": forgery.MapFile("Smithy was the runner up to be Forgejo's name"),
+			},
+		})
+		forgery.EnableRepoUnits(t, baseRepo, unit.TypePullRequests)
+
+		clone := func(t *testing.T, clone string) string {
+			t.Helper()
+
+			dstPath := t.TempDir()
+			cloneURL, _ := url.Parse(clone)
+			cloneURL.User = url.UserPassword("user2", userPassword)
+			require.NoError(t, git.CloneWithArgs(t.Context(), nil, cloneURL.String(), dstPath, git.CloneRepoOptions{}))
+			doGitSetRemoteURL(dstPath, "origin", cloneURL)(t)
+
+			return dstPath
+		}
+
+		revParse := func(t *testing.T, dstPath, ref string) string {
+			t.Helper()
+			stdout := &bytes.Buffer{}
+			stderr := &bytes.Buffer{}
+			err := git.NewCommand(t.Context(), "rev-parse").AddDynamicArguments(ref).
+				Run(&git.RunOpts{Dir: dstPath, Stdout: stdout, Stderr: stderr})
+			if err != nil {
+				require.Contains(t, stderr.String(), "unknown revision")
+				return ""
+			}
+			return strings.TrimSpace(stdout.String())
+		}
+
+		firstCommit := func(t *testing.T, dstPath string) string {
+			t.Helper()
+			require.NoError(t, os.WriteFile(path.Join(dstPath, "README.md"), []byte("## test content"), 0o600))
+			require.NoError(t, git.AddChanges(dstPath, true))
+			require.NoError(t, git.CommitChanges(dstPath, git.CommitChangesOptions{
+				Committer: &git.Signature{
+					Email: "user2@example.com",
+					Name:  "user2",
+					When:  time.Now(),
+				},
+				Author: &git.Signature{
+					Email: "user2@example.com",
+					Name:  "user2",
+					When:  time.Now(),
+				},
+				Message: "Add README.",
+			}))
+			return revParse(t, dstPath, "HEAD")
+		}
+
+		amendCommit := func(t *testing.T, dstPath string) string {
+			t.Helper()
+			stdout := &bytes.Buffer{}
+			stderr := &bytes.Buffer{}
+			err := git.NewCommand(t.Context(), "commit", "--amend", "--message", "new message").
+				Run(&git.RunOpts{Dir: dstPath, Stdout: stdout, Stderr: stderr})
+			if err != nil {
+				t.Logf("commit stdout = %q", stdout.String())
+				t.Logf("commit stderr = %q", stderr.String())
+			}
+			require.NoError(t, err)
+			return revParse(t, dstPath, "HEAD")
+		}
+
+		testCases := []struct {
+			name                   string
+			inputKeepForcePushRefs bool
+			inputFork              bool
+			inputAGit              bool
+			outcomeRefsPresent     bool
+		}{
+			{
+				name:                   "Inline PR",
+				inputKeepForcePushRefs: true,
+				outcomeRefsPresent:     true,
+			},
+			{
+				name:                   "Disable Keep Refs",
+				inputKeepForcePushRefs: false,
+				outcomeRefsPresent:     false,
+			},
+			{
+				name:                   "Fork PR",
+				inputKeepForcePushRefs: true,
+				inputFork:              true,
+				outcomeRefsPresent:     true,
+			},
+			{
+				name:                   "AGit PR",
+				inputKeepForcePushRefs: true,
+				inputAGit:              true,
+				outcomeRefsPresent:     true,
+			},
+		}
+
+		for i, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				defer test.MockVariableValue(&setting.Repository.PullRequest.KeepForcePushRefs, tc.inputKeepForcePushRefs)()
+
+				repoName := baseRepo.FullName()
+				if tc.inputFork {
+					testRepoFork(t, session, "user2", baseRepo.Name, "org3", "forked-repo")
+					repoName = fmt.Sprintf("org3/forked-repo")
+				}
+
+				// Local clone with a working directory:
+				clonePath := clone(t, fmt.Sprintf("%s%s.git", u.String(), repoName))
+				branch := fmt.Sprintf("branch-%d", i)
+				require.NoError(t, git.NewCommand(t.Context(), "checkout", "-b").AddDynamicArguments(branch).Run(&git.RunOpts{Dir: clonePath}))
+
+				// Create first commit in PR:
+				firstCommitID := firstCommit(t, clonePath)
+				t.Logf("firstCommitID = %s", firstCommitID)
+
+				// Create PR:
+				var pr *issues_model.PullRequest
+				if !tc.inputAGit {
+					require.NoError(t, git.NewCommand(t.Context(), "push", "origin").AddDynamicArguments(branch).Run(&git.RunOpts{Dir: clonePath}))
+					resp := session.MakeRequest(t, NewRequestWithValues(t, "POST", fmt.Sprintf("%s/compare/main...%s:%s", baseRepo.FullName(), repoName, branch), map[string]string{
+						"title": "pull request",
+					}), http.StatusOK)
+					jsonBody := make(map[string]string)
+					require.NoError(t, json.NewDecoder(resp.Body).Decode(&jsonBody)) // {"redirect":"/user2/repo-TestPullForcePushRef-a16d140/pulls/2"}
+					prIndex, err := strconv.Atoi(strings.Split(jsonBody["redirect"], "/")[4])
+					require.NoError(t, err)
+					pr = unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{Index: int64(prIndex), BaseRepoID: baseRepo.ID})
+				} else {
+					stdout := &bytes.Buffer{}
+					stderr := &bytes.Buffer{}
+					err := git.NewCommand(t.Context(), "push", "origin").
+						AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/agit-%d", branch, i)).
+						Run(&git.RunOpts{Dir: clonePath, Stdout: stdout, Stderr: stderr})
+					if err != nil {
+						t.Logf("agit push stdout = %q", stdout.String())
+						t.Logf("agit push stderr = %q", stderr.String())
+						require.NoError(t, err)
+					}
+					// search for "remote:   http://localhost:3002/user2/repo-TestPullForcePushRef-5bab6c15/pulls/4
+					stderrStr := stderr.String()
+					prIndexStr := regexp.MustCompile("/pulls/([0-9]+) *\n").FindStringSubmatch(stderrStr)[1]
+					prIndex, err := strconv.Atoi(prIndexStr)
+					require.NoError(t, err)
+					pr = unittest.AssertExistsAndLoadBean(t, &issues_model.PullRequest{Index: int64(prIndex), BaseRepoID: baseRepo.ID})
+				}
+
+				// Change the first commit with an amend, and force push it:
+				secondCommitID := amendCommit(t, clonePath)
+				t.Logf("secondCommitID = %s", secondCommitID)
+				if !tc.inputAGit {
+					require.NoError(t, git.NewCommand(t.Context(), "push", "--force", "origin").AddDynamicArguments(branch).Run(&git.RunOpts{Dir: clonePath}))
+				} else {
+					stdout := &bytes.Buffer{}
+					stderr := &bytes.Buffer{}
+					err := git.NewCommand(t.Context(), "push", "--force", "--push-option=force-push=true", "origin").
+						AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/agit-%d", branch, i)).
+						Run(&git.RunOpts{Dir: clonePath, Stdout: stdout, Stderr: stderr})
+					if err != nil {
+						t.Logf("agit force push stdout = %q", stdout.String())
+						t.Logf("agit force push stderr = %q", stderr.String())
+						require.NoError(t, err)
+					}
+				}
+
+				// Find the internal PR comment marked IsForcePush created from the force push:
+				forcePushComment := forcePushRefGetSingleComment(t, pr)
+				assert.Equal(t, firstCommitID, forcePushComment.OldCommit)
+				assert.Equal(t, secondCommitID, forcePushComment.NewCommit)
+
+				if tc.outcomeRefsPresent {
+					// firstCommitID is probably an orphan in the base repo, except that w/
+					// `setting.Repository.PullRequest.KeepForcePushRefs` there will be an additional ref kept pointing at both
+					// the old and new commits.  Verify the existence of those refs in the base repo:
+					oldRefRevParse := revParse(t, baseRepo.RepoPath(), forcePushComment.ForcePushOldCommitGitRefName())
+					assert.Equal(t, firstCommitID, oldRefRevParse)
+					newRefRevParse := revParse(t, baseRepo.RepoPath(), forcePushComment.ForcePushNewCommitGitRefName())
+					assert.Equal(t, secondCommitID, newRefRevParse)
+				} else {
+					assert.Empty(t, revParse(t, baseRepo.RepoPath(), forcePushComment.ForcePushOldCommitGitRefName()))
+					assert.Empty(t, revParse(t, baseRepo.RepoPath(), forcePushComment.ForcePushNewCommitGitRefName()))
+				}
+			})
+		}
+	})
+}
+
+func forcePushRefGetSingleComment(t *testing.T, pr *issues_model.PullRequest) *issues_model.Comment {
+	var forcePushComment *issues_model.Comment
+	// Fetch all comments on the PR and search for one, and only one, which is tagged with IsForcePush.  This is done in
+	// a retry loop because TestPullRequest is an uncontrolled background goroutine (not a proper queue job, done
+	// immediately during tests) from a push, and TestPullRequest will be creating these comments.
+	ctx := t.Context()
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		var comments []*issues_model.Comment
+		require.NoError(t, db.GetEngine(ctx).Where("issue_id = ?", pr.IssueID).Find(&comments))
+		for _, c := range comments {
+			require.NoError(t, c.LoadIssue(ctx))
+			require.NoError(t, c.Issue.LoadRepo(ctx))
+			require.NoError(t, c.LoadPushCommits(ctx))
+			if c.IsForcePush {
+				require.Nil(t, forcePushComment, "must be only one comment with a force push")
+				forcePushComment = c
+			}
+		}
+		require.NotNil(t, forcePushComment, "must have one comment flagged as a force push")
+	}, 30*time.Second, 200*time.Millisecond)
+	return forcePushComment
 }
