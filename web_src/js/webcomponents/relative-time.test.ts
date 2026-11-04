@@ -12,10 +12,10 @@ test('CalculateRelativeTimes', () => {
   // @ts-expect-error(TS2540) read-only property
   window.config.pageData.PLURALSTRINGS_LANG = {
     'relativetime.mins': ['a minute ago', '%d minutes ago'],
-    'relativetime.hours': ['over an hour ago', 'over %d hours ago'],
-    'relativetime.days': ['over %d day ago', 'over %d days ago'],
-    'relativetime.weeks': ['over %d week ago', 'over %d weeks ago'],
-    'relativetime.months': ['over %d month ago', 'over %d months ago'],
+    'relativetime.hours': ['an hour ago', '%d hours ago'],
+    'relativetime.days': ['%d day ago', '%d days ago'],
+    'relativetime.weeks': ['%d week ago', '%d weeks ago'],
+    'relativetime.months': ['%d month ago', '%d months ago'],
     'relativetime.years': ['over %d year ago', 'over %d years ago'],
   };
   const mock = document.createElement('relative-time');
@@ -56,139 +56,139 @@ test('CalculateRelativeTimes', () => {
 
   mock.setAttribute('datetime', '2024-10-27T03:01:00+01:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over an hour ago');
+  expect(mock.textContent).toEqual('an hour ago');
 
   mock.setAttribute('datetime', '2024-10-27T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 4 hours ago');  // This tests DST switchover
+  expect(mock.textContent).toEqual('4 hours ago');  // This tests DST switchover
 
   mock.setAttribute('datetime', '2024-10-27T00:01:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 5 hours ago');
+  expect(mock.textContent).toEqual('5 hours ago');
 
   mock.setAttribute('datetime', '2024-10-26T22:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 7 hours ago');
+  expect(mock.textContent).toEqual('7 hours ago');
 
   mock.setAttribute('datetime', '2024-10-26T05:08:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 23 hours ago');
+  expect(mock.textContent).toEqual('23 hours ago');
 
   mock.setAttribute('datetime', '2024-10-26T05:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 24 hours ago');
+  expect(mock.textContent).toEqual('24 hours ago');
 
   mock.setAttribute('datetime', '2024-10-26T04:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 25 hours ago');
+  expect(mock.textContent).toEqual('25 hours ago');
 
   mock.setAttribute('datetime', '2024-10-25T17:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 36 hours ago');
+  expect(mock.textContent).toEqual('36 hours ago');
 
   mock.setAttribute('datetime', '2024-10-25T06:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 47 hours ago');
+  expect(mock.textContent).toEqual('47 hours ago');
 
   mock.setAttribute('datetime', '2024-10-25T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_HOUR);
-  expect(mock.textContent).toEqual('over 2 days ago');
+  expect(mock.textContent).toEqual('2 days ago');
 
   mock.setAttribute('datetime', '2024-10-24T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_HOUR);
-  expect(mock.textContent).toEqual('over 3 days ago');
+  expect(mock.textContent).toEqual('3 days ago');
 
   mock.setAttribute('datetime', '2024-10-21T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_HOUR);
-  expect(mock.textContent).toEqual('over 6 days ago');
+  expect(mock.textContent).toEqual('6 days ago');
 
   mock.setAttribute('datetime', '2024-10-20T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_HOUR);
-  expect(mock.textContent).toEqual('over 7 days ago');
+  expect(mock.textContent).toEqual('7 days ago');
 
   mock.setAttribute('datetime', '2024-10-15T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_HOUR);
-  expect(mock.textContent).toEqual('over 12 days ago');
+  expect(mock.textContent).toEqual('12 days ago');
 
   mock.setAttribute('datetime', '2024-10-14T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_HOUR);
-  expect(mock.textContent).toEqual('over 13 days ago');
+  expect(mock.textContent).toEqual('13 days ago');
 
   mock.setAttribute('datetime', '2024-10-13T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 2 weeks ago');
+  expect(mock.textContent).toEqual('2 weeks ago');
 
   mock.setAttribute('datetime', '2024-10-06T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 3 weeks ago');
+  expect(mock.textContent).toEqual('3 weeks ago');
 
   mock.setAttribute('datetime', '2024-09-25T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 4 weeks ago');
+  expect(mock.textContent).toEqual('4 weeks ago');
 
   mock.setAttribute('datetime', '2024-09-18T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 5 weeks ago');
+  expect(mock.textContent).toEqual('5 weeks ago');
 
   mock.setAttribute('datetime', '2024-09-04T06:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 7 weeks ago');
+  expect(mock.textContent).toEqual('7 weeks ago');
 
   mock.setAttribute('datetime', '2024-08-30T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 8 weeks ago');
+  expect(mock.textContent).toEqual('8 weeks ago');
 
   mock.setAttribute('datetime', '2024-08-27T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 2 months ago');
+  expect(mock.textContent).toEqual('2 months ago');
 
   mock.setAttribute('datetime', '2024-07-30T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 2 months ago');
+  expect(mock.textContent).toEqual('2 months ago');
 
   mock.setAttribute('datetime', '2024-05-30T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 4 months ago');
+  expect(mock.textContent).toEqual('4 months ago');
 
   mock.setAttribute('datetime', '2024-03-01T01:00:00+01:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 7 months ago');
+  expect(mock.textContent).toEqual('7 months ago');
 
   mock.setAttribute('datetime', '2024-02-29T01:00:00+01:00');  // Leap day handling
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 7 months ago');
+  expect(mock.textContent).toEqual('7 months ago');
 
   mock.setAttribute('datetime', '2024-02-27T01:00:00-03:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 7 months ago');
+  expect(mock.textContent).toEqual('7 months ago');
 
   mock.setAttribute('datetime', '2024-02-27T01:00:00+01:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 8 months ago');
+  expect(mock.textContent).toEqual('8 months ago');
 
   mock.setAttribute('datetime', '2023-11-15T01:00:00+03:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 11 months ago');
+  expect(mock.textContent).toEqual('11 months ago');
 
   mock.setAttribute('datetime', '2023-10-20T01:00:00+08:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 12 months ago');
+  expect(mock.textContent).toEqual('12 months ago');
 
   mock.setAttribute('datetime', '2023-09-20T01:00:00+08:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 13 months ago');
+  expect(mock.textContent).toEqual('13 months ago');
 
   mock.setAttribute('datetime', '2023-05-30T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 16 months ago');
+  expect(mock.textContent).toEqual('16 months ago');
 
   mock.setAttribute('datetime', '2022-11-30T01:00:00-05:30');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 22 months ago');
+  expect(mock.textContent).toEqual('22 months ago');
 
   mock.setAttribute('datetime', '2022-10-30T01:00:00-05:30');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
-  expect(mock.textContent).toEqual('over 23 months ago');
+  expect(mock.textContent).toEqual('23 months ago');
 
   mock.setAttribute('datetime', '2022-10-20T01:00:00+10:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
@@ -225,31 +225,31 @@ test('CalculateRelativeTimes', () => {
 
   mock.setAttribute('datetime', '2024-10-27T04:05:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over an hour ago');
+  expect(mock.textContent).toEqual('an hour ago');
 
   mock.setAttribute('datetime', '2024-10-27T01:00:00+02:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 4 hours ago');
+  expect(mock.textContent).toEqual('4 hours ago');
 
   mock.setAttribute('datetime', '2024-10-27T01:00:00+04:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 6 hours ago');
+  expect(mock.textContent).toEqual('6 hours ago');
 
   mock.setAttribute('datetime', '2024-10-27T01:00:00+10:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 12 hours ago');
+  expect(mock.textContent).toEqual('12 hours ago');
 
   mock.setAttribute('datetime', '2024-10-27T01:00:00Z');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 2 hours ago');
+  expect(mock.textContent).toEqual('2 hours ago');
 
   mock.setAttribute('datetime', '2024-10-26T15:00:00-01:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 11 hours ago');
+  expect(mock.textContent).toEqual('11 hours ago');
 
   mock.setAttribute('datetime', '2024-10-25T19:00:00-11:00');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(TEN_MINUTES);
-  expect(mock.textContent).toEqual('over 21 hours ago');
+  expect(mock.textContent).toEqual('21 hours ago');
 });
 
 test('CalculateDurationFormat', () => {

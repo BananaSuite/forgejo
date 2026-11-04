@@ -38,20 +38,20 @@
 		"other": "%d minutes ago"
 	},
 	"relativetime.hours": {
-		"one": "over an hour ago",
-		"other": "over %d hours ago"
+		"one": "an hour ago",
+		"other": "%d hours ago"
 	},
 	"relativetime.days": {
-		"one": "over %d day ago",
-		"other": "over %d days ago"
+		"one": "%d day ago",
+		"other": "%d days ago"
 	},
 	"relativetime.weeks": {
-		"one": "over %d week ago",
-		"other": "over %d weeks ago"
+		"one": "%d week ago",
+		"other": "%d weeks ago"
 	},
 	"relativetime.months": {
-		"one": "over %d month ago",
-		"other": "over %d months ago"
+		"one": "%d month ago",
+		"other": "%d months ago"
 	},
 	"relativetime.years": {
 		"one": "over %d year ago",
