@@ -364,3 +364,19 @@ func TestTwoFactorWithPasswordChange(t *testing.T) {
 		runTest(t, changePasswordUser, true)
 	})
 }
+
+func TestSignInProhibitedForBot(t *testing.T) {
+	defer unittest.OverrideFixtures("tests/integration/fixtures/TestSignInProhibitedForBot")()
+	defer tests.PrepareTestEnv(t)()
+
+	session := emptyTestSession(t)
+	req := NewRequestWithValues(t, "POST", "/user/login", map[string]string{
+		"user_name": "bot01",
+		"password":  "password",
+	})
+	resp := session.MakeRequest(t, req, http.StatusOK)
+
+	htmlDoc := NewHTMLParser(t, resp.Body)
+	resultMsg := htmlDoc.doc.Find(".ui.attached.segment>p").Text()
+	assert.Equal(t, "Your account is a bot so you cannot access via web interface. Contact the instance administrator to regain access.", resultMsg)
+}
