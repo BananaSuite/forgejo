@@ -1209,6 +1209,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		ctx.ServerError("GetRepoAssignees", err)
 		return
 	}
+	ctx.Data["IsBlocked"] = user_model.IsBlockedMultiple(ctx, []int64{issue.PosterID, ctx.Repo.Owner.ID}, ctx.Doer.ID)
 	ctx.Data["Assignees"] = MakeSelfOnTop(ctx.Doer, assigneeUsers)
 
 	participants := getIssueParticipants(ctx, issue)
