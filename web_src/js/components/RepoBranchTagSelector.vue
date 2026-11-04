@@ -300,12 +300,13 @@ export default {
   border-top: none !important;
 }
 
+/* Only show RSS icon on hover */
 .menu .item .rss-icon {
-  display: none; /* only show RSS icon on hover */
+  visibility: hidden;
 }
 
 .menu .item:hover .rss-icon {
-  display: inline-block;
+  visibility: visible;
 }
 
 .scrolling.menu .loading-indicator {
