@@ -41,6 +41,7 @@ func TestUpdateUser(t *testing.T) {
 		IsActive:                     optional.Some(false),
 		IsAdmin:                      optional.Some(true),
 		Visibility:                   optional.Some(structs.VisibleTypePrivate),
+		VisibleTeams:                 optional.Some(false),
 		KeepActivityPrivate:          optional.Some(true),
 		Language:                     optional.Some("lang"),
 		Theme:                        optional.Some("forgejo-dark"),
@@ -63,6 +64,7 @@ func TestUpdateUser(t *testing.T) {
 	assert.Equal(t, opts.IsActive.ValueOrZeroValue(), user.IsActive)
 	assert.Equal(t, opts.IsAdmin.ValueOrZeroValue(), user.IsAdmin)
 	assert.Equal(t, opts.Visibility.ValueOrZeroValue(), user.Visibility)
+	assert.Equal(t, opts.VisibleTeams.ValueOrZeroValue(), user.VisibleTeams)
 	assert.Equal(t, opts.KeepActivityPrivate.ValueOrZeroValue(), user.KeepActivityPrivate)
 	assert.Equal(t, opts.Language.ValueOrZeroValue(), user.Language)
 	assert.Equal(t, opts.Theme.ValueOrZeroValue(), user.Theme)
@@ -83,12 +85,75 @@ func TestUpdateUser(t *testing.T) {
 	assert.Equal(t, opts.IsActive.ValueOrZeroValue(), user.IsActive)
 	assert.Equal(t, opts.IsAdmin.ValueOrZeroValue(), user.IsAdmin)
 	assert.Equal(t, opts.Visibility.ValueOrZeroValue(), user.Visibility)
+	assert.Equal(t, opts.VisibleTeams.ValueOrZeroValue(), user.VisibleTeams)
 	assert.Equal(t, opts.KeepActivityPrivate.ValueOrZeroValue(), user.KeepActivityPrivate)
 	assert.Equal(t, opts.Language.ValueOrZeroValue(), user.Language)
 	assert.Equal(t, opts.Theme.ValueOrZeroValue(), user.Theme)
 	assert.Equal(t, opts.DiffViewStyle.ValueOrZeroValue(), user.DiffViewStyle)
 	assert.Equal(t, opts.AllowCreateOrganization.ValueOrZeroValue(), user.AllowCreateOrganization)
 	assert.Equal(t, opts.EmailNotificationsPreference.ValueOrZeroValue(), user.EmailNotificationsPreference)
+}
+
+func TestUpdateWithInconsistentVisibilities(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	require.Error(t, UpdateUser(db.DefaultContext, admin, &UpdateOptions{
+		IsAdmin: optional.Some(false),
+	}))
+
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 35, Type: user_model.UserTypeOrganization})
+	assert.Equal(t, structs.VisibleTypePrivate, org.Visibility)
+
+	opts := &UpdateOptions{
+		VisibleTeams: optional.Some(true),
+	}
+	require.NoError(t, UpdateUser(db.DefaultContext, org, opts))
+
+	// despite setting this setting to "true", it is not enabled,
+	// as it doesn't make sense for a private organization
+	assert.False(t, org.VisibleTeams)
+
+	org = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 35})
+	assert.False(t, org.VisibleTeams)
+}
+
+func TestUpdateToPublicVisibility(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	admin := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+
+	require.Error(t, UpdateUser(db.DefaultContext, admin, &UpdateOptions{
+		IsAdmin: optional.Some(false),
+	}))
+
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 35, Type: user_model.UserTypeOrganization})
+
+	opts := &UpdateOptions{
+		Visibility:   optional.Some(structs.VisibleTypePublic),
+		VisibleTeams: optional.Some(true),
+	}
+	require.NoError(t, UpdateUser(db.DefaultContext, org, opts))
+
+	assert.Equal(t, opts.Visibility.ValueOrZeroValue(), org.Visibility)
+	assert.True(t, org.VisibleTeams)
+
+	org = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 35})
+	assert.Equal(t, opts.Visibility.ValueOrZeroValue(), org.Visibility)
+	assert.True(t, org.VisibleTeams)
+
+	// reverting back to private visibility resets the members and team visibilities too
+	opts = &UpdateOptions{
+		Visibility: optional.Some(structs.VisibleTypePrivate),
+	}
+	require.NoError(t, UpdateUser(db.DefaultContext, org, opts))
+
+	assert.Equal(t, structs.VisibleTypePrivate, org.Visibility)
+	assert.False(t, org.VisibleTeams)
+
+	org = unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 35})
+	assert.False(t, org.VisibleTeams)
 }
 
 func TestUpdateAuth(t *testing.T) {

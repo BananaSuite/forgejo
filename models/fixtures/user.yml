@@ -113,6 +113,7 @@
   num_teams: 5
   num_members: 3
   visibility: 0
+  visible_teams: false
   repo_admin_change_team_access: false
   theme: ""
   keep_activity_private: false
@@ -227,6 +228,7 @@
   num_teams: 2
   num_members: 2
   visibility: 0
+  visible_teams: true
   repo_admin_change_team_access: false
   theme: ""
   keep_activity_private: false

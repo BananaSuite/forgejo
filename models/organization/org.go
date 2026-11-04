@@ -321,6 +321,10 @@ func CreateOrganization(ctx context.Context, org *Organization, owner *user_mode
 	org.NumMembers = 1
 	org.Type = user_model.UserTypeOrganization
 
+	if org.Visibility == structs.VisibleTypePrivate {
+		org.VisibleTeams = false
+	}
+
 	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return err
