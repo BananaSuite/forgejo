@@ -287,6 +287,30 @@ func TestAddOauth(t *testing.T) {
 				},
 			},
 		},
+		// case 11
+		{
+			args: []string{
+				"oauth-test",
+				"--name", "oauth2 (via openidConnect) source `--scopes` aggregates multiple uses",
+				"--provider", "openidConnect",
+				"--auto-discover-url", "https://example.com/.well-known/openid-configuration",
+				"--scopes", "address",
+				"--scim-enabled",
+				"--scim-token", "abc",
+			},
+			source: &auth.Source{
+				Type:     auth.OAuth2,
+				Name:     "oauth2 (via openidConnect) source `--scopes` aggregates multiple uses",
+				IsActive: true,
+				Cfg: &oauth2.Source{
+					ScimEnabled:                   true,
+					ScimToken:                     "abc",
+					Provider:                      "openidConnect",
+					OpenIDConnectAutoDiscoveryURL: "https://example.com/.well-known/openid-configuration",
+					Scopes:                        []string{"address"},
+				},
+			},
+		},
 	}
 
 	for n, c := range cases {
@@ -895,6 +919,25 @@ func TestUpdateOauth(t *testing.T) {
 				Cfg: &oauth2.Source{
 					CustomURLMapping:    &oauth2.CustomURLMapping{},
 					DynGroupMapsRemoval: false,
+				},
+			},
+		},
+		// case 31
+		{
+			args: []string{
+				"oauth-test",
+				"--id", "1",
+				"--dyn-group-maps-removal",
+				"--scim-enabled",
+				"--scim-token", "abc",
+			},
+			authSource: &auth.Source{
+				Type: auth.OAuth2,
+				Cfg: &oauth2.Source{
+					ScimEnabled:         true,
+					ScimToken:           "abc",
+					CustomURLMapping:    &oauth2.CustomURLMapping{},
+					DynGroupMapsRemoval: true,
 				},
 			},
 		},
