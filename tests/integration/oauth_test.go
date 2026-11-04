@@ -1059,7 +1059,8 @@ func setupMockOIDCServer() *httptest.Server {
 				"issuer": "` + strings.TrimSuffix(mockServer.URL, "/") + `",
 				"authorization_endpoint": "` + mockServer.URL + `/authorize",
 				"token_endpoint": "` + mockServer.URL + `/token",
-				"userinfo_endpoint": "` + mockServer.URL + `/userinfo"
+				"userinfo_endpoint": "` + mockServer.URL + `/userinfo",
+				"end_session_endpoint": "` + mockServer.URL + `/logout"
 			}`))
 		default:
 			http.NotFound(w, r)
@@ -2384,4 +2385,53 @@ func TestSignUpViaOAuthWithPreferredUsernameProcessesEmail(t *testing.T) {
 	assert.Equal(t, "/", test.RedirectURL(resp))
 	userAfterLogin := unittest.AssertExistsAndLoadBean(t, &user_model.User{LoginName: userGitLabUserID})
 	assert.Equal(t, "someotheremail", userAfterLogin.Name)
+}
+
+func TestSignOutRedirectOAuth(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	mockServer := setupMockOIDCServer()
+	defer mockServer.Close()
+
+	sourceName := "oidc"
+	authPayload := authSourcePayloadOpenIDConnect(sourceName, mockServer.URL+"/")
+	authSource := addAuthSource(t, authPayload)
+
+	userID := "5678"
+	user := &user_model.User{
+		Name:        "oidc.user",
+		Email:       "oidc.user@example.com",
+		Passwd:      "oidc.userpassword",
+		Type:        user_model.UserTypeIndividual,
+		LoginType:   auth_model.OAuth2,
+		LoginSource: authSource.ID,
+		LoginName:   userID,
+		IsActive:    true,
+	}
+	defer createUser(t.Context(), t, user)()
+
+	t.Run("OIDCLogout", func(t *testing.T) {
+			defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
+				return goth.User{
+					Provider: sourceName,
+					UserID:   userID,
+					Email:    user.Email,
+				}, nil
+			})()
+
+			session := emptyTestSession(t)
+
+			req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", sourceName))
+			resp := session.MakeRequest(t, req, http.StatusSeeOther)
+			assert.Equal(t, "/", test.RedirectURL(resp))
+
+			req = NewRequest(t, "POST", "/user/logout")
+			resp = session.MakeRequest(t, req, http.StatusSeeOther)
+
+			u, err := url.Parse(test.RedirectURL(resp))
+			require.NoError(t, err)
+			expectedValues := url.Values{"post_logout_redirect_uri": []string{setting.AppURL}, "client_id": []string{""}}
+			assert.Equal(t, expectedValues, u.Query())
+			u.RawQuery = ""
+			assert.Equal(t, mockServer.URL + "/logout", u.String())
+	})
 }
