@@ -143,14 +143,14 @@
 	</div>
 	<div class="field">
 		<div class="ui checkbox">
-			<label for="oauth2_scim_enabled"><strong>{{ctx.Locale.Tr "admin.auths.scim_enabled"}}</strong></label>
+			<label for="oauth2_scim_enabled"><strong>{{ctx.Locale.Tr "admin.auths.scim.enabled"}}</strong></label>
 			<input id="oauth2_scim_enabled" name="oauth2_scim_enabled" type="checkbox" {{if .oauth2_scim_enabled}}checked{{end}}>
-			<p class="help">{{ctx.Locale.Tr "admin.auths.scim_enabled_helper"}}</p>
+			<p class="help">{{ctx.Locale.Tr "admin.auths.scim.enabled.helper"}}</p>
 		</div>
 	</div>
 	<div class="field">
-		<label for="oauth2_scim_token">{{ctx.Locale.Tr "admin.auths.scim_token"}}</label>
+		<label for="oauth2_scim_token">{{ctx.Locale.Tr "admin.auths.scim.token"}}</label>
 		<input id="oauth2_scim_token" name="oauth2_scim_token" value="{{.oauth2_scim_token}}">
-		<p class="help">{{ctx.Locale.Tr "admin.auths.scim_token_helper"}}</p>
+		<p class="help">{{ctx.Locale.Tr "admin.auths.scim.token.helper"}}</p>
 	</div>
 </div>
