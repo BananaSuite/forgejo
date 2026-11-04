@@ -82,6 +82,10 @@ func UserSignIn(ctx context.Context, username, password string) (*user_model.Use
 				return nil, nil, user_model.ErrUserProhibitLogin{UID: user.ID, Name: user.Name}
 			}
 
+			if user.IsBot {
+				return nil, nil, user_model.ErrUserProhibitBotLogin{UID: user.ID, Name: user.Name}
+			}
+
 			return user, source, nil
 		}
 	}

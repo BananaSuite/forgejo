@@ -1,5 +1,7 @@
 {
 	"auth.signup.username.prefix.info": "This prefix (%s) will be prepended to your username and cannot be changed.",
+	"auth.prohibit_bot_login": "Account is bot",
+	"auth.prohibit_bot_login_desc": "Your account is a bot so you cannot access via web interface. Contact the instance administrator to regain access.",
 	"repo.issues.review.apply_suggestion": "Apply suggestion",
 	"repo.issues.review.suggested_change_commit": "Apply suggestion",
 	"repo.issues.review.add_suggestion_to_batch": "Add suggestion to batch",

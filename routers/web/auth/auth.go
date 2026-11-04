@@ -251,19 +251,7 @@ func SignInPost(ctx *context.Context) {
 
 	u, source, err := auth_method.UserSignIn(ctx, form.UserName, form.Password)
 	if err != nil {
-		if errors.Is(err, util.ErrNotExist) || errors.Is(err, util.ErrInvalidArgument) {
-			log.Warn("Failed authentication attempt for %s from %s: %v", form.UserName, ctx.RemoteAddr(), err)
-			ctx.RenderWithErr(ctx.Tr("form.username_password_incorrect"), tplSignIn, &form)
-		} else if user_model.IsErrEmailAlreadyUsed(err) {
-			log.Warn("Failed authentication attempt for %s from %s: %v", form.UserName, ctx.RemoteAddr(), err)
-			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), tplSignIn, &form)
-		} else if user_model.IsErrUserProhibitLogin(err) {
-			log.Warn("Failed authentication attempt for %s from %s: %v", form.UserName, ctx.RemoteAddr(), err)
-			ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
-			ctx.HTML(http.StatusOK, "user/auth/prohibit_login")
-		} else {
-			ctx.ServerError("UserSignIn", err)
-		}
+		handleSignInError(ctx, form.UserName, &form, tplSignIn, "UserSignIn", err)
 		return
 	}
 

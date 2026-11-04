@@ -93,6 +93,11 @@ func handleSignInError(ctx *context.Context, userName string, ptrForm any, tmpl 
 		log.Info("Failed authentication attempt for %s from %s: %v", userName, ctx.RemoteAddr(), err)
 		ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
 		ctx.HTML(http.StatusOK, "user/auth/prohibit_login")
+	} else if user_model.IsErrUserProhibitBotLogin(err) {
+		ctx.Data["user_exists"] = true
+		log.Info("Failed authentication attempt for %s (bot) from %s: %v", userName, ctx.RemoteAddr(), err)
+		ctx.Data["Title"] = ctx.Tr("auth.prohibit_bot_login")
+		ctx.HTML(http.StatusOK, "user/auth/prohibit_bot_login")
 	} else {
 		ctx.ServerError(invoker, err)
 	}

@@ -280,6 +280,13 @@ func verifyAuthWithOptions(options *common.VerifyOptions) func(ctx *context.Cont
 				return
 			}
 
+			if ctx.Doer.IsBot {
+				log.Info("Failed authentication attempt for %s (bot) from %s", ctx.Doer.Name, ctx.RemoteAddr())
+				ctx.Data["Title"] = ctx.Tr("auth.prohibit_bot_login")
+				ctx.HTML(http.StatusOK, "user/auth/prohibit_bot_login")
+				return
+			}
+
 			if ctx.Doer.MustChangePassword {
 				if ctx.Req.URL.Path != "/user/settings/change_password" {
 					if strings.HasPrefix(ctx.Req.UserAgent(), "git") {

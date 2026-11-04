@@ -118,3 +118,24 @@ func IsErrFederatedUserNotExists(err error) bool {
 	_, ok := err.(ErrFederatedUserNotExists)
 	return ok
 }
+
+// ErrUserProhibitBotLogin represents a "ErrUserProhibitBotLogin" kind of error.
+type ErrUserProhibitBotLogin struct {
+	UID  int64
+	Name string
+}
+
+// IsErrUserProhibitLogin checks if an error is a ErrUserProhibitBotLogin
+func IsErrUserProhibitBotLogin(err error) bool {
+	_, ok := err.(ErrUserProhibitBotLogin)
+	return ok
+}
+
+func (err ErrUserProhibitBotLogin) Error() string {
+	return fmt.Sprintf("user is bot and not allowed login [uid: %d, name: %s]", err.UID, err.Name)
+}
+
+// Unwrap unwraps this error as a ErrPermission error
+func (err ErrUserProhibitBotLogin) Unwrap() error {
+	return util.ErrPermissionDenied
+}
