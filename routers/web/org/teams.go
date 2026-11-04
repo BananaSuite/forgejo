@@ -49,19 +49,33 @@ const (
 // Teams render teams list page
 func Teams(ctx *context.Context) {
 	org := ctx.Org.Organization
+
+	if !ctx.Org.IsMember && !org.VisibleTeams {
+		if !ctx.IsSigned {
+			ctx.Redirect(setting.AppSubURL + "/user/login")
+		} else {
+			ctx.NotFound("Teams", nil)
+		}
+		return
+	}
+
 	ctx.Data["Title"] = org.FullName
 	ctx.Data["PageIsOrgTeams"] = true
 
 	doerIsMember := make(map[int64]bool)
 	for _, t := range ctx.Org.Teams {
-		if err := t.LoadMembers(ctx); err != nil {
-			ctx.ServerError("GetMembers", err)
-			return
+		if !ctx.IsSigned {
+			doerIsMember[t.ID] = false
+		} else {
+			if err := t.LoadMembers(ctx); err != nil {
+				ctx.ServerError("GetMembers", err)
+				return
+			}
+			// since LoadMembers above isn't paginated, we can compute whether
+			// the user is a member simply by looking for them in the returned members.
+			// TODO: compute this information via org.GetUserTeams once we limit the number of loaded users, for https://codeberg.org/forgejo/forgejo/issues/12448
+			doerIsMember[t.ID] = slices.IndexFunc(t.Members, func(u *user_model.User) bool { return u.ID == ctx.Doer.ID }) != -1
 		}
-		// since LoadMembers above isn't paginated, we can compute whether
-		// the user is a member simply by looking for them in the returned members.
-		// TODO: compute this information via org.GetUserTeams once we limit the number of loaded users, for https://codeberg.org/forgejo/forgejo/issues/12448
-		doerIsMember[t.ID] = slices.IndexFunc(t.Members, func(u *user_model.User) bool { return u.ID == ctx.Doer.ID }) != -1
 	}
 	ctx.Data["Teams"] = ctx.Org.Teams
 	ctx.Data["DoerIsMember"] = doerIsMember

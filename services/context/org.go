@@ -202,10 +202,10 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 
 	// Team.
 	shouldSeeAllTeams := false
-	if ctx.Org.IsMember {
+	if ctx.Org.IsMember || ctx.Org.Organization.VisibleTeams {
 		if ctx.Org.IsOwner {
 			shouldSeeAllTeams = true
-		} else {
+		} else if ctx.Org.IsMember {
 			teams, err := org.GetUserTeams(ctx, ctx.Doer.ID)
 			if err != nil {
 				ctx.ServerError("GetUserTeams", err)

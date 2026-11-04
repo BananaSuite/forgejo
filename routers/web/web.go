@@ -1085,6 +1085,7 @@ func registerRoutes(m *web.Route) {
 	m.Group("/org", func() {
 		m.Group("/{org}", func() {
 			m.Get("/members", org.Members)
+			m.Get("/teams", org.Teams)
 		}, context.OrgAssignment())
 	}, ignSignIn)
 
@@ -1110,7 +1111,6 @@ func registerRoutes(m *web.Route) {
 			m.Get("/milestones", reqMilestonesDashboardPageEnabled, user.Milestones)
 			m.Get("/milestones/{team}", reqMilestonesDashboardPageEnabled, user.Milestones)
 			m.Post("/members/action/{action}", org.MembersAction)
-			m.Get("/teams", org.Teams)
 		}, context.OrgAssignment(true, false, true))
 
 		m.Group("/{org}", func() {

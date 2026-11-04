@@ -17,6 +17,7 @@ import (
 	"forgejo.org/modules/log"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/modules/web"
+	"forgejo.org/routers/api/v1/permissions"
 	"forgejo.org/routers/api/v1/user"
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
@@ -51,6 +52,17 @@ func ListTeams(ctx *context.APIContext) {
 	//     "$ref": "#/responses/TeamList"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+
+	if !ctx.Organization().VisibleTeams {
+		permissions.ReqToken(ctx)
+		if ctx.Written() {
+			return
+		}
+		permissions.ReqOrgMembership(ctx)
+		if ctx.Written() {
+			return
+		}
+	}
 
 	teams, count, err := organization.SearchTeam(ctx, &organization.SearchTeamOptions{
 		ListOptions: utils.GetListOptions(ctx),
@@ -941,6 +953,17 @@ func SearchTeam(ctx *context.APIContext) {
 	//             "$ref": "#/definitions/Team"
 	//   "404":
 	//     "$ref": "#/responses/notFound"
+
+	if !ctx.Organization().VisibleTeams {
+		permissions.ReqToken(ctx)
+		if ctx.Written() {
+			return
+		}
+		permissions.ReqOrgMembership(ctx)
+		if ctx.Written() {
+			return
+		}
+	}
 
 	listOptions := utils.GetListOptions(ctx)
 
