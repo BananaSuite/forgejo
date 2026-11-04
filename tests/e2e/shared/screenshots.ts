@@ -22,7 +22,7 @@ async function screenshot_prepare(page: Page) {
   await page.locator('footer .left-links').evaluate((node) => node.innerHTML = 'MOCK');
 
   // replace timestamps in repos to mask them later down
-  await page.locator('.flex-item-body > relative-time').filter({hasText: /now|minute/}).evaluateAll((nodes) => {
+  await page.locator('.flex-item-body > relative-time').filter({hasText: /seconds|minute/}).evaluateAll((nodes) => {
     for (const node of nodes) node.outerHTML = 'relative time in repo';
   });
   // other time elements

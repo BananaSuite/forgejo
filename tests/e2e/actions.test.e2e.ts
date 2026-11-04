@@ -26,7 +26,7 @@ async function dispatchSuccess(page: Page) {
 
   await expect(page.getByText('Workflow run was successfully requested.')).toBeVisible();
 
-  await expect(page.locator('.run-list>:first-child .run-list-meta', {hasText: 'now'})).toBeVisible();
+  await expect(page.locator('.run-list>:first-child .run-list-meta', {hasText: 'a few seconds ago'})).toBeVisible();
   await screenshot(page, page.locator('div.ui.container').filter({hasText: 'All workflows'}));
 }
 
