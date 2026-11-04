@@ -13,7 +13,7 @@
 			<div class="flex-item-main">
 				<div class="flex-item-title">
 					<a title="{{.Title}}" href="{{if .Link}}{{.Link}}{{else}}{{$.Link}}/{{.Index}}{{end}}">
-						{{if .Title}}{{.Title}}{{else}}{{ctx.Locale.Tr "actions.runs.empty_commit_message"}}{{end}}
+						{{if .Title}}{{RenderCommitMessage ctx .Title ($.Repository.ComposeMetas ctx)}}{{else}}{{ctx.Locale.Tr "actions.runs.empty_commit_message"}}{{end}}
 					</a>
 					{{if .Prioritize}}<span class="ui label">{{ctx.Locale.Tr "actions.runs.prioritized_run"}}</span>{{end}}
 				</div>
@@ -38,17 +38,17 @@
 					<div class="run-list-meta">{{svg "octicon-calendar" 16}}{{DateUtils.TimeSince .Updated}}</div>
 					<div class="run-list-meta">{{svg "octicon-stopwatch" 16}}{{.Duration}}</div>
 				</div>
-				<details class="dropdown dir-rtl">
-					<summary class="border">
+				<div class="dialog-dropdown">
+					<button class="opener border" command="toggle-popover" commandfor="run-{{.Index}}-options-dropdown">
 						{{ctx.Locale.Tr "actions.runs.options"}} {{svg "octicon-triangle-down" 14}}
-					</summary>
+					</button>
 					<form id="de_prioritize_{{.Index}}" method="post">
 						<input type="hidden" name="workflow" value="{{$.CurWorkflow}}">
 						<input type="hidden" name="actor" value="{{$.CurActor}}">
 						<input type="hidden" name="status" value="{{$.CurStatus}}">
 						<input type="hidden" name="page" value="{{$.Page.Paginater.Current}}">
 					</form>
-					<div class="content">
+					<dialog popover id="run-{{.Index}}-options-dropdown" class="inline-flip">
 						<ul>
 							<li>
 								<button form="de_prioritize_{{.Index}}" formaction="{{.Link}}/prioritize" {{if or (not ($.Permission.CanWrite $.UnitTypeActions)) .Prioritize .Status.IsDone}}disabled{{end}}>{{ctx.Locale.Tr "actions.runs.prioritize_run"}}</button>
@@ -57,8 +57,8 @@
 								<button form="de_prioritize_{{.Index}}" formaction="{{.Link}}/deprioritize" {{if or (not ($.Permission.CanWrite $.UnitTypeActions)) (not .Prioritize) .Status.IsDone}}disabled{{end}}>{{ctx.Locale.Tr "actions.runs.deprioritize_run"}}</button>
 							</li>
 						</ul>
-					</div>
-				</details>
+					</dialog>
+				</div>
 			</div>
 		</div>
 	{{end}}

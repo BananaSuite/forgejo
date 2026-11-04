@@ -19,7 +19,6 @@ import (
 	"forgejo.org/routers/api/v1/utils"
 	"forgejo.org/services/context"
 	"forgejo.org/services/convert"
-	repo_service "forgejo.org/services/repository"
 )
 
 // ListCollaborators list a repository's collaborators
@@ -194,7 +193,7 @@ func AddCollaborator(ctx *context.APIContext) {
 	}
 
 	if form.Permission != nil {
-		if err := repo_model.ChangeCollaborationAccessMode(ctx, ctx.Repo().Repository, collaborator.ID, perm.ParseAccessMode(*form.Permission)); err != nil {
+		if err := repo_module.ChangeCollaborationAccessMode(ctx, ctx.Repo().Repository, collaborator.ID, perm.ParseAccessMode(*form.Permission)); err != nil {
 			ctx.Error(http.StatusInternalServerError, "ChangeCollaborationAccessMode", err)
 			return
 		}
@@ -244,7 +243,7 @@ func DeleteCollaborator(ctx *context.APIContext) {
 		return
 	}
 
-	if err := repo_service.DeleteCollaboration(ctx, ctx.Repo().Repository, collaborator.ID); err != nil {
+	if err := repo_module.DeleteCollaboration(ctx, ctx.Repo().Repository, collaborator.ID); err != nil {
 		ctx.Error(http.StatusInternalServerError, "DeleteCollaboration", err)
 		return
 	}
@@ -339,7 +338,7 @@ func GetReviewers(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	reviewers, err := repo_model.GetReviewers(ctx, ctx.Repo().Repository, ctx.Doer().ID, 0)
+	reviewers, err := repo_model.GetReviewers(ctx, ctx.Repo().Repository, 0)
 	if err != nil {
 		ctx.Error(http.StatusInternalServerError, "ListCollaborators", err)
 		return

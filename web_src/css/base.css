@@ -728,6 +728,10 @@ img.ui.avatar,
   color: var(--color-grey-light) !important;
 }
 
+.text.light.pink {
+  color: var(--color-pink-light) !important;
+}
+
 .text.gold {
   color: var(--color-gold) !important;
 }
@@ -1265,6 +1269,10 @@ table th[data-sortt-desc] .svg {
   font-weight: var(--font-weight-semibold) !important;
   line-height: 6px !important;
   vertical-align: middle !important;
+}
+
+.ellipsis-button:focus-visible {
+  outline: 1.5px dotted var(--color-text);
 }
 
 .truncated-item-name {

@@ -50,11 +50,6 @@ func createTag(ctx context.Context, gitRepo *git.Repository, rel *repo_model.Rel
 	// Only actual create when publish.
 	if !rel.IsDraft {
 		if !gitRepo.IsTagExist(rel.TagName) {
-			if err := rel.LoadAttributes(ctx); err != nil {
-				log.Error("LoadAttributes: %v", err)
-				return false, err
-			}
-
 			protectedTags, err := git_model.GetProtectedTags(ctx, rel.Repo.ID)
 			if err != nil {
 				return false, fmt.Errorf("GetProtectedTags: %w", err)
@@ -109,7 +104,8 @@ func createTag(ctx context.Context, gitRepo *git.Repository, rel *repo_model.Rel
 					RefFullName: refFullName,
 					OldCommitID: objectFormat.EmptyObjectID().String(),
 					NewCommitID: commit.ID.String(),
-				}, commits)
+				}, commits,
+			)
 			notify_service.CreateRef(ctx, rel.Publisher, rel.Repo, refFullName, commit.ID.String())
 			rel.CreatedUnix = timeutil.TimeStampNow()
 		}
@@ -414,7 +410,8 @@ func DeleteReleaseByID(ctx context.Context, repo *repo_model.Repository, rel *re
 				RefFullName: refName,
 				OldCommitID: rel.Sha1,
 				NewCommitID: objectFormat.EmptyObjectID().String(),
-			}, repository.NewPushCommits())
+			}, repository.NewPushCommits(),
+		)
 		notify_service.DeleteRef(ctx, doer, repo, refName)
 
 		if _, err := db.DeleteByID[repo_model.Release](ctx, rel.ID); err != nil {

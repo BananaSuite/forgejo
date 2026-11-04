@@ -14,7 +14,6 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/actions"
 	"forgejo.org/modules/log"
-	"forgejo.org/modules/setting"
 	"forgejo.org/modules/sync"
 	"forgejo.org/modules/util"
 	actions_service "forgejo.org/services/actions"
@@ -186,7 +185,7 @@ func (s *Service) FetchTask(
 		// it means there may still be some tasks not be assigned.
 		// try to pick a task for the runner that send the request.
 		if t, err := actions_service.PickTask(ctx, runner, requestKey, nil); err != nil {
-			if !(actions_service.IsNoTaskAvailable(err)) {
+			if !actions_service.IsNoTaskAvailable(err) {
 				log.Error("pick task failed: %v", err)
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("pick task: %w", err))
 			}
@@ -198,7 +197,7 @@ func (s *Service) FetchTask(
 			for taskCapacity > 0 {
 				t, err := actions_service.PickTask(ctx, runner, requestKey, nil)
 				if err != nil {
-					if !(actions_service.IsNoTaskAvailable(err)) {
+					if !actions_service.IsNoTaskAvailable(err) {
 						// Don't return an error to the client/runner -- we've already assigned one-or-more tasks to the runner
 						// and if we don't return them, they can't be picked up by another runner and will become zombie tasks.
 						// Log the error and return the tasks we've assigned so far.
@@ -256,7 +255,7 @@ func (*Service) FetchSingleTask(
 		}
 
 		if t, err := actions_service.PickTask(ctx, runner, requestKey, handle); err != nil {
-			if !(actions_service.IsNoTaskAvailable(err)) {
+			if !actions_service.IsNoTaskAvailable(err) {
 				log.Error("pick task failed: %v", err)
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("pick task: %w", err))
 			}
@@ -324,16 +323,6 @@ func (*Service) UpdateTask(
 		if err := actions_service.EmitJobsIfReady(task.Job.RunID); err != nil {
 			log.Error("Emit ready jobs of run %d: %v", task.Job.RunID, err)
 		}
-		// Reaching a finalized result for a task can cause other tasks in the same concurrency group to become
-		// unblocked. Increasing task version here allows all applicable runners to requery to the DB for that state.
-		// Because it is only useful for that condition, and it has system performance risks, only enable it when
-		// concurrency group queuing is enabled.
-		if setting.Actions.ConcurrencyGroupQueueEnabled {
-			if err := actions_model.IncreaseTaskVersion(ctx, runner.OwnerID, runner.RepoID); err != nil {
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("fail to increase task version: %w", err))
-			}
-		}
-
 		if runner.Ephemeral {
 			err := actions_model.DeleteRunner(ctx, runner)
 			if err != nil {
@@ -367,47 +356,100 @@ func (*Service) UpdateLog(
 	} else if runner.ID != task.RunnerID {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("invalid runner for task"))
 	}
+
 	ack := task.LogLength
+	emptyRows := len(req.Msg.Rows) == 0 || req.Msg.Index > ack || int64(len(req.Msg.Rows))+req.Msg.Index <= ack
+	updateTaskColumns := []string{} // columns for UpdateTask(...)
 
-	if len(req.Msg.Rows) == 0 || req.Msg.Index > ack || int64(len(req.Msg.Rows))+req.Msg.Index <= ack {
+	if !emptyRows {
+		if task.LogInStorage {
+			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("log file has been archived"))
+		}
+
+		rows := req.Msg.Rows[ack-req.Msg.Index:]
+		ns, err := actions.WriteLogs(ctx, task.LogFilename, task.LogSize, rows)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("write logs: %w", err))
+		}
+		task.LogLength += int64(len(rows))
+		for _, n := range ns {
+			task.LogIndexes = append(task.LogIndexes, task.LogSize)
+			task.LogSize += int64(n)
+		}
+
+		res.Msg.AckIndex = task.LogLength
+		updateTaskColumns = append(updateTaskColumns, "log_indexes", "log_length", "log_size")
+	} else {
 		res.Msg.AckIndex = ack
-		return res, nil
 	}
-
-	if task.LogInStorage {
-		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("log file has been archived"))
-	}
-
-	rows := req.Msg.Rows[ack-req.Msg.Index:]
-	ns, err := actions.WriteLogs(ctx, task.LogFilename, task.LogSize, rows)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("write logs: %w", err))
-	}
-	task.LogLength += int64(len(rows))
-	for _, n := range ns {
-		task.LogIndexes = append(task.LogIndexes, task.LogSize)
-		task.LogSize += int64(n)
-	}
-
-	res.Msg.AckIndex = task.LogLength
 
 	var remove func()
-	if req.Msg.NoMore {
+	if req.Msg.NoMore && !task.LogInStorage {
 		task.LogInStorage = true
+		updateTaskColumns = append(updateTaskColumns, "log_in_storage")
 		remove, err = actions.TransferLogs(ctx, task.LogFilename)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("transfer logs: %w", err))
 		}
 	}
 
-	if err := actions_model.UpdateTask(ctx, task, "log_indexes", "log_length", "log_size", "log_in_storage"); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update task: %w", err))
+	if len(updateTaskColumns) != 0 {
+		if err := actions_model.UpdateTask(ctx, task, updateTaskColumns...); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("update task: %w", err))
+		}
 	}
 	if remove != nil {
 		remove()
 	}
 
 	return res, nil
+}
+
+// UpdateStepSummary stores the step summaries (GITHUB_STEP_SUMMARY markdown) of the task.
+func (*Service) UpdateStepSummary(
+	ctx context.Context,
+	req *connect.Request[runnerv1.UpdateStepSummaryRequest],
+) (*connect.Response[runnerv1.UpdateStepSummaryResponse], error) {
+	runner := GetRunner(ctx)
+
+	task, err := actions_model.GetTaskByID(ctx, req.Msg.TaskId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get task: %w", err))
+	} else if runner.ID != task.RunnerID {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("invalid runner for task"))
+	}
+
+	if len(req.Msg.Summaries) == 0 {
+		return connect.NewResponse(&runnerv1.UpdateStepSummaryResponse{}), nil
+	}
+
+	steps, err := actions_model.GetTaskStepsByTaskID(ctx, task.ID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("get task steps: %w", err))
+	}
+	stepsByIndex := make(map[int64]*actions_model.ActionTaskStep, len(steps))
+	for _, step := range steps {
+		stepsByIndex[step.Index] = step
+	}
+
+	summaries := make([]*actions_model.ActionTaskStepSummary, 0, len(req.Msg.Summaries))
+	for _, summary := range req.Msg.Summaries {
+		step, ok := stepsByIndex[summary.StepNumber]
+		if !ok {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown step number %d for task %d", summary.StepNumber, task.ID))
+		}
+		summaries = append(summaries, &actions_model.ActionTaskStepSummary{
+			StepID:  step.ID,
+			TaskID:  task.ID,
+			RepoID:  task.RepoID,
+			Content: summary.Content,
+		})
+	}
+	if err := actions_model.SaveTaskStepSummaries(ctx, summaries...); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("save step summaries: %w", err))
+	}
+
+	return connect.NewResponse(&runnerv1.UpdateStepSummaryResponse{}), nil
 }
 
 func recoverTasks(ctx context.Context, runner *actions_model.ActionRunner, requestKey string) ([]*runnerv1.Task, error) {

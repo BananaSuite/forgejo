@@ -9,7 +9,8 @@
   "baseBranchPatterns": [
     "$default",
     "/^v15\\.\\d+/forgejo$/",
-    "/^v16\\.\\d+/forgejo$/"
+    "/^v16\\.\\d+/forgejo$/",
+    "/^v17\\.\\d+/forgejo$/"
   ],
   "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths", "npmDedupe"],
   "prConcurrentLimit": 10,
@@ -35,7 +36,6 @@
     {
       "description": "Schedule some deps less frequently",
       "matchPackageNames": [
-        "code.forgejo.org/f3/gof3/**",
         "github.com/google/pprof"
       ],
       "extends": ["schedule:quarterly"]
@@ -50,6 +50,7 @@
       "groupName": "devcontainer packages",
       "extends": ["schedule:quarterly"],
       "automerge": true,
+      "rebaseWhen": "conflicted",
       "matchPackageNames": [
         "ghcr.io/devcontainers/features/**",
         "ghcr.io/devcontainers-contrib/features/**"
@@ -59,6 +60,7 @@
       "description": "x/tools/* are used in the CI only and upgraded together",
       "matchUpdateTypes": ["minor", "patch", "digest"],
       "automerge": true,
+      "rebaseWhen": "conflicted",
       "groupName": "x/tools",
       "matchPackageNames": ["golang.org/x/tools{/,}**"]
     },
@@ -93,14 +95,19 @@
         "swagger-ui-dist"
       ],
       "matchUpdateTypes": ["patch"],
-      "automerge": true
+      "automerge": true,
+      "rebaseWhen": "conflicted"
     },
     {
       "description": "Add reviewer and additional labels to renovate PRs",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["data.forgejo.org/renovate/renovate"],
       "reviewers": ["viceice"],
-      "addLabels": ["forgejo/ci"]
+      "addLabels": ["forgejo/ci"],
+      "prBodyNotes": [
+        "> [!NOTE]\n> Updates the Renovate version used by `make lint-renovate`. This does **not** affect Renovate itself running on this repository."
+      ],
+      "extends": ["schedule:quarterly"]
     },
     {
       "description": "Disable renovate self-updates for release branches",
@@ -136,7 +143,8 @@
         "vite-string-plugin",
         "yamllint"
       ],
-      "automerge": true
+      "automerge": true,
+      "rebaseWhen": "conflicted"
     },
     {
       "description": "Run end-to-end tests for some dependencies",

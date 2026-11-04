@@ -10,6 +10,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -26,6 +27,7 @@ import (
 	"forgejo.org/modules/web"
 	"forgejo.org/routers"
 	"forgejo.org/tests"
+	"forgejo.org/tests/internaltest"
 )
 
 var testE2eWebRoutes *web.Route
@@ -41,19 +43,27 @@ func TestMain(m *testing.M) {
 
 	tests.InitTest()
 	initChangedFiles()
-	testE2eWebRoutes = routers.NormalRoutes()
 
-	err := unittest.InitFixtures(
-		unittest.FixturesOptions{
-			Dir:  filepath.Join(setting.AppWorkPath, "models/fixtures/"),
-			Base: setting.AppWorkPath,
-			Dirs: []string{"tests/e2e/fixtures/"},
-		},
-	)
+	fixtureOptions := unittest.FixturesOptions{
+		Dir:  filepath.Join(setting.AppWorkPath, "models/fixtures/"),
+		Base: setting.AppWorkPath,
+		Dirs: []string{"tests/e2e/fixtures/"},
+	}
+
+	err := unittest.InitFixtures(fixtureOptions)
 	if err != nil {
 		fmt.Printf("Error initializing test database: %v\n", err)
 		os.Exit(1)
 	}
+
+	testE2eWebRoutes = routers.NormalRoutes()
+	testE2eWebRoutes.R.Patch("/_e2e/fixtures/reload", func(_ http.ResponseWriter, _ *http.Request) {
+		err := unittest.LoadFixtures()
+		if err != nil {
+			fmt.Printf("Error reloading fixtures: %s\n", err)
+			os.Exit(1)
+		}
+	})
 
 	exitVal := m.Run()
 
@@ -74,6 +84,8 @@ func TestMain(m *testing.M) {
 
 // TestE2e should be the only test e2e necessary. It will collect all "*.test.e2e.ts" files in this directory and build a test for each.
 func TestE2e(t *testing.T) {
+	internaltest.NewInternalTestServer(t, nil)
+
 	// Find the paths of all e2e test files in test directory.
 	searchGlob := filepath.Join(setting.AppWorkPath, "tests", "e2e", "*.test.e2e.ts")
 	paths, err := filepath.Glob(searchGlob)
@@ -136,6 +148,7 @@ func TestE2e(t *testing.T) {
 				cmd := exec.Command(runArgs[0], thisTest...)
 				cmd.Env = os.Environ()
 				cmd.Env = append(cmd.Env, fmt.Sprintf("GITEA_URL=%s", setting.AppURL))
+				cmd.Dir = setting.AppWorkPath
 
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr

@@ -119,8 +119,8 @@ func TestMain(m *testing.M) {
 	// integration test settings...
 	if setting.CfgProvider != nil {
 		testingCfg := setting.CfgProvider.Section("integration-tests")
-		testlogger.SlowTest = testingCfg.Key("SLOW_TEST").MustDuration(testlogger.SlowTest)
-		testlogger.SlowFlush = testingCfg.Key("SLOW_FLUSH").MustDuration(testlogger.SlowFlush)
+		testlogger.SlowTest, _ = testingCfg.Key("SLOW_TEST").MustDuration(testlogger.SlowTest)
+		testlogger.SlowFlush, _ = testingCfg.Key("SLOW_FLUSH").MustDuration(testlogger.SlowFlush)
 	}
 
 	if os.Getenv("GITEA_SLOW_TEST_TIME") != "" {
@@ -434,7 +434,7 @@ func loginUserMaybeTOTP(t testing.TB, user *user_model.User, useTOTP bool) *Test
 	if useTOTP {
 		sess := loginUser(t, user.Name)
 		sess.EnrollTOTP(t)
-		sess.MakeRequest(t, NewRequest(t, "POST", "/user/logout"), http.StatusOK)
+		sess.MakeRequest(t, NewRequest(t, "POST", "/user/logout"), http.StatusSeeOther)
 
 		return loginUserWithTOTP(t, user)
 	}
@@ -745,6 +745,43 @@ func getHTMLDoc(t testing.TB, session *TestSession, urlStr string, expectedStatu
 	return NewHTMLParser(t, resp.Body)
 }
 
+func sessionJSONMethod(t testing.TB, session *TestSession, method, endpoint string, opts any, expectedStatus int,
+) *httptest.ResponseRecorder {
+	req := NewRequestWithJSON(t, method, endpoint, &opts)
+	return session.MakeRequest(t, req, expectedStatus)
+}
+
+func sessionJSONPOST(t testing.TB, session *TestSession, endpoint string, opts any, expectedStatus int,
+) *httptest.ResponseRecorder {
+	return sessionJSONMethod(t, session, "POST", endpoint, opts, expectedStatus)
+}
+
+func sessionJSONPUT(t testing.TB, session *TestSession, endpoint string, opts any, expectedStatus int,
+) *httptest.ResponseRecorder {
+	return sessionJSONMethod(t, session, "PUT", endpoint, opts, expectedStatus)
+}
+
+func sessionMethod(t testing.TB, session *TestSession, method, endpoint string, expectedStatus int,
+) *httptest.ResponseRecorder {
+	req := NewRequest(t, method, endpoint)
+	return session.MakeRequest(t, req, expectedStatus)
+}
+
+func sessionPOST(t testing.TB, session *TestSession, endpoint string, expectedStatus int,
+) *httptest.ResponseRecorder {
+	return sessionMethod(t, session, "POST", endpoint, expectedStatus)
+}
+
+func sessionGET(t testing.TB, session *TestSession, endpoint string, expectedStatus int,
+) *httptest.ResponseRecorder {
+	return sessionMethod(t, session, "GET", endpoint, expectedStatus)
+}
+
+func sessionDELETE(t testing.TB, session *TestSession, endpoint string, expectedStatus int,
+) *httptest.ResponseRecorder {
+	return sessionMethod(t, session, "DELETE", endpoint, expectedStatus)
+}
+
 func SortMailerMessages(msgs []*mailer.Message) {
 	slices.SortFunc(msgs, func(a, b *mailer.Message) int {
 		return strings.Compare(b.To, a.To)
@@ -771,8 +808,9 @@ func newAITester(t *testing.T, setupAI ...func(*auth.AuthorizedIntegration)) *Au
 	require.NoError(t, err)
 	ait.jwtSigningKey = jwtSigningKey
 
+	uniqueTest := gouuid.New().String()
 	ait.testServer = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/actions/.well-known/openid-configuration" {
+		if r.URL.Path == fmt.Sprintf("/api/actions/%s/.well-known/openid-configuration", uniqueTest) {
 			retval := map[string]any{
 				"issuer":                                ait.authorizedIntegration.Issuer,
 				"jwks_uri":                              fmt.Sprintf("%s/.keys", ait.authorizedIntegration.Issuer),
@@ -782,7 +820,7 @@ func newAITester(t *testing.T, setupAI ...func(*auth.AuthorizedIntegration)) *Au
 			require.NoError(t, err)
 			return
 		}
-		if r.URL.Path == "/api/actions/.keys" {
+		if r.URL.Path == fmt.Sprintf("/api/actions/%s/.keys", uniqueTest) {
 			jwk, err := ait.jwtSigningKey.ToJWK()
 			require.NoError(t, err)
 			jwk["use"] = "sig"
@@ -800,12 +838,13 @@ func newAITester(t *testing.T, setupAI ...func(*auth.AuthorizedIntegration)) *Au
 		&auth_service.GetAuthorizedIntegrationHTTPClient,
 		func() *http.Client {
 			return ait.testServer.Client()
-		})
+		},
+	)
 
 	ait.authorizedIntegration = &auth.AuthorizedIntegration{
 		UserID:   2,
 		Scope:    auth.AccessTokenScopeAll,
-		Issuer:   fmt.Sprintf("%s/api/actions", ait.testServer.URL),
+		Issuer:   fmt.Sprintf("%s/api/actions/%s", ait.testServer.URL, uniqueTest),
 		Audience: fmt.Sprintf("https://forgejo.example.org/-/coolguy/authorized-integration/%s", gouuid.New().String()),
 		ClaimRules: &auth.ClaimRules{
 			Rules: []auth.ClaimRule{

@@ -20,9 +20,6 @@ import (
 	"forgejo.org/models/unit"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/gitrepo"
-	"forgejo.org/modules/httpcache"
-	"forgejo.org/modules/lfs"
-	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/storage"
 	api "forgejo.org/modules/structs"
@@ -74,11 +71,6 @@ func GetRawFile(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	if ctx.Repo().Repository.IsEmpty {
-		ctx.NotFound()
-		return
-	}
-
 	blob, entry, lastModified := getBlobForEntry(ctx)
 	if ctx.Written() {
 		return
@@ -87,7 +79,7 @@ func GetRawFile(ctx *context.APIContext) {
 	ctx.RespHeader().Set(giteaObjectTypeHeader, string(files_service.GetObjectTypeFromTreeEntry(entry)))
 	ctx.RespHeader().Set(forgejoObjectTypeHeader, string(files_service.GetObjectTypeFromTreeEntry(entry)))
 
-	if err := common.ServeBlob(ctx.Base, ctx.Repo().TreePath, blob, lastModified); err != nil {
+	if err := common.ServeBlobRaw(ctx.Base, ctx.Repo(), blob, lastModified); err != nil {
 		ctx.Error(http.StatusInternalServerError, "ServeBlob", err)
 	}
 }
@@ -128,11 +120,6 @@ func GetRawFileOrLFS(ctx *context.APIContext) {
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
-	if ctx.Repo().Repository.IsEmpty {
-		ctx.NotFound()
-		return
-	}
-
 	blob, entry, lastModified := getBlobForEntry(ctx)
 	if ctx.Written() {
 		return
@@ -140,94 +127,9 @@ func GetRawFileOrLFS(ctx *context.APIContext) {
 
 	ctx.RespHeader().Set(giteaObjectTypeHeader, string(files_service.GetObjectTypeFromTreeEntry(entry)))
 	ctx.RespHeader().Set(forgejoObjectTypeHeader, string(files_service.GetObjectTypeFromTreeEntry(entry)))
-
-	// LFS Pointer files are at most 1024 bytes - so any blob greater than 1024 bytes cannot be an LFS file
-	if blob.Size() > 1024 {
-		// First handle caching for the blob
-		if httpcache.HandleGenericETagTimeCache(ctx.Req, ctx.Resp, `"`+blob.ID.String()+`"`, lastModified) {
-			return
-		}
-
-		// OK not cached - serve!
-		if err := common.ServeBlob(ctx.Base, ctx.Repo().TreePath, blob, lastModified); err != nil {
-			ctx.ServerError("ServeBlob", err)
-		}
-		return
+	if err := common.ServeBlob(ctx.Base, ctx.Repo(), blob, lastModified); err != nil {
+		ctx.ServerError("ServeBlob", err)
 	}
-
-	// OK, now the blob is known to have at most 1024 bytes we can simply read this in one go (This saves reading it twice)
-	dataRc, err := blob.DataAsync()
-	if err != nil {
-		ctx.ServerError("DataAsync", err)
-		return
-	}
-
-	// FIXME: code from #19689, what if the file is large ... OOM ...
-	buf, err := io.ReadAll(dataRc)
-	if err != nil {
-		_ = dataRc.Close()
-		ctx.ServerError("DataAsync", err)
-		return
-	}
-
-	if err := dataRc.Close(); err != nil {
-		log.Error("Error whilst closing blob %s reader in %-v. Error: %v", blob.ID, ctx.Repo().Repository, err)
-	}
-
-	// Check if the blob represents a pointer
-	pointer, _ := lfs.ReadPointer(bytes.NewReader(buf))
-
-	// if it's not a pointer, just serve the data directly
-	if !pointer.IsValid() {
-		// First handle caching for the blob
-		if httpcache.HandleGenericETagTimeCache(ctx.Req, ctx.Resp, `"`+blob.ID.String()+`"`, lastModified) {
-			return
-		}
-
-		// OK not cached - serve!
-		common.ServeContentByReader(ctx.Base, ctx.Repo().TreePath, blob.Size(), bytes.NewReader(buf))
-		return
-	}
-
-	// Now check if there is a MetaObject for this pointer
-	meta, err := git_model.GetLFSMetaObjectByOid(ctx, ctx.Repo().Repository.ID, pointer.Oid)
-
-	// If there isn't one, just serve the data directly
-	if err == git_model.ErrLFSObjectNotExist {
-		// Handle caching for the blob SHA (not the LFS object OID)
-		if httpcache.HandleGenericETagTimeCache(ctx.Req, ctx.Resp, `"`+blob.ID.String()+`"`, lastModified) {
-			return
-		}
-
-		common.ServeContentByReader(ctx.Base, ctx.Repo().TreePath, blob.Size(), bytes.NewReader(buf))
-		return
-	} else if err != nil {
-		ctx.ServerError("GetLFSMetaObjectByOid", err)
-		return
-	}
-
-	// Handle caching for the LFS object OID
-	if httpcache.HandleGenericETagCache(ctx.Req, ctx.Resp, `"`+pointer.Oid+`"`) {
-		return
-	}
-
-	if setting.LFS.Storage.MinioConfig.ServeDirect {
-		// If we have a signed url (S3, object storage), redirect to this directly.
-		u, err := storage.LFS.URL(pointer.RelativePath(), blob.Name(), nil)
-		if u != nil && err == nil {
-			ctx.Redirect(u.String())
-			return
-		}
-	}
-
-	lfsDataRc, err := lfs.ReadMetaObject(meta.Pointer)
-	if err != nil {
-		ctx.ServerError("ReadMetaObject", err)
-		return
-	}
-	defer lfsDataRc.Close()
-
-	common.ServeContentByReadSeeker(ctx.Base, ctx.Repo().TreePath, lastModified, lfsDataRc)
 }
 
 func getBlobForEntry(ctx *context.APIContext) (blob *git.Blob, entry *git.TreeEntry, lastModified *time.Time) {
@@ -310,9 +212,10 @@ func archiveDownload(ctx *context.APIContext) {
 
 	aReq, err := archiver_service.NewRequest(ctx, ctx.Repo().Repository.ID, ctx.Repo().GitRepo, strings.TrimSuffix(uri, ext), tp)
 	if err != nil {
-		if errors.Is(err, archiver_service.ErrUnknownArchiveFormat{}) {
+		if archiver_service.IsUnknownArchiveFormatError(err) {
+			// Unreachable because archiver_service.ParseFileName performs the same check
 			ctx.Error(http.StatusBadRequest, "unknown archive format", err)
-		} else if errors.Is(err, archiver_service.RepoRefNotFoundError{}) {
+		} else if archiver_service.IsRepoRefNotFoundError(err) {
 			ctx.Error(http.StatusNotFound, "unrecognized reference", err)
 		} else {
 			ctx.ServerError("archiver_service.NewRequest", err)

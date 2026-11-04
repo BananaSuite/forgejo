@@ -127,7 +127,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 	jobNames := util.KeysOfMap(wf.Jobs)
 
 	payload := &structs.WorkflowDispatchPayload{
-		Inputs:     inputs,
+		Inputs:     inputsAny,
 		Ref:        entry.Ref,
 		Repository: convert.ToRepo(ctx, repo, access.Permission{AccessMode: perm.AccessModeNone}),
 		Sender:     convert.ToUser(ctx, doer, nil),
@@ -192,6 +192,7 @@ func (entry *Workflow) Dispatch(ctx context.Context, inputGetter InputValueGette
 		jobparser.ExpandLocalReusableWorkflows(expandLocalReusableWorkflows(entry.Commit)),
 		jobparser.ExpandInstanceReusableWorkflows(expandInstanceReusableWorkflows(ctx)),
 		jobparser.WithGitContext(generateGiteaContextForRun(run)),
+		jobparser.EnableNamespaces(),
 	)
 	if err != nil {
 		return nil, nil, err
@@ -216,6 +217,9 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 
 	commit, err := gitRepo.GetCommit(ref)
 	if err != nil {
+		if errors.Is(err, util.ErrNotExist) {
+			return nil, util.NewInvalidArgumentErrorf("reference '%s' does not exist", ref)
+		}
 		return nil, err
 	}
 
@@ -232,7 +236,7 @@ func GetWorkflowFromCommit(gitRepo *git.Repository, ref, workflowID string) (*Wo
 		}
 	}
 	if workflowEntry == nil {
-		return nil, errors.New("workflow not found")
+		return nil, util.NewNotExistErrorf("workflow not found")
 	}
 
 	return &Workflow{
@@ -265,7 +269,8 @@ func ConfigureActionRunTitle(workflows []*jobparser.SingleWorkflow, run *actions
 // or appropriate defaults if not present.
 func ConfigureActionRunConcurrency(workflow *act_model.Workflow, run *actions_model.ActionRun, vars map[string]string, inputs map[string]any) error {
 	concurrencyGroup, cancelInProgress, err := jobparser.EvaluateWorkflowConcurrency(
-		workflow.RawConcurrency, generateGiteaContextForRun(run), vars, inputs)
+		workflow.RawConcurrency, generateGiteaContextForRun(run), vars, inputs,
+	)
 	if err != nil {
 		return fmt.Errorf("unable to evaluate workflow `concurrency` block: %w", err)
 	}

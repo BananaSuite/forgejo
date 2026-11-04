@@ -374,7 +374,8 @@ func renderRevisionPage(ctx *context.Context) (*git.Repository, *git.TreeEntry) 
 			Revision: ctx.Repo.Repository.GetWikiBranchName(),
 			File:     pageFilename,
 			Page:     page,
-		})
+		},
+	)
 	if err != nil {
 		ctx.ServerError("CommitsByFileAndRange", err)
 		return nil, nil
@@ -675,8 +676,8 @@ func WikiRaw(ctx *context.Context) {
 	}
 
 	if entry != nil {
-		if err = common.ServeBlob(ctx.Base, ctx.Repo.TreePath, entry.Blob(), nil); err != nil {
-			ctx.ServerError("ServeBlob", err)
+		if err = common.ServeBlobRaw(ctx.Base, ctx.Repo, entry.Blob(), nil); err != nil {
+			ctx.ServerError("ServeBlobRaw", err)
 		}
 		return
 	}

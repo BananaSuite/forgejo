@@ -162,20 +162,26 @@ func (r *Writer) resolveLink(node org.Node) string {
 	}
 	if len(link) > 0 && !markup.IsLinkStr(link) &&
 		link[0] != '#' && !strings.HasPrefix(link, mailto) {
-		var base string
-		if r.Ctx.IsWiki {
-			base = r.Ctx.Links.WikiLink()
-		} else if r.Ctx.Links.HasBranchInfo() {
-			base = r.Ctx.Links.SrcLink()
-		} else {
-			base = r.Ctx.Links.Base
+		isRootRelative := strings.HasPrefix(link, "/")
+		isRepoFile := r.Ctx.IsRepoFile()
+		if isRootRelative && (r.Ctx.IsWiki || isRepoFile) {
+			link = strings.TrimLeft(link, "/")
 		}
 
+		var base string
 		switch l.Kind() {
 		case "image", "video":
-			base = r.Ctx.Links.ResolveMediaLink(r.Ctx.IsWiki)
+			base = r.Ctx.Links.ResolveMediaLink(r.Ctx.IsWiki, isRootRelative && isRepoFile)
 		case "regular":
-			// Convert line search syntax to line links
+			if r.Ctx.IsWiki {
+				base = r.Ctx.Links.WikiLink()
+			} else if isRootRelative && isRepoFile {
+				base = r.Ctx.Links.SrcLinkBase()
+			} else if r.Ctx.Links.HasBranchInfo() {
+				base = r.Ctx.Links.SrcLink()
+			} else {
+				base = r.Ctx.Links.Base
+			}
 			target, search, found := strings.Cut(link, "::")
 			if found {
 				if _, err := strconv.Atoi(search); err == nil {
