@@ -5,7 +5,6 @@ package auth
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"testing"
 
@@ -22,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestWebAuthUserLogin(t *testing.T) {
+func TestUserLogin(t *testing.T) {
 	ctx, resp := contexttest.MockContext(t, "/user/login")
 	SignIn(ctx)
 	assert.Equal(t, http.StatusOK, resp.Code)
