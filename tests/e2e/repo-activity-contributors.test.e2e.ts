@@ -23,7 +23,7 @@ test.describe('Contributor graph', () => {
     /* Verify that Vue has access to i18n string */
     const header = page.getByRole('heading', {'level': 1});
     await header.waitFor();
-    await expect(header).toContainText(/Contributors since \d+ years ago/);
+    await expect(header).toContainText(/Contributors since over \d+ years ago/);
   });
 
   test('heading changes with new time scope', async ({page}) => {
@@ -39,7 +39,7 @@ test.describe('Contributor graph', () => {
     /* Verify that Vue has access to i18n string */
     const header = page.getByRole('heading', {'level': 1});
     await header.waitFor();
-    await expect(header).toContainText(/Contributors between \d+ years ago and \d+ years ago/);
+    await expect(header).toContainText(/Contributors between over \d+ years ago and over \d+ years ago/);
   });
 });
 
