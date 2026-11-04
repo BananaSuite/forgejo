@@ -2410,28 +2410,28 @@ func TestSignOutRedirectOAuth(t *testing.T) {
 	defer createUser(t.Context(), t, user)()
 
 	t.Run("OIDCLogout", func(t *testing.T) {
-			defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
-				return goth.User{
-					Provider: sourceName,
-					UserID:   userID,
-					Email:    user.Email,
-				}, nil
-			})()
+		defer mockCompleteUserAuth(func(res http.ResponseWriter, req *http.Request) (goth.User, error) {
+			return goth.User{
+				Provider: sourceName,
+				UserID:   userID,
+				Email:    user.Email,
+			}, nil
+		})()
 
-			session := emptyTestSession(t)
+		session := emptyTestSession(t)
 
-			req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", sourceName))
-			resp := session.MakeRequest(t, req, http.StatusSeeOther)
-			assert.Equal(t, "/", test.RedirectURL(resp))
+		req := NewRequest(t, "GET", fmt.Sprintf("/user/oauth2/%s/callback?code=XYZ&state=XYZ", sourceName))
+		resp := session.MakeRequest(t, req, http.StatusSeeOther)
+		assert.Equal(t, "/", test.RedirectURL(resp))
 
-			req = NewRequest(t, "POST", "/user/logout")
-			resp = session.MakeRequest(t, req, http.StatusSeeOther)
+		req = NewRequest(t, "POST", "/user/logout")
+		resp = session.MakeRequest(t, req, http.StatusSeeOther)
 
-			u, err := url.Parse(test.RedirectURL(resp))
-			require.NoError(t, err)
-			expectedValues := url.Values{"post_logout_redirect_uri": []string{setting.AppURL}, "client_id": []string{""}}
-			assert.Equal(t, expectedValues, u.Query())
-			u.RawQuery = ""
-			assert.Equal(t, mockServer.URL + "/logout", u.String())
+		u, err := url.Parse(test.RedirectURL(resp))
+		require.NoError(t, err)
+		expectedValues := url.Values{"post_logout_redirect_uri": []string{setting.AppURL}, "client_id": []string{""}}
+		assert.Equal(t, expectedValues, u.Query())
+		u.RawQuery = ""
+		assert.Equal(t, mockServer.URL+"/logout", u.String())
 	})
 }
