@@ -4,7 +4,6 @@
 package integration
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 	"testing"
@@ -12,7 +11,6 @@ import (
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
-	"forgejo.org/modules/json"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -52,13 +50,9 @@ func addSCIMAuthSource(t *testing.T, name string) *auth_model.Source {
 
 func newSCIMRequestWithBody(t *testing.T, method, url, token string, body any) *RequestWrapper {
 	t.Helper()
-	jsonBytes, err := json.Marshal(body)
-	require.NoError(t, err)
-	req := NewRequestWithBody(t, method, url, bytes.NewBuffer(jsonBytes)).
-		SetHeader("Content-Type", "application/scim+json")
-	if token != "" {
-		req = req.SetHeader("Authorization", "Bearer "+token)
-	}
+	req := NewRequestWithJSON(t, method, url, &body).
+		SetHeader("Content-Type", "application/scim+json").
+		AddTokenAuth(token)
 	return req
 }
 
