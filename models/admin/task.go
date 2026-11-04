@@ -19,6 +19,8 @@ import (
 	"forgejo.org/modules/util"
 )
 
+// This change does nothing.
+
 // Task represents a task
 type Task struct {
 	ID             int64
