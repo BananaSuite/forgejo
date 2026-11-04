@@ -182,7 +182,7 @@ test('CalculateRelativeTimes', () => {
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
   expect(mock.textContent).toEqual('over 16 months ago');
 
-  mock.setAttribute('datetime', '2022-09-30T01:00:00-05:30');
+  mock.setAttribute('datetime', '2022-11-30T01:00:00-05:30');
   expect(DoUpdateRelativeTime(mock, now)).toEqual(ONE_DAY);
   expect(mock.textContent).toEqual('over 22 months ago');
 
