@@ -132,6 +132,7 @@ type User struct {
 	// (ex: in private Gitea instances user won't be allowed to see even organizations/repositories that are set as public)
 	IsRestricted bool `xorm:"NOT NULL DEFAULT false"`
 	// IsBot indicates that the user is a bot. When IsBot is true, the badge “Bot” is displayed next to the user.
+	// Also the user is not allowed to log in Web UI, BUT can access API via access tokens
 	IsBot bool `xorm:"NOT NULL DEFAULT false"`
 
 	AllowGitHook            bool
