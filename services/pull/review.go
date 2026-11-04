@@ -234,6 +234,10 @@ func CreateCodeCommentKnownReviewID(ctx context.Context, doer *user_model.User, 
 	issue *issues_model.Issue, content, treePath, beforeCommitID, afterCommitID string,
 	line, extraLinesCount, reviewID int64, attachments []string,
 ) (*issues_model.Comment, error) {
+	if user_model.IsBlockedMultiple(ctx, []int64{issue.PosterID, repo.OwnerID}, doer.ID) {
+		return nil, user_model.ErrBlockedByUser
+	}
+
 	var commitID, blamedCommitID, patch string
 	blamedLine := line
 	if err := issue.LoadPullRequest(ctx); err != nil {
