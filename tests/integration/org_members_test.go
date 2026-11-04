@@ -49,6 +49,19 @@ func TestOrgMembersPage(t *testing.T) {
 		doc.AssertElement(t, ".empty-placeholder", true)
 	})
 
+	t.Run("Guest PoV with public members list", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// hide the profile org badge of all members of org6
+		require.NoError(t, organization.ChangeOrgUserStatus(db.DefaultContext, 6, 5, false))
+		require.NoError(t, organization.ChangeOrgUserStatus(db.DefaultContext, 6, 28, false))
+
+		doc := NewHTMLParser(t, MakeRequest(t, NewRequest(t, "GET", "/org/org6/members"), http.StatusOK).Body)
+		doc.AssertElement(t, ".empty-placeholder", false)
+		// both members are still listed in the members list
+		assert.Equal(t, 2, doc.Find(".members .list h3").Length())
+	})
+
 	t.Run("Member PoV", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 

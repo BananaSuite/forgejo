@@ -33,8 +33,9 @@ func Members(ctx *context.Context) {
 	page := max(ctx.FormInt("page"), 1)
 
 	opts := &organization.FindOrgMembersOpts{
-		Doer:  ctx.Doer,
-		OrgID: org.ID,
+		Doer:                 ctx.Doer,
+		OrgMembersAreVisible: org.VisibleMembers,
+		OrgID:                org.ID,
 	}
 
 	if ctx.Doer != nil {

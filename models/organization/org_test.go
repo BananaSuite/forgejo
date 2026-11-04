@@ -288,6 +288,22 @@ func TestGetOrgUsersByOrgID(t *testing.T) {
 	assert.Empty(t, orgUsers)
 }
 
+func TestGetOrgUsersByOrgIDWithPublicMembers(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	// hide the profile org badge of all members of org6
+	require.NoError(t, organization.ChangeOrgUserStatus(db.DefaultContext, 6, 5, false))
+	require.NoError(t, organization.ChangeOrgUserStatus(db.DefaultContext, 6, 28, false))
+
+	opts := &organization.FindOrgMembersOpts{OrgID: 6, OrgMembersAreVisible: true}
+
+	// because the org has visible members, we get the full list of members
+	assert.False(t, opts.PublicOnly())
+	orgUsers, err := organization.GetOrgUsersByOrgID(db.DefaultContext, opts)
+	require.NoError(t, err)
+	assert.Len(t, orgUsers, 2)
+}
+
 func TestChangeOrgUserStatus(t *testing.T) {
 	require.NoError(t, unittest.PrepareTestDatabase())
 
