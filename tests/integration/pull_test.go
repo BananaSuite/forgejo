@@ -80,6 +80,25 @@ func TestPullViewConversation(t *testing.T) {
 		assert.Equal(t, "/user2/commitsonpr/commit/3e64625bd6eb5bcba69ac97de6c8f507402df861", fifthCommitMessageHref)
 		assert.Equal(t, "/user2/commitsonpr/commit/3e64625bd6eb5bcba69ac97de6c8f507402df861", fifthCommitShaHref)
 	})
+
+	t.Run("ForcePush", func(t *testing.T) {
+		forcePush := htmlDoc.Find("#issuecomment-17")
+		require.Equal(t, 1, forcePush.Length())
+		html, err := forcePush.Html()
+		require.NoError(t, err)
+		t.Logf("issuecomment-17 HTML = %s", html) // useful for figuring out errors in the assertions
+
+		// match sections of the markup "user2 force-pushed branch 1 from 1978192d98 to 9b93963cf6 2025-06-...
+		assert.Equal(t, 1, forcePush.Find("svg.octicon-repo-push").Length())
+		assert.Equal(t, "user2", forcePush.Find("a.author").Text())
+		assert.Contains(t, forcePush.Text(), "force-pushed branch1 from")
+		assert.Equal(t, "1978192d98", forcePush.Find("a.ui.sha[href='/user2/commitsonpr/commit/1978192d98bb1b65e11c2cf37da854fbf94bffd6'] code").Text())
+		assert.Equal(t, "9b93963cf6", forcePush.Find("a.ui.sha[href='/user2/commitsonpr/commit/9b93963cf6de4dc33f915bb67f192d099c301f43'] code").Text())
+		assert.Contains(t, forcePush.Text(), "2025-06-")
+
+		// followed by a Compare button:
+		assert.Equal(t, 1, forcePush.Find("span.compare a[href='/user2/commitsonpr/compare/1978192d98bb1b65e11c2cf37da854fbf94bffd6..9b93963cf6de4dc33f915bb67f192d099c301f43']").Length())
+	})
 }
 
 func TestPullManuallyMergeWarning(t *testing.T) {
