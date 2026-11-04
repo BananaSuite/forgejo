@@ -57,7 +57,7 @@ func TestCompareDefault(t *testing.T) {
 
 // Ensure the comparison matches what we expect
 func inspectCompare(t *testing.T, htmlDoc *HTMLDoc, diffCount int, diffChanges []string) {
-	selection := htmlDoc.doc.Find("#diff-file-boxes").Children()
+	selection := htmlDoc.doc.Find("[id^='diff-page-']").Children()
 
 	assert.Lenf(t, selection.Nodes, diffCount, "Expected %v diffed files, found: %v", diffCount, len(selection.Nodes))
 
