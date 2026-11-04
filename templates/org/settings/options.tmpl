@@ -62,6 +62,17 @@
 							</div>
 						</div>
 
+						<div class="divider"></div>
+						<div class="field" id="visibility_box">
+							<label>{{ctx.Locale.Tr "org.settings.members_and_teams"}}</label>
+							<div class="field">
+								<div class="ui checkbox">
+									<input type="checkbox" name="visible_members" {{if .VisibleMembers}}checked{{end}}>
+									<label>{{ctx.Locale.Tr "org.settings.visible_members"}}</label>
+								</div>
+							</div>
+						</div>
+
 						<div class="field" id="permission_box">
 							<label>{{ctx.Locale.Tr "org.settings.permission"}}</label>
 							<div class="field">

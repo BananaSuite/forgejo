@@ -49,6 +49,7 @@ func Settings(ctx *context.Context) {
 	ctx.Data["PageIsOrgSettings"] = true
 	ctx.Data["PageIsSettingsOptions"] = true
 	ctx.Data["CurrentVisibility"] = ctx.Org.Organization.Visibility
+	ctx.Data["VisibleMembers"] = ctx.Org.Organization.VisibleMembers
 	ctx.Data["RepoAdminChangeTeamAccess"] = ctx.Org.Organization.RepoAdminChangeTeamAccess
 	ctx.Data["ContextUser"] = ctx.ContextUser
 	ctx.Data["CooldownPeriod"] = setting.Service.UsernameCooldownPeriod
@@ -138,6 +139,7 @@ func SettingsPost(ctx *context.Context) {
 		Website:                   optional.Some(form.Website),
 		Location:                  optional.Some(form.Location),
 		Visibility:                optional.Some(form.Visibility),
+		VisibleMembers:            optional.Some(form.VisibleMembers),
 		RepoAdminChangeTeamAccess: optional.Some(form.RepoAdminChangeTeamAccess),
 	}
 	if ctx.Doer.IsAdmin {

@@ -59,6 +59,7 @@ func CreatePost(ctx *context.Context) {
 		Type:                      user_model.UserTypeOrganization,
 		Visibility:                form.Visibility,
 		RepoAdminChangeTeamAccess: form.RepoAdminChangeTeamAccess,
+		VisibleMembers:            true, // will be adjusted in CreateOrganization if this is inconsistent with the org visibility
 	}
 
 	if err := organization.CreateOrganization(ctx, org, ctx.Doer); err != nil {

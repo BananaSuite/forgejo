@@ -29,6 +29,7 @@ type UpdateOptions struct {
 	MaxRepoCreation              optional.Option[int]
 	IsRestricted                 optional.Option[bool]
 	Visibility                   optional.Option[structs.VisibleType]
+	VisibleMembers               optional.Option[bool]
 	KeepActivityPrivate          optional.Option[bool]
 	Language                     optional.Option[string]
 	Theme                        optional.Option[string]
@@ -123,6 +124,11 @@ func UpdateUser(ctx context.Context, u *user_model.User, opts *UpdateOptions) er
 		}
 		u.Visibility = value
 		cols = append(cols, "visibility")
+	}
+	// change the "visible members" setting if it was explicitly changed, or if the visibility was changed to private
+	if has, value := opts.VisibleMembers.Get(); has || opts.Visibility.ValueOrZeroValue() == structs.VisibleTypePrivate {
+		u.VisibleMembers = value && u.Visibility != structs.VisibleTypePrivate
+		cols = append(cols, "visible_members")
 	}
 	if has, value := opts.KeepActivityPrivate.Get(); has {
 		u.KeepActivityPrivate = value

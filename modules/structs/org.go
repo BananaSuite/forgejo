@@ -16,6 +16,7 @@ type Organization struct {
 	Website                   string    `json:"website"`
 	Location                  string    `json:"location"`
 	Visibility                string    `json:"visibility"`
+	VisibleMembers            bool      `json:"visible_members"`
 	RepoAdminChangeTeamAccess bool      `json:"repo_admin_change_team_access"`
 	Created                   time.Time `json:"created"`
 	// deprecated
@@ -43,6 +44,7 @@ type CreateOrgOption struct {
 	// possible values are `public` (default), `limited` or `private`
 	// enum: ["public", "limited", "private"]
 	Visibility                string `json:"visibility" binding:"In(,public,limited,private)"`
+	VisibleMembers            *bool  `json:"visible_members,omitempty"` // defaults to true
 	RepoAdminChangeTeamAccess bool   `json:"repo_admin_change_team_access"`
 }
 
@@ -56,6 +58,7 @@ type EditOrgOption struct {
 	// possible values are `public`, `limited` or `private`
 	// enum: ["public", "limited", "private"]
 	Visibility                *string `json:"visibility" binding:"In(public,limited,private)"`
+	VisibleMembers            *bool   `json:"visible_members"`
 	RepoAdminChangeTeamAccess *bool   `json:"repo_admin_change_team_access"`
 }
 

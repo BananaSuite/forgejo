@@ -52,14 +52,15 @@ func CreateOrg(ctx *context.APIContext) {
 	}
 
 	org := &organization.Organization{
-		Name:        form.UserName,
-		FullName:    form.FullName,
-		Description: form.Description,
-		Website:     form.Website,
-		Location:    form.Location,
-		IsActive:    true,
-		Type:        user_model.UserTypeOrganization,
-		Visibility:  visibility,
+		Name:           form.UserName,
+		FullName:       form.FullName,
+		Description:    form.Description,
+		Website:        form.Website,
+		Location:       form.Location,
+		IsActive:       true,
+		Type:           user_model.UserTypeOrganization,
+		Visibility:     visibility,
+		VisibleMembers: form.VisibleMembers == nil || *form.VisibleMembers,
 	}
 
 	if err := organization.CreateOrganization(ctx, org, ctx.User()); err != nil {
