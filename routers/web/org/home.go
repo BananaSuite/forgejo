@@ -121,10 +121,11 @@ func Home(ctx *context.Context) {
 	}
 
 	opts := &organization.FindOrgMembersOpts{
-		Doer:         ctx.Doer,
-		OrgID:        org.ID,
-		IsDoerMember: ctx.Org.IsMember,
-		ListOptions:  db.ListOptions{Page: 1, PageSize: 25},
+		Doer:                 ctx.Doer,
+		OrgID:                org.ID,
+		IsDoerMember:         ctx.Org.IsMember,
+		OrgMembersAreVisible: ctx.Org.Organization.VisibleMembers,
+		ListOptions:          db.ListOptions{Page: 1, PageSize: 25},
 	}
 
 	members, _, err := organization.FindOrgMembers(ctx, opts)

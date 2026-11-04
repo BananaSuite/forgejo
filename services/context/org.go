@@ -190,9 +190,10 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 
 	// Member
 	opts := &organization.FindOrgMembersOpts{
-		Doer:         ctx.Doer,
-		OrgID:        org.ID,
-		IsDoerMember: ctx.Org.IsMember,
+		Doer:                 ctx.Doer,
+		OrgID:                org.ID,
+		OrgMembersAreVisible: ctx.Org.Organization.VisibleMembers,
+		IsDoerMember:         ctx.Org.IsMember,
 	}
 	ctx.Data["NumMembers"], err = organization.CountOrgMembers(ctx, opts)
 	if err != nil {

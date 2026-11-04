@@ -145,8 +145,9 @@ func (org *Organization) LoadTeams(ctx context.Context) ([]*Team, error) {
 // GetMembers returns all members of organization.
 func (org *Organization) GetMembers(ctx context.Context, doer *user_model.User) (user_model.UserList, map[int64]bool, error) {
 	return FindOrgMembers(ctx, &FindOrgMembersOpts{
-		Doer:  doer,
-		OrgID: org.ID,
+		Doer:                 doer,
+		OrgID:                org.ID,
+		OrgMembersAreVisible: org.VisibleMembers,
 	})
 }
 
@@ -213,13 +214,14 @@ func (org *Organization) IsGhost() bool {
 // FindOrgMembersOpts represents find org members conditions
 type FindOrgMembersOpts struct {
 	db.ListOptions
-	Doer         *user_model.User
-	IsDoerMember bool
-	OrgID        int64
+	Doer                 *user_model.User
+	IsDoerMember         bool
+	OrgMembersAreVisible bool // set to true if the organization has the "visible members" option enabled
+	OrgID                int64
 }
 
 func (opts FindOrgMembersOpts) PublicOnly() bool {
-	return opts.Doer == nil || (!opts.IsDoerMember && !opts.Doer.IsAdmin)
+	return !opts.OrgMembersAreVisible && (opts.Doer == nil || (!opts.IsDoerMember && !opts.Doer.IsAdmin))
 }
 
 // CountOrgMembers counts the organization's members
