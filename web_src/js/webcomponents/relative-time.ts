@@ -7,6 +7,7 @@ dayjs.extend(utc);
 
 export const HALF_MINUTE = 30 * 1000;
 export const ONE_MINUTE = 60 * 1000;
+export const TEN_MINUTES = 10 * ONE_MINUTE;
 export const ONE_HOUR = 60 * ONE_MINUTE;
 export const ONE_DAY = 24 * ONE_HOUR;
 
@@ -232,14 +233,14 @@ export function DoUpdateRelativeTime(object: HTMLElement, now?: number): number 
   if (days >= 2) {
     // Datetime is more than two days but less than two weeks ago.
     object.textContent = GetPluralizedStringOrFallback('relativetime.days', days, 'day');
-    return ONE_DAY;
+    return ONE_HOUR;
   }
 
   const hours = Math.floor(nowJS.diff(thenJS, 'hour'));
   if (hours >= 1) {
     // Datetime is more than one hour but less than two days ago.
     object.textContent = GetPluralizedStringOrFallback('relativetime.hours', hours, 'hour');
-    return ONE_HOUR;
+    return TEN_MINUTES;
   }
 
   const minutes = Math.floor(nowJS.diff(thenJS, 'minute'));
