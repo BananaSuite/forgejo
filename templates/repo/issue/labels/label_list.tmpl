@@ -1,3 +1,12 @@
+{{if $.PageIsOrgSettingsLabels}}
+<div class="issue-navbar tw-mb-4">
+<div class="switch issue-list-navbar">
+	<a class="{{if .PageIsLabelsActive}}active {{end}}item" href="{{.Link}}">Active ({{$.LabelCounts.ActiveCount}})</a>
+	<a class="{{if not .PageIsLabelsActive}}active {{end}}item" href="{{.Link}}?archived=true">Archived ({{$.LabelCounts.ArchivedCount}})</a>
+</div>
+</div>
+{{end}}
+
 <h4 class="ui top attached header">
 	{{ctx.Locale.Tr "repo.issues.label_count" .NumLabels}}
 	<div class="ui right">

@@ -28,6 +28,11 @@ type ErrRepoLabelNotExist struct {
 	RepoID  int64
 }
 
+type OrgLabelCounts struct {
+	ActiveCount int64 `xorm:"active_count"`
+	ArchivedCount int64 `xorm:"archived_count"`
+}
+
 // IsErrRepoLabelNotExist checks if an error is a RepoErrLabelNotExist.
 func IsErrRepoLabelNotExist(err error) bool {
 	_, ok := err.(ErrRepoLabelNotExist)
@@ -516,6 +521,38 @@ func GetLabelsByOrgID(ctx context.Context, orgID int64, sortType string, listOpt
 	return labels, sess.Find(&labels)
 }
 
+// GetLabelsByOrgID returns all labels that belong to given organization by ID.
+func GetLabelsByOrgIDIsArchived(ctx context.Context, orgID int64, sortType string, listOptions db.ListOptions, isArchived bool) ([]*Label, error) {
+	if orgID <= 0 {
+		return nil, ErrOrgLabelNotExist{0, orgID}
+	}
+	labels := make([]*Label, 0, 10)
+	sess := db.GetEngine(ctx).Where("org_id = ?", orgID)
+
+	if isArchived {
+		sess.Where("archived_unix != 0")
+	} else {
+		sess.Where("archived_unix = 0")
+	}
+
+	switch sortType {
+	case "reversealphabetically":
+		sess.Desc("name")
+	case "leastissues":
+		sess.Asc("num_issues")
+	case "mostissues":
+		sess.Desc("num_issues")
+	default:
+		sess.Asc("name")
+	}
+
+	if listOptions.Page > 0 {
+		sess = db.SetSessionPagination(sess, &listOptions)
+	}
+
+	return labels, sess.Find(&labels)
+}
+
 // GetLabelIDsByNames returns a list of labelIDs by names.
 // It doesn't filter them by repo or org, so it could return labels belonging to different repos/orgs.
 // It's used for filtering issues via indexer, otherwise it would be useless.
@@ -529,8 +566,20 @@ func GetLabelIDsByNames(ctx context.Context, labelNames []string) ([]int64, erro
 }
 
 // CountLabelsByOrgID count all labels that belong to given organization by ID.
-func CountLabelsByOrgID(ctx context.Context, orgID int64) (int64, error) {
-	return db.GetEngine(ctx).Where("org_id = ?", orgID).Count(&Label{})
+func CountLabelsByOrgID(ctx context.Context, orgID int64) (*OrgLabelCounts, error) {
+	counts := new(OrgLabelCounts)
+
+	_, err := db.GetEngine(ctx).SQL("SELECT " +
+	  "COUNT(CASE WHEN archived_unix = 0 THEN 1 END) AS active_count, " +
+		"COUNT(CASE WHEN archived_unix <> 0 THEN 1 END) AS archived_count " +
+		"FROM label " +
+		"WHERE org_id = ?", orgID).Get(counts);
+
+	if err != nil {
+		return nil, err
+	}
+
+	return counts, nil
 }
 
 func init() {

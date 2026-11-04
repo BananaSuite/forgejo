@@ -17,17 +17,30 @@ import (
 
 // RetrieveLabels find all the labels of an organization
 func RetrieveLabels(ctx *context.Context) {
-	labels, err := issues_model.GetLabelsByOrgID(ctx, ctx.Org.Organization.ID, ctx.FormString("sort"), db.ListOptions{})
+	isArchived := ctx.FormString("archived") == "true"
+
+	labels, err := issues_model.GetLabelsByOrgIDIsArchived(ctx, ctx.Org.Organization.ID, ctx.FormString("sort"), db.ListOptions{}, isArchived)
 	if err != nil {
 		ctx.ServerError("RetrieveLabels.GetLabels", err)
 		return
 	}
+
 	for _, l := range labels {
 		l.CalOpenIssues()
 	}
+
+	counts, errCount := issues_model.CountLabelsByOrgID(ctx, ctx.Org.Organization.ID)
+
+	if errCount != nil {
+		ctx.ServerError("RetrieveLabels.CountLabelsByOrgID", errCount)
+		return
+	}
+
 	ctx.Data["Labels"] = labels
 	ctx.Data["NumLabels"] = len(labels)
 	ctx.Data["SortType"] = ctx.FormString("sort")
+	ctx.Data["PageIsLabelsActive"] = !isArchived
+	ctx.Data["LabelCounts"] = counts
 }
 
 // NewLabel create new label for organization

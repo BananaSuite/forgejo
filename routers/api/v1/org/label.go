@@ -55,13 +55,13 @@ func ListLabels(ctx *context.APIContext) {
 		return
 	}
 
-	count, err := issues_model.CountLabelsByOrgID(ctx, ctx.Org().Organization.ID)
+	counts, err := issues_model.CountLabelsByOrgID(ctx, ctx.Org().Organization.ID)
 	if err != nil {
 		ctx.InternalServerError(err)
 		return
 	}
 
-	ctx.SetTotalCountHeader(count)
+	ctx.SetTotalCountHeader(counts.ActiveCount + counts.ArchivedCount)
 	ctx.JSON(http.StatusOK, convert.ToLabelList(labels, nil, ctx.Org().Organization.AsUser()))
 }
 
