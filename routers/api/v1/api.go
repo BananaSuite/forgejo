@@ -1335,9 +1335,9 @@ func Routes() *web.Route {
 			})
 			m.Group("/teams", func() {
 				m.Get("", org.ListTeams)
-				m.Post("", reqOrgOwnership(), bind(api.CreateTeamOption{}), org.CreateTeam)
+				m.Post("", reqToken(), reqOrgOwnership(), bind(api.CreateTeamOption{}), org.CreateTeam)
 				m.Get("/search", org.SearchTeam)
-			}, reqToken(), reqOrgMembership())
+			})
 			m.Group("/labels", func() {
 				m.Get("", org.ListLabels)
 				m.Post("", reqToken(), reqOrgOwnership(), bind(api.CreateLabelOption{}), org.CreateLabel)

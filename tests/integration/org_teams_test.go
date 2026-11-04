@@ -10,6 +10,7 @@ import (
 	"forgejo.org/models/organization"
 	access_model "forgejo.org/models/perm/access"
 	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/assert"
@@ -17,6 +18,10 @@ import (
 
 func TestOrgTeams(t *testing.T) {
 	defer tests.PrepareTestEnv(t)()
+
+	// org3 doesn't make its list of teams public
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 3, Type: user_model.UserTypeOrganization})
+	assert.False(t, org.VisibleTeams)
 
 	// not logged in user
 	req := NewRequest(t, "GET", "/org/org3/teams")
@@ -49,6 +54,41 @@ func TestOrgTeams(t *testing.T) {
 	doc = NewHTMLParser(t, session.MakeRequest(t, req, http.StatusOK).Body)
 	doc.AssertElement(t, "a[href^='/org/org3/teams/owners'].text.black", true)
 	doc.AssertElement(t, "a[href^='/org/org3/teams/team12creators'].text.black", true)
+}
+
+func TestOrgVisibleTeams(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	// org6 makes its list of teams public
+	org := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 6, Type: user_model.UserTypeOrganization})
+	assert.True(t, org.VisibleTeams)
+
+	t.Run("View publicly visible teams list as logged-out user", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		req := NewRequest(t, "GET", "/org/org6/teams")
+		doc := NewHTMLParser(t, MakeRequest(t, req, http.StatusOK).Body)
+
+		// the teams page is present in the header
+		doc.AssertElement(t, "a[href^='/org/org6/teams']", true)
+		// the owners team is listed, but not clickable, because its members list is not public
+		doc.AssertElement(t, "a[href^='/org/org6/teams/owners'].text.black", false)
+		doc.AssertElement(t, "strong:contains('Owners')", true)
+	})
+
+	t.Run("View publicly visible teams list as logged-in user but not org member", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		session := loginUser(t, "user2")
+		req := NewRequest(t, "GET", "/org/org6/teams")
+		doc := NewHTMLParser(t, session.MakeRequest(t, req, http.StatusOK).Body)
+
+		// the teams page is present in the header
+		doc.AssertElement(t, "a[href^='/org/org6/teams']", true)
+		// the owners team is listed, but not clickable, because its members list is not public
+		doc.AssertElement(t, "a[href^='/org/org6/teams/owners'].text.black", false)
+		doc.AssertElement(t, "strong:contains('Owners')", true)
+	})
 }
 
 func TestOrgTeamRemoveAllRepositories(t *testing.T) {

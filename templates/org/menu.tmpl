@@ -38,7 +38,7 @@
 			</a>
 			{{end}}
 			<span hidden test-name="member-count">{{.NumMembers}}</span>
-			{{if .IsOrganizationMember}}
+			{{if or .IsOrganizationMember .Org.VisibleTeams}}
 			<a class="{{if $.PageIsOrgTeams}}active {{end}}item" href="{{$.OrgLink}}/teams">
 				{{svg "octicon-people"}} {{ctx.Locale.Tr "org.teams"}}
 				{{if .NumTeams}}
