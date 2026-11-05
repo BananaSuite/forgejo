@@ -595,7 +595,7 @@ func TestPullCreatePrFromForkToFork(t *testing.T) {
 		testEditFileToNewBranch(t, sessionFork3, "user30", "repo1", "master", "my-patch", "README.md", "Hello, World (Edited)\n")
 
 		// As user30, go to the PR page of the first fork, belonging to user1
-		req := NewRequest(t, "GET", path.Join("user1", "repo1", "pulls"))
+		req := NewRequest(t, "GET", path.Join("user1", "repo1", "pulls", "new"))
 		resp := sessionFork3.MakeRequest(t, req, http.StatusOK)
 
 		// Check that the button to create PRs is enabled

@@ -67,6 +67,7 @@ const (
 	tplCompareDiff base.TplName = "repo/diff/compare"
 	tplPullCommits base.TplName = "repo/pulls/commits"
 	tplPullFiles   base.TplName = "repo/pulls/files"
+	tplPullAgit    base.TplName = "repo/pulls/agit"
 
 	pullRequestTemplateKey = "PullRequestTemplate"
 )
@@ -2081,4 +2082,25 @@ func SetCommitNotesPullRequest(ctx *context.Context) {
 
 func RemoveCommitNotesPullRequest(ctx *context.Context) {
 	removeCommitNotes(ctx, fmt.Sprintf("%s/pulls/%s/commits/%s", ctx.Repo.Repository.Link(), ctx.Params(":index"), ctx.Params(":sha")))
+}
+
+func NewAgitPullRequest(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.pulls.new")
+	ctx.Data["PageIsPullList"] = true
+
+	ctx.Data["PullRequestWorkInProgressPrefixes"] = setting.Repository.PullRequest.WorkInProgressPrefixes
+	ctx.Data["IsAttachmentEnabled"] = setting.Attachment.Enabled
+	upload.AddUploadContext(ctx, "comment")
+
+	_, templateErrs := setTemplateIfExists(ctx, pullRequestTemplateKey, pullRequestTemplateCandidates)
+	if len(templateErrs) > 0 {
+		ctx.Flash.Warning(renderErrorOfTemplates(ctx, templateErrs), true)
+	}
+
+	PrepareBranchList(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	ctx.HTML(http.StatusOK, tplPullAgit)
 }
