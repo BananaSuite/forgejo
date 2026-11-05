@@ -55,7 +55,7 @@
 					{{end}}
 				</button>
 			{{end}}
-			{{if and $.SignedUserID (not $.Repository.IsArchived)}}
+			{{if and $.SignedUserID (not $.Repository.IsArchived) (not $.IsBlocked)}}
 				<button class="comment-form-reply ui primary tiny labeled icon button">
 					{{svg "octicon-reply" 16 "reply icon tw-mr-1"}}{{ctx.Locale.Tr "repo.diff.comment.reply"}}
 				</button>

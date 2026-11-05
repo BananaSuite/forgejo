@@ -938,6 +938,10 @@ func CanMarkConversation(ctx context.Context, issue *Issue, doer *user_model.Use
 		if !permResult {
 			return false, nil
 		}
+
+		if user_model.IsBlocked(ctx, issue.PosterID, doer.ID) {
+			return false, nil
+		}
 	}
 
 	return true, nil
