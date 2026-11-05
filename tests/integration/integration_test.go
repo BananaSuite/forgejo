@@ -8,6 +8,7 @@ package integration
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"fmt"
 	"hash"
 	"hash/fnv"
@@ -302,10 +303,13 @@ func addAuthSource(t *testing.T, payload map[string]string) *auth.Source {
 }
 
 func authSourcePayloadOAuth2(name string) map[string]string {
+	clientID := rand.Text()
+
 	return map[string]string{
-		"type":      fmt.Sprintf("%d", auth.OAuth2),
-		"name":      name,
-		"is_active": "on",
+		"type":       fmt.Sprintf("%d", auth.OAuth2),
+		"name":       name,
+		"is_active":  "on",
+		"oauth2_key": clientID,
 	}
 }
 
