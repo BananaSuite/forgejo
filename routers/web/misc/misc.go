@@ -75,8 +75,9 @@ Disallow: /repo/migrate
 Disallow: /org/create
 Disallow: /*/*/fork
 
+Disallow: /*/*/action
 Disallow: /*/*/watchers
-Disallow: /*/*/stargazers
+Disallow: /*/*/stars
 Disallow: /*/*/forks
 
 Disallow: /*/*/src/
@@ -110,6 +111,30 @@ Disallow: /*/*/issues/new
 Disallow: /*/*/pulls/*/files
 Disallow: /*/*/pulls/*/commits
 
+Disallow: /*/*/issues/*/title
+Disallow: /*/*/issues/*/content
+Disallow: /*/*/issues/*/view-attachments
+Disallow: /*/*/issues/*/ref
+Disallow: /*/*/issues/request_review
+Disallow: /*/*/issues/comments
+Disallow: /*/*/issues/labels
+Disallow: /*/*/issues/milestone
+Disallow: /*/*/issues/projects
+Disallow: /*/*/issues/assignee
+Disallow: /*/*/issues/*/watch
+Disallow: /*/*/pulls/*/watch
+Disallow: /*/*/issues/*/times
+Disallow: /*/*/pulls/*/times
+Disallow: /*/*/issues/*/deadline
+Disallow: /*/*/issues/*/dependency
+Disallow: /*/*/pulls/*/dependency
+Disallow: /*/*/issues/*/pin
+Disallow: /*/*/pulls/*/pin
+Disallow: /*/*/issues/*/lock
+Disallow: /*/*/pulls/*/lock
+Disallow: /*/*/issues/*/delete
+Disallow: /*/*/pulls/*/delete
+
 Disallow: /attachments/
 Disallow: /*/*/attachments/
 Disallow: /*/*/issues/*/attachments/
@@ -124,12 +149,12 @@ Disallow: /*.diff$
 Disallow: /*.atom$
 Disallow: /*.rss$
 
-Disallow: /*lang=*
-Disallow: /*redirect_to=*
-Disallow: /*tab=*
-Disallow: /*q=*
-Disallow: /*sort=*
-Disallow: /*repo-search-archived=*
+Disallow: /*?*lang=*
+Disallow: /*?*redirect_to=*
+Disallow: /*?*tab=*
+Disallow: /*?*q=*
+Disallow: /*?*sort=*
+Disallow: /*?*repo-search-archived=*
 `)
 })
 
