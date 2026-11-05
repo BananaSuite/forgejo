@@ -653,6 +653,7 @@ func Routes() *web.Route {
 				m.Get("/api", settings.GetGeneralAPISettings)
 				m.Get("/attachment", settings.GetGeneralAttachmentSettings)
 				m.Get("/repository", settings.GetGeneralRepoSettings)
+				m.Get("/ssh", settings.GetGeneralSSHSettings)
 			})
 
 			m.Get("/actions/run", misc.GetActionsRun)

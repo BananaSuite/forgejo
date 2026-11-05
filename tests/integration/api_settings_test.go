@@ -61,4 +61,14 @@ func TestAPIExposedSettings(t *testing.T) {
 		MaxFiles:     setting.Attachment.MaxFiles,
 		MaxSize:      setting.Attachment.MaxSize,
 	}, attachment)
+
+	ssh := new(api.GeneralSSHSettings)
+	req = NewRequest(t, "GET", "/api/v1/settings/ssh")
+	resp = MakeRequest(t, req, http.StatusOK)
+
+	DecodeJSON(t, resp, &ssh)
+	assert.Equal(t, &api.GeneralSSHSettings{
+		Domain: setting.SSH.Domain,
+		Port:   setting.SSH.Port,
+	}, ssh)
 }

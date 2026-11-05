@@ -67,6 +67,29 @@ func GetGeneralRepoSettings(ctx *context.APIContext) {
 	})
 }
 
+// GetGeneralSSHSettings returns instance's global settings for SSH access
+func GetGeneralSSHSettings(ctx *context.APIContext) {
+	// swagger:operation GET /settings/ssh settings getGeneralSSHSettings
+	// ---
+	// summary: Get instance's global settings for SSH access
+	// produces:
+	// - application/json
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/GeneralSSHSettings"
+	//   "404":
+	//     "$ref": "#/responses/error"
+	//
+	if setting.SSH.Disabled {
+		ctx.Error(http.StatusNotFound, "getGeneralSSHSettings", "SSH is disabled")
+		return
+	}
+	ctx.JSON(http.StatusOK, api.GeneralSSHSettings{
+		Domain: setting.SSH.Domain,
+		Port:   setting.SSH.Port,
+	})
+}
+
 // GetGeneralAttachmentSettings returns instance's global settings for Attachment
 func GetGeneralAttachmentSettings(ctx *context.APIContext) {
 	// swagger:operation GET /settings/attachment settings getGeneralAttachmentSettings

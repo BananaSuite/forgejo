@@ -12,6 +12,13 @@ type swaggerResponseGeneralRepoSettings struct {
 	Body api.GeneralRepoSettings `json:"body"`
 }
 
+// GeneralSSHSettings
+// swagger:response GeneralSSHSettings
+type swaggerResponseGeneralSSHSettings struct {
+	// in:body
+	Body api.GeneralSSHSettings `json:"body"`
+}
+
 // GeneralUISettings
 // swagger:response GeneralUISettings
 type swaggerResponseGeneralUISettings struct {

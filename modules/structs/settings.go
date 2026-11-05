@@ -14,6 +14,14 @@ type GeneralRepoSettings struct {
 	LFSDisabled          bool `json:"lfs_disabled"`
 }
 
+// GeneralSSHSettings contains global SSH settings
+type GeneralSSHSettings struct {
+	// required: true
+	Domain string `json:"domain"`
+	// required: true
+	Port int `json:"port"`
+}
+
 // GeneralUISettings contains global ui settings exposed by API
 type GeneralUISettings struct {
 	DefaultTheme     string   `json:"default_theme"`
