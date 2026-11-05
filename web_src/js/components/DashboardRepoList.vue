@@ -73,7 +73,7 @@ export default {
 
   computed: {
     showMoreReposLink() {
-      return this.repos.length > 0 && this.repos.length < this.counts[`${this.reposFilter}:${this.archivedFilter}:${this.privateFilter}`];
+      return this.repos.length > 0 && this.finalPage > 1;
     },
     searchURL() {
       return `${this.subUrl}/repo/search?sort=updated&order=desc&uid=${this.uid}&team_id=${this.teamId}&q=${this.searchQuery
@@ -125,9 +125,7 @@ export default {
 
     changeReposFilter(filter) {
       this.reposFilter = filter;
-      this.repos = [];
       this.page = 1;
-      this.counts[`${filter}:${this.archivedFilter}:${this.privateFilter}`] = 0;
       this.searchRepos();
     },
 
@@ -187,8 +185,6 @@ export default {
         this.archivedFilter = 'unarchived';
       }
       this.page = 1;
-      this.repos = [];
-      this.counts[`${this.reposFilter}:${this.archivedFilter}:${this.privateFilter}`] = 0;
       this.searchRepos();
     },
 
@@ -201,12 +197,12 @@ export default {
         this.privateFilter = 'both';
       }
       this.page = 1;
-      this.repos = [];
-      this.counts[`${this.reposFilter}:${this.archivedFilter}:${this.privateFilter}`] = 0;
       this.searchRepos();
     },
 
-    changePage(page) {
+    async changePage(page) {
+      if (this.isLoading) return;
+
       this.page = page;
       if (this.page > this.finalPage) {
         this.page = this.finalPage;
@@ -214,9 +210,7 @@ export default {
       if (this.page < 1) {
         this.page = 1;
       }
-      this.repos = [];
-      this.counts[`${this.reposFilter}:${this.archivedFilter}:${this.privateFilter}`] = 0;
-      this.searchRepos();
+      await this.searchRepos();
     },
 
     async searchRepos() {
@@ -225,6 +219,7 @@ export default {
       const searchedMode = this.repoTypes[this.reposFilter].searchMode;
       const searchedURL = this.searchURL;
       const searchedQuery = this.searchQuery;
+      const key = `${this.reposFilter}:${this.archivedFilter}:${this.privateFilter}`;
 
       let response, json;
       try {
@@ -235,10 +230,14 @@ export default {
         }
 
         response = await GET(searchedURL);
+        if (!response.ok) throw new Error(`Invalid server response: ${response.status}`);
+
         json = await response.json();
       } catch {
         if (searchedURL === this.searchURL) {
           this.isLoading = false;
+          this.repos = [];
+          delete this.counts[key];
         }
         return;
       }
@@ -285,7 +284,7 @@ export default {
       return commitStatus[status].color;
     },
 
-    reposFilterKeyControl(e) {
+    async reposFilterKeyControl(e) {
       switch (e.key) {
         case 'Enter':
           document.querySelector('.repo-owner-name-list li.active a')?.click();
@@ -294,7 +293,7 @@ export default {
           if (this.activeIndex > 0) {
             this.activeIndex--;
           } else if (this.page > 1) {
-            this.changePage(this.page - 1);
+            await this.changePage(this.page - 1);
             this.activeIndex = this.searchLimit - 1;
           }
           break;
@@ -303,17 +302,17 @@ export default {
             this.activeIndex++;
           } else if (this.page < this.finalPage) {
             this.activeIndex = 0;
-            this.changePage(this.page + 1);
+            await this.changePage(this.page + 1);
           }
           break;
         case 'ArrowRight':
           if (this.page < this.finalPage) {
-            this.changePage(this.page + 1);
+            await this.changePage(this.page + 1);
           }
           break;
         case 'ArrowLeft':
           if (this.page > 1) {
-            this.changePage(this.page - 1);
+            await this.changePage(this.page - 1);
           }
           break;
       }
