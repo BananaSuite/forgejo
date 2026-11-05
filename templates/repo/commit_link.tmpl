@@ -1,6 +1,5 @@
-{{/* Expected inputs: .Repo (repository model), .CommitID (string), .Status, .Statuses */}}
-{{$isValid := (.Repo.IsCommitValid ctx .CommitID)}}
-{{if $isValid}}
+{{/* Expected inputs: .Repo (repository model), .CommitID (string), .Status, .Statuses, .IsValid */}}
+{{if .IsValid}}
 	<a class="ui sha" href="{{.Repo.CommitLink .CommitID}}">
 		<code>{{ShortSha .CommitID}}</code>
 	</a>

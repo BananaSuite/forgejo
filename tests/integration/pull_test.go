@@ -138,6 +138,7 @@ func TestPullViewConversation(t *testing.T) {
 		assert.Contains(t, forcePush.Find("span[data-tooltip-content]").Text(), "(unavailable)")
 		assert.Equal(t, "9b93963cf6", forcePush.Find("a.ui.sha[href='/user2/commitsonpr/commit/9b93963cf6de4dc33f915bb67f192d099c301f43'] code").Text())
 		assert.Contains(t, forcePush.Text(), "2025-06-")
+		assert.NotContains(t, forcePush.Text(), "Compare") // no compare button as one of the commits is invalid
 	})
 }
 

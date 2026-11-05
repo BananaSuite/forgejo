@@ -571,6 +571,8 @@
 				<span class="text grey muted-links">
 					{{if .IsForcePush}}
 						<span class="forced-push">
+							{{$isOldCommitValid := ($.Issue.Repo.IsCommitValid ctx .OldCommit)}}
+							{{$isNewCommitValid := ($.Issue.Repo.IsCommitValid ctx .NewCommit)}}
 							<span>
 								{{
 									ctx.Locale.Tr
@@ -582,17 +584,19 @@
 										"CommitID" .OldCommit
 										"Status" (index .Commits 0).Status
 										"Statuses" (index .Commits 0).Statuses
+										"IsValid" $isOldCommitValid
 									))
 									(ExecuteTemplate ctx "repo/commit_link" (dict
 										"Repo" $.Issue.Repo
 										"CommitID" .NewCommit
 										"Status" (index .Commits 1).Status
 										"Statuses" (index .Commits 1).Statuses
+										"IsValid" $isNewCommitValid
 									))
 									$createdStr
 								}}
 							</span>
-							{{if $.Issue.PullRequest.BaseRepo.Name}}
+							{{if and $.Issue.PullRequest.BaseRepo.Name $isOldCommitValid $isNewCommitValid}}
 								<span class="compare">
 									<a href="{{$.Issue.PullRequest.BaseRepo.Link}}/compare/{{PathEscape .OldCommit}}..{{PathEscape .NewCommit}}" rel="nofollow" class="ui compare label">{{ctx.Locale.Tr "repo.issues.force_push_compare"}}</a>
 								</span>
