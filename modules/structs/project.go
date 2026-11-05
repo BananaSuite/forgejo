@@ -3,17 +3,6 @@
 
 package structs
 
-type CreateOrUpdateProjectOptions struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	// TemplateType can be: "text_only" and "images_and_text"
-	TemplateType string `json:"template_type"`
-	// CardType can be: "text_only" and "images_and_text"
-	CardType string `json:"card_type"`
-	// Status can be: "open" and "closed"
-	Status string `json:"status"`
-}
-
 type Project struct {
 	ID          int64  `json:"id"`
 	Title       string `json:"title"`
@@ -28,6 +17,29 @@ type Project struct {
 	TemplateType string `json:"template_type"`
 	// CardType can be: "text_only" and "images_and_text"
 	CardType string `json:"card_type"`
+}
+
+type CreateOrUpdateProjectOptions struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	// TemplateType can be: "text_only" and "images_and_text"
+	TemplateType string `json:"template_type"`
+	// CardType can be: "text_only" and "images_and_text"
+	CardType string `json:"card_type"`
+	// Status can be: "open" and "closed"
+	Status string `json:"status"`
+}
+
+type ProjectIssue struct {
+	ID              int64 `json:"id"`
+	IssueID         int64 `json:"issue_id"`
+	ProjectID       int64 `json:"project_id"`
+	ProjectColumnID int64 `json:"project_column_id"`
+	Sorting         int64 `json:"sorting"`
+}
+
+type CreateProjectIssueOptions struct {
+	IssueID int64 `json:"issue_id"`
 }
 
 type MoveProjectIssue struct {

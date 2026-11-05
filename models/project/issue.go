@@ -6,6 +6,7 @@ package project
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 
 	"forgejo.org/models/db"
@@ -13,6 +14,12 @@ import (
 	"forgejo.org/modules/util"
 
 	"xorm.io/builder"
+)
+
+// Errors when moving ProjectIssues
+var (
+	ErrDuplicateIssuesInReorderRequest = errors.New("duplicate issue IDs in reorder request")
+	ErrNotAllIssuesInProject           = errors.New("all issues must belong to the specified project")
 )
 
 // ProjectIssue saves relation from issue to a project
@@ -54,6 +61,25 @@ func init() {
 	db.RegisterModel(new(ProjectIssue))
 }
 
+// ErrProjectIssueNotExist represents a "ErrProjectIssueNotExist" kind of error.
+type ErrProjectIssueNotExist struct {
+	IssueID int64
+}
+
+// IsErrProjectIssueNotExist checks if an error is a ErrProjectIssueNotExist
+func IsErrProjectIssueNotExist(err error) bool {
+	_, ok := errors.AsType[ErrProjectIssueNotExist](err)
+	return ok
+}
+
+func (err ErrProjectIssueNotExist) Error() string {
+	return fmt.Sprintf("project issue does not exist [id: %d]", err.IssueID)
+}
+
+func (err ErrProjectIssueNotExist) Unwrap() error {
+	return util.ErrNotExist
+}
+
 func deleteProjectIssuesByProjectID(ctx context.Context, projectID int64) error {
 	_, err := db.GetEngine(ctx).Where("project_id=?", projectID).Delete(&ProjectIssue{})
 	return err
@@ -87,6 +113,18 @@ func (p *Project) NumOpenIssues(ctx context.Context) int {
 	return int(c)
 }
 
+// GetProjectIssue fetches a ProjectIssue
+func GetProjectIssue(ctx context.Context, issueID int64) (*ProjectIssue, error) {
+	issue := new(ProjectIssue)
+	has, err := db.GetEngine(ctx).ID(issueID).Get(issue)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrProjectIssueNotExist{IssueID: issueID}
+	}
+	return issue, nil
+}
+
 // MoveIssuesOnProjectColumn moves or keeps issues in a column and sorts them inside that column.
 // The sortedIssueIDs map keys are sorting positions and values are issue IDs.
 // Cards not in the map that already exist in the target column are shifted to
@@ -105,7 +143,7 @@ func MoveIssuesOnProjectColumn(ctx context.Context, column *Column, sortedIssueI
 			sortingByIssue[issueID] = sorting
 		}
 		if len(sortingByIssue) != len(sortedIssueIDs) {
-			return errors.New("duplicate issue IDs in reorder request")
+			return ErrDuplicateIssuesInReorderRequest
 		}
 
 		// Validate all issues exist and belong to this project
@@ -116,7 +154,7 @@ func MoveIssuesOnProjectColumn(ctx context.Context, column *Column, sortedIssueI
 			return err
 		}
 		if int(count) != len(sortedIssueIDs) {
-			return errors.New("all issues must belong to the specified project")
+			return ErrNotAllIssuesInProject
 		}
 
 		// Sort issue IDs to ensure consistent lock ordering across concurrent transactions.

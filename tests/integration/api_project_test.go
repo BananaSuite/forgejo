@@ -13,8 +13,12 @@ import (
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
+	"forgejo.org/models/organization"
+	"forgejo.org/models/perm"
 	project_model "forgejo.org/models/project"
+	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 	project_module "forgejo.org/modules/project"
 	api "forgejo.org/modules/structs"
 	"forgejo.org/services/convert"
@@ -26,10 +30,12 @@ import (
 )
 
 type runOpts struct {
-	token     string
-	owner     string
-	repo      string
-	ownerType project_module.APIOwnerType
+	token         string
+	owner         string
+	repo          string
+	projectID     int64
+	shouldSucceed bool
+	ownerType     project_module.APIOwnerType
 }
 
 func getProjectAPIBaseString(opts *runOpts) string {
@@ -65,9 +71,43 @@ func getProject(t *testing.T, token, projectAPIBaseString string, pID int64, sta
 	return projectsIDEndpoint(t, token, "GET", projectAPIBaseString, pID, status)
 }
 
+func deleteProject(t *testing.T, token, projectAPIBaseString string, pID int64, status int) *httptest.ResponseRecorder {
+	return projectsIDEndpoint(t, token, "DELETE", projectAPIBaseString, pID, status)
+}
+
 func projectsIDEndpoint(t *testing.T, token, method, projectAPIBaseString string, pID int64, status int) *httptest.ResponseRecorder {
 	projectAPIString := fmt.Sprintf("%v/projects/%v", projectAPIBaseString, pID)
 	return requestWithAuth(t, token, method, projectAPIString, status)
+}
+
+// createProjectIssue creates an issue.
+func createProjectIssue(t *testing.T, runOpts *runOpts, columnID int64, issueName string) api.ProjectIssue {
+	// create issue
+	var issue api.Issue
+	resp := jsonRequestWithAuth(t, runOpts.token, "POST",
+		fmt.Sprintf("/api/v1/repos/%s/%s/issues", runOpts.owner, runOpts.repo),
+		http.StatusCreated,
+		&api.CreateIssueOption{
+			Body:  issueName,
+			Title: issueName,
+		},
+	)
+	DecodeJSON(t, resp, &issue)
+
+	// create project issue
+	var projectIssue api.ProjectIssue
+	endpoint := getProjectAPIBaseString(runOpts) + fmt.Sprintf("/projects/%d/columns/%d/issues", runOpts.projectID, columnID)
+	if columnID == 0 {
+		endpoint = getProjectAPIBaseString(runOpts) + fmt.Sprintf("/projects/%d/issues", runOpts.projectID)
+	}
+	resp = jsonRequestWithAuth(t, runOpts.token, "POST", endpoint,
+		http.StatusCreated,
+		&api.CreateProjectIssueOptions{
+			IssueID: issue.ID,
+		},
+	)
+	DecodeJSON(t, resp, &projectIssue)
+	return projectIssue
 }
 
 func requestWithAuth(
@@ -249,6 +289,20 @@ func TestProjectAPICRUD(t *testing.T) {
 			assert.Equal(t, project.TemplateType, projResp.TemplateType)
 			assert.Equal(t, project.CardType, projResp.CardType)
 
+			// Add issue to a project, to the default column
+			projectIssue1 := createProjectIssue(t,
+				&runOpts{
+					token:     writeToken,
+					owner:     tt.owner,
+					repo:      tt.repo,
+					projectID: project.ID,
+					ownerType: tt.ownerType,
+				}, 0, "TestIssue")
+
+			assert.NotZero(t, projectIssue1.ID)
+			assert.Equal(t, project.ID, projectIssue1.ProjectID)
+			assert.NotNil(t, projectIssue1.Sorting) // Sorting is zero by default, but "NOT NULL" according to DB model
+
 			// Update properties of a project
 			t.Run("Update properties of project", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
@@ -316,6 +370,23 @@ func TestProjectAPICRUD(t *testing.T) {
 				}
 			})
 
+			// List issues in a project
+			t.Run("List issues in a a project", func(t *testing.T) {
+				defer tests.PrintCurrentTest(t)()
+
+				var issueResp []*api.ProjectIssue
+				endpoint := fmt.Sprintf("%s/projects/%d/issues",
+					tt.baseURL, project.ID)
+				resp := requestWithAuth(t, readToken, "GET", endpoint, http.StatusOK)
+				DecodeJSON(t, resp, &issueResp)
+
+				if !slices.ContainsFunc(issueResp, func(p *api.ProjectIssue) bool {
+					return p.ID == projectIssue1.ID
+				}) {
+					t.Error("project issue not in project issue list")
+				}
+			})
+
 			// Remove project
 			t.Run("Remove project", func(t *testing.T) {
 				defer tests.PrintCurrentTest(t)()
@@ -330,4 +401,246 @@ func TestProjectAPICRUD(t *testing.T) {
 			})
 		})
 	}
+}
+
+func runProjectWriteActions(t *testing.T, runOpts *runOpts, projectOpts *api.CreateOrUpdateProjectOptions) {
+	projectAPIBaseString := getProjectAPIBaseString(runOpts)
+	endpoint := projectAPIBaseString + "/projects"
+	resp := jsonRequestWithAuth(t, runOpts.token, "POST", endpoint, NoExpectedStatus, projectOpts)
+	var proj *api.Project
+	if runOpts.shouldSucceed {
+		require.Equal(t, http.StatusCreated, resp.Code)
+		DecodeJSON(t, resp, &proj)
+		assert.Equal(t, projectOpts.Title, proj.Title)
+		deleteProject(t, runOpts.token, projectAPIBaseString, proj.ID, http.StatusNoContent)
+	} else {
+		assert.NotEqual(t, http.StatusCreated, resp.Code)
+	}
+}
+
+func runProjectReadActions(t *testing.T, opts *runOpts) {
+	projectAPIBaseString := getProjectAPIBaseString(opts)
+	resp := getProject(t, opts.token, projectAPIBaseString, opts.projectID, NoExpectedStatus)
+	if opts.shouldSucceed {
+		var proj *api.Project
+		assert.Equal(t, http.StatusOK, resp.Code)
+		DecodeJSON(t, resp, &proj)
+		assert.Equal(t, opts.projectID, proj.ID)
+	} else {
+		assert.NotEqual(t, http.StatusOK, resp.Code)
+	}
+}
+
+func TestProjectAPIPermissionHandling(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+	err := unittest.PrepareTestDatabase()
+	require.NoError(t, err)
+
+	// users and tokens
+	user1 := forgery.CreateUser(t, nil)
+	user2 := forgery.CreateUser(t, nil)
+
+	user2Session := loginUser(t, user2.Name)
+	user2WriteToken := getTokenForLoggedInUser(t,
+		user2Session,
+		auth_model.AccessTokenScopeWriteProject,
+		auth_model.AccessTokenScopeWriteOrganization,
+		auth_model.AccessTokenScopeWriteRepository,
+		auth_model.AccessTokenScopeWriteUser,
+		auth_model.AccessTokenScopeWriteIssue,
+	)
+	user2ReadToken := getTokenForLoggedInUser(t,
+		user2Session,
+		auth_model.AccessTokenScopeReadProject,
+		auth_model.AccessTokenScopeReadOrganization,
+		auth_model.AccessTokenScopeReadRepository,
+		auth_model.AccessTokenScopeReadUser,
+		auth_model.AccessTokenScopeReadIssue,
+	)
+
+	projectOpts := &api.CreateOrUpdateProjectOptions{
+		Title:        "Test Project",
+		Description:  "Test Project",
+		TemplateType: "none",
+		CardType:     "text_only",
+		Status:       "open",
+	}
+
+	t.Run("Private Org where User2 is owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		privUser2Org := forgery.CreateOrganisationWithOptions(t, user2,
+			&forgery.CreateOrganisationOptions{
+				Visibility: api.VisibleTypePrivate,
+			})
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         privUser2Org.Name,
+			shouldSucceed: true,
+			ownerType:     project_module.APIOwnerTypeOrganization,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Repo where User2 is owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user2Repo := forgery.CreateRepository(t, user2, nil)
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         user2.Name,
+			repo:          user2Repo.Name,
+			shouldSucceed: true,
+			ownerType:     project_module.APIOwnerTypeRepository,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Project where User2 is owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         user2.Name,
+			shouldSucceed: true,
+			ownerType:     project_module.APIOwnerTypeIndividual,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Private Org where User2 team member with write access", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		// private user1 org with user2 write access
+		privUser1Org := forgery.CreateOrganisationWithOptions(t, user1,
+			&forgery.CreateOrganisationOptions{
+				Visibility: api.VisibleTypePrivate,
+			})
+
+		privOrgTeamOpts := &forgery.CreateTeamOptions{
+			Name: "CanWriteProjects",
+			Mode: perm.AccessModeWrite,
+			Units: []*organization.TeamUnit{
+				{
+					OrgID:      privUser1Org.ID,
+					Type:       unit.TypeProjects,
+					AccessMode: perm.AccessModeWrite,
+				},
+			},
+			Members: []*user_model.User{user2},
+		}
+		forgery.CreateTeam(t, privUser1Org, privOrgTeamOpts)
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         privUser1Org.Name,
+			shouldSucceed: true,
+			ownerType:     project_module.APIOwnerTypeOrganization,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Repo where User2 is collaborator with read/write access", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user1Repo := forgery.CreateRepository(t, user1, &forgery.CreateRepositoryOptions{
+			Collaborators: map[*user_model.User]perm.AccessMode{
+				user2: perm.AccessModeWrite,
+			},
+		})
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         user1.Name,
+			repo:          user1Repo.Name,
+			shouldSucceed: true,
+			ownerType:     project_module.APIOwnerTypeRepository,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Repo where User2 is not owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user1Repo := forgery.CreateRepository(t, user1, nil)
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         user1.Name,
+			repo:          user1Repo.Name,
+			shouldSucceed: false,
+			ownerType:     project_module.APIOwnerTypeRepository,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+	})
+
+	t.Run("Repo where User2 is collaborator with read access", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user1Repo := forgery.CreateRepository(t, user1, &forgery.CreateRepositoryOptions{
+			Collaborators: map[*user_model.User]perm.AccessMode{
+				user2: perm.AccessModeRead,
+			},
+		})
+
+		// Run actions
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         user1.Name,
+			repo:          user1Repo.Name,
+			shouldSucceed: false,
+			ownerType:     project_module.APIOwnerTypeRepository,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+
+		user1Project := forgery.CreateProject(t, user1Repo, nil)
+		runOpts.projectID = user1Project.ID
+		runOpts.token = user2ReadToken
+		runOpts.shouldSucceed = true
+		runProjectReadActions(t, runOpts)
+	})
+
+	t.Run("Private Org where User2 is not member", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		privUser1Org := forgery.CreateOrganisationWithOptions(t, user1,
+			&forgery.CreateOrganisationOptions{
+				Visibility: api.VisibleTypePrivate,
+			})
+		runOpts := &runOpts{
+			token:         user2WriteToken,
+			owner:         privUser1Org.Name,
+			shouldSucceed: false,
+			ownerType:     project_module.APIOwnerTypeOrganization,
+		}
+		runProjectWriteActions(t, runOpts, projectOpts)
+		user1Project := forgery.CreateProject(t, privUser1Org, nil)
+		runOpts.token = user2ReadToken
+		runOpts.projectID = user1Project.ID
+		runProjectReadActions(t, runOpts)
+	})
+
+	t.Run("Project where User2 is not owner", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		privUser1Org := forgery.CreateOrganisationWithOptions(t, user1,
+			&forgery.CreateOrganisationOptions{
+				Visibility: api.VisibleTypePrivate,
+			})
+		delProj := forgery.CreateProject(t, privUser1Org, nil)
+		runOpts := &runOpts{
+			token:         user2ReadToken,
+			owner:         privUser1Org.Name,
+			shouldSucceed: false,
+			ownerType:     project_module.APIOwnerTypeOrganization,
+		}
+		baseString := getProjectAPIBaseString(runOpts)
+		deleteProject(t, user2WriteToken, baseString, delProj.ID, http.StatusForbidden)
+	})
 }
