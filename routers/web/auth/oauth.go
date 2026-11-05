@@ -48,6 +48,7 @@ import (
 	"github.com/markbates/goth/providers/fitbit"
 	"github.com/markbates/goth/providers/openidConnect"
 	"github.com/markbates/goth/providers/zoom"
+	"github.com/MicahParks/keyfunc/v3"
 	go_oauth2 "golang.org/x/oauth2"
 )
 
@@ -1180,6 +1181,103 @@ func SignInOAuthCallback(ctx *context.Context) {
 	}
 
 	handleOAuth2SignIn(ctx, authSource, u, gothUser)
+}
+
+type OAuthBackchannelLogoutArguments struct {
+	LogoutToken string `form:"logout_token" binding:"Required"`
+}
+
+type OAuthBackchannelLogoutClaims struct {
+	jwt.RegisteredClaims
+	Sid    string                    `json:"sid"`
+	Events map[string]map[string]any `json:"events"`
+	Nonce  *string                   `json:"nonce"`
+}
+
+type OpenIDConfigJWKsURI struct {
+	JwksURI string `json:"jwks_uri"`
+}
+
+func getProviderJwksURI(openIDAutoDiscoveryURL string) (string, error) {
+	res, err := http.Get(openIDAutoDiscoveryURL)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		return "", err
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	openIDConfig := &OpenIDConfigJWKsURI{}
+	err = json.Unmarshal(body, openIDConfig)
+	if err != nil {
+		return "", err
+	}
+
+	return openIDConfig.JwksURI, nil
+}
+
+func OAuthBackchannelLogout(ctx *context.Context) {
+	// Fetch the OIDC provider from goth
+	provider := ctx.Params(":provider")
+
+	p, ok := oauth2.GetProviderFromGothic(provider)
+	if !ok {
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+
+	oidcProvider, ok := p.(*openidConnect.Provider)
+	if !ok || oidcProvider.OpenIDConfig == nil {
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch the OpenID JWKs so we can verify the request
+	authSource, err := auth.GetActiveOAuth2SourceByName(ctx, provider)
+	if err != nil {
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+
+	source := authSource.Cfg.(*oauth2.Source)
+
+	jwksURI, err := getProviderJwksURI(source.OpenIDConnectAutoDiscoveryURL)
+	if err != nil {
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+
+	k, err := keyfunc.NewDefaultCtx(ctx, []string{jwksURI})
+	if err != nil {
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// Verify the request and parse out the claims
+	arguments := web.GetForm(ctx).(*OAuthBackchannelLogoutArguments)
+
+	claims := &OAuthBackchannelLogoutClaims{}
+	token, err := jwt.ParseWithClaims(arguments.LogoutToken, claims, k.Keyfunc,
+		jwt.WithValidMethods([]string{"RS256"}),
+		jwt.WithIssuer(oidcProvider.OpenIDConfig.Issuer),
+		jwt.WithAudience(oidcProvider.ClientKey),
+	)
+	if err != nil || token == nil {
+		log.Fatal("%w", err)
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("Session ID: %s", claims.Sid)
+
+	ctx.Status(http.StatusOK)
 }
 
 func claimValueToStringSet(claimValue any) container.Set[string] {

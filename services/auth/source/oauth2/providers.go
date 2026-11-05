@@ -162,6 +162,15 @@ func ClearProviders() {
 	goth.ClearProviders()
 }
 
+// GetProviderFromGothic fetches the provider with the specified name from the goth lib
+func GetProviderFromGothic(providerName string) (goth.Provider, bool) {
+	gothRWMutex.RLock()
+	defer gothRWMutex.RUnlock()
+
+	p, ok := goth.GetProviders()[providerName]
+	return p, ok
+}
+
 var ErrAuthSourceNotActivated = errors.New("auth source is not activated")
 
 // used to create different types of goth providers

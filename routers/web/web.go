@@ -900,6 +900,7 @@ func registerRoutes(m *web.Route) {
 		m.Group("/oauth2", func() {
 			m.Get("/{provider}", auth.SignInOAuth)
 			m.Get("/{provider}/callback", auth.SignInOAuthCallback)
+			m.Post("/{provider}/backchannel_logout", web.Bind(auth.OAuthBackchannelLogoutArguments{}), auth.OAuthBackchannelLogout)
 		})
 	})
 	// ***** END: User *****

@@ -119,6 +119,8 @@ require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	git.sr.ht/~mariusor/go-xsd-duration v0.0.0-20220703122237-02e73435a078 // indirect
+	github.com/MicahParks/jwkset v0.11.4 // indirect
+	github.com/MicahParks/keyfunc/v3 v3.9.1 // indirect
 	github.com/RoaringBitmap/roaring v1.9.4 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.14.5 // indirect
 	github.com/STARRY-S/zip v0.2.3 // indirect
