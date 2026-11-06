@@ -918,11 +918,10 @@ func CanMarkConversation(ctx context.Context, issue *Issue, doer *user_model.Use
 		return false, errors.New("issue or doer is nil")
 	}
 
+	if err = issue.LoadRepo(ctx); err != nil {
+		return false, err
+	}
 	if doer.ID != issue.PosterID {
-		if err = issue.LoadRepo(ctx); err != nil {
-			return false, err
-		}
-
 		p, err := access_model.GetUserRepoPermission(ctx, issue.Repo, doer)
 		if err != nil {
 			return false, err
@@ -944,7 +943,7 @@ func CanMarkConversation(ctx context.Context, issue *Issue, doer *user_model.Use
 		}
 	}
 
-	return true, nil
+	return user_model.IsBlocked(ctx, issue.Repo.OwnerID, doer.ID), nil
 }
 
 // DeleteReview delete a review and it's code comments

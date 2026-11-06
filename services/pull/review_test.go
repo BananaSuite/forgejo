@@ -47,3 +47,20 @@ func TestDismissReview(t *testing.T) {
 	require.Error(t, err)
 	assert.True(t, pull_service.IsErrDismissRequestOnClosedPR(err))
 }
+
+func TestCreateCodeCommentKnownReviewID_BlockedUser(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	issue := unittest.AssertExistsAndLoadBean(t, &issues_model.Issue{ID: 2})
+	assert.NoError(t, issue.LoadRepo(t.Context()))
+
+	require.NoError(t, issue.LoadRepo(db.DefaultContext))
+	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	blockedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+
+	assert.NoError(t, db.Insert(t.Context(), &user_model.BlockedUser{UserID: owner.ID, BlockID: blockedUser.ID}))
+
+	_, err := pull_service.CreateCodeCommentKnownReviewID(t.Context(), blockedUser, issue.Repo, issue, "test", "", "", "", 12, 1, 1, []string{})
+
+	assert.ErrorIs(t, err, user_model.ErrBlockedByUser)
+}
