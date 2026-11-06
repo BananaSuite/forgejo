@@ -47,10 +47,37 @@ func gitFsck(ctx context.Context, logger log.Logger, autofix bool) error {
 		if err != nil {
 			logger.Warn("%s is broken: %v", p, err)
 			broken++
+
+			if autofix {
+				err := git.NewCommand(ctx, "-c", "core.commitGraph=false", "fsck", "--full", "--no-dangling").Run(&git.RunOpts{
+					Dir: p,
+				})
+				if err != nil {
+					logger.Error("%s has errors outside of commitGraph: %v", p, err)
+					continue
+				}
+
+				err = git.WriteCommitGraph(ctx, p)
+				if err != nil {
+					logger.Error("%s could not write commit-graph: %v", p, err)
+					continue
+				}
+
+				err = cmd.Run(&git.RunOpts{
+					Dir: p,
+				})
+				if err != nil {
+					logger.Error("%s reparation did not succeed: %v", p, err)
+					continue
+				}
+
+				logger.Info("%s has been repaired", p)
+				broken--
+			}
 		}
 	}
 	if broken > 0 {
-		return fmt.Errorf("%d repositories are broken", broken)
+		return fmt.Errorf("%d git repositories are broken", broken)
 	}
 	return nil
 }
