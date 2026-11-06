@@ -498,9 +498,9 @@ func TestCanMarkConversation_BlockedUser(t *testing.T) {
 	owner := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	blockedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
 
-	assert.NoError(t, db.Insert(t.Context(), &user_model.BlockedUser{UserID: owner.ID, BlockID: blockedUser.ID}))
+	require.NoError(t, db.Insert(t.Context(), &user_model.BlockedUser{UserID: owner.ID, BlockID: blockedUser.ID}))
 
 	permResult, err := issues_model.CanMarkConversation(t.Context(), issue, blockedUser)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, permResult)
 }
