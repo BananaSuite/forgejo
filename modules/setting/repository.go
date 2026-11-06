@@ -68,7 +68,7 @@ var (
 		// Repository editor settings
 		Editor struct {
 			LineWrapExtensions []string
-		} `ini:"-"`
+		} `ini:"repository.editor"`
 
 		// Repository upload settings
 		Upload struct {
@@ -77,12 +77,12 @@ var (
 			AllowedTypes string
 			FileMaxSize  int64
 			MaxFiles     int
-		} `ini:"-"`
+		} `ini:"repository.upload"`
 
 		// Repository local settings
 		Local struct {
 			LocalCopyPath string
-		} `ini:"-"`
+		} `ini:"repository.local"`
 
 		// Pull request settings
 		PullRequest struct {
@@ -318,14 +318,6 @@ func loadRepositoryFrom(rootCfg ConfigProvider) error {
 
 	if err = sec.MapTo(&Repository); err != nil {
 		return fmt.Errorf("Failed to map Repository settings: %v", err)
-	} else if err = rootCfg.Section("repository.editor").MapTo(&Repository.Editor); err != nil {
-		return fmt.Errorf("Failed to map Repository.Editor settings: %v", err)
-	} else if err = rootCfg.Section("repository.upload").MapTo(&Repository.Upload); err != nil {
-		return fmt.Errorf("Failed to map Repository.Upload settings: %v", err)
-	} else if err = rootCfg.Section("repository.local").MapTo(&Repository.Local); err != nil {
-		return fmt.Errorf("Failed to map Repository.Local settings: %v", err)
-	} else if err = rootCfg.Section("repository.pull-request").MapTo(&Repository.PullRequest); err != nil {
-		return fmt.Errorf("Failed to map Repository.PullRequest settings: %v", err)
 	}
 
 	if !rootCfg.Section("packages").Key("ENABLED").MustBool(Packages.Enabled) {
