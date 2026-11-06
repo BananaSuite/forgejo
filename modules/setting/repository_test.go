@@ -14,8 +14,24 @@ import (
 )
 
 func TestSSHInstanceKey(t *testing.T) {
-	sshSigningKeyPath, err := filepath.Abs("../../tests/integration/ssh-signing-key.pub")
-	require.NoError(t, err)
+	t.Run("Default value", func(t *testing.T) {
+		cfg, err := NewConfigProviderFromData(`
+[repository.signing]
+FORMAT = ssh
+`)
+		require.NoError(t, err)
+		require.Error(t, loadRepositoryFrom(cfg))
+	})
+
+	t.Run("No value", func(t *testing.T) {
+		cfg, err := NewConfigProviderFromData(`
+[repository.signing]
+FORMAT = ssh
+SIGNING_KEY =
+`)
+		require.NoError(t, err)
+		require.Error(t, loadRepositoryFrom(cfg))
+	})
 
 	t.Run("None value", func(t *testing.T) {
 		cfg, err := NewConfigProviderFromData(`
@@ -24,24 +40,22 @@ FORMAT = ssh
 SIGNING_KEY = none
 `)
 		require.NoError(t, err)
-
-		loadRepositoryFrom(cfg)
-
-		assert.Nil(t, SSHInstanceKey)
+		require.Error(t, loadRepositoryFrom(cfg))
 	})
 
-	t.Run("No value", func(t *testing.T) {
+	t.Run("Key does not exist", func(t *testing.T) {
 		cfg, err := NewConfigProviderFromData(`
 [repository.signing]
 FORMAT = ssh
+SIGNING_KEY = /file/does/not/exist
 `)
 		require.NoError(t, err)
-
-		loadRepositoryFrom(cfg)
-
-		assert.Nil(t, SSHInstanceKey)
+		require.Error(t, loadRepositoryFrom(cfg))
 	})
+
 	t.Run("Normal", func(t *testing.T) {
+		sshSigningKeyPath, err := filepath.Abs("../../tests/integration/ssh-signing-key.pub")
+		require.NoError(t, err)
 		iniStr := fmt.Sprintf(`
 [repository.signing]
 FORMAT = ssh
@@ -49,8 +63,7 @@ SIGNING_KEY = %s
 `, sshSigningKeyPath)
 		cfg, err := NewConfigProviderFromData(iniStr)
 		require.NoError(t, err)
-
-		loadRepositoryFrom(cfg)
+		require.NoError(t, loadRepositoryFrom(cfg))
 
 		assert.NotNil(t, SSHInstanceKey)
 		assert.Equal(t, "ssh-ed25519", SSHInstanceKey.Type())
