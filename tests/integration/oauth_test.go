@@ -2429,7 +2429,7 @@ func TestSignOutRedirectOAuth(t *testing.T) {
 
 		u, err := url.Parse(test.RedirectURL(resp))
 		require.NoError(t, err)
-		expectedValues := url.Values{"post_logout_redirect_uri": []string{setting.AppURL}, "client_id": []string{authPayload["oauth2_key"]}}
+		expectedValues := url.Values{"client_id": []string{authPayload["oauth2_key"]}}
 		assert.Equal(t, expectedValues, u.Query())
 		u.RawQuery = ""
 		assert.Equal(t, mockServer.URL+"/logout", u.String())
