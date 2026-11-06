@@ -30,7 +30,7 @@
 					{{if ne $idx 0}}
 						<div class="divider"></div>
 					{{end}}
-					{{$isPublic := index $.MembersIsPublicMember .ID}}
+					{{$isPublic := or (index $.MembersIsPublicMember .ID) $.Org.VisibleMembers}}
 					<a href="{{.HomeLink}}">{{ctx.AvatarUtils.Avatar . 48}}</a>
 					<div>
 						<h3>

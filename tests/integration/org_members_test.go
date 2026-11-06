@@ -34,6 +34,8 @@ func TestOrgMembersPage(t *testing.T) {
 		/* No interactive buttons - though such evaluation is easy to break in rename */
 		assert.Equal(t, 0, doc.Find(".members .list .link-action").Length())
 		assert.Equal(t, 0, doc.Find(".members .list .delete-button").Length())
+		// no hidden member is included in the list
+		doc.AssertElement(t, ".members .list span:contains('Hidden')", false)
 		/* Guests cannot add members to organizations */
 		doc.AssertElement(t, "#add-org-member-button", false)
 	})
@@ -60,6 +62,8 @@ func TestOrgMembersPage(t *testing.T) {
 		doc.AssertElement(t, ".empty-placeholder", false)
 		// both members are still listed in the members list
 		assert.Equal(t, 2, doc.Find(".members .list h3").Length())
+		// no hidden member is included in the list
+		doc.AssertElement(t, ".members .list span:contains('Hidden')", false)
 	})
 
 	t.Run("Member PoV", func(t *testing.T) {
@@ -70,6 +74,8 @@ func TestOrgMembersPage(t *testing.T) {
 		/* Interactive buttons are only available for own entry in the list */
 		assert.Equal(t, 1, doc.Find(".members .list .link-action").Length())
 		assert.Equal(t, 1, doc.Find(".members .list .delete-button").Length())
+		// some hidden member is included in the list (the amount depends on whether a previous sub-test was run)
+		assert.LessOrEqual(t, 1, doc.Find(".members .list span:contains('Hidden')").Length())
 		/* Adding new members is not possible, as the member isn't an owner */
 		doc.AssertElement(t, "#add-org-member-button", false)
 	})
