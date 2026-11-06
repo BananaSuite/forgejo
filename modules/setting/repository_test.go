@@ -53,6 +53,19 @@ SIGNING_KEY = /file/does/not/exist
 		require.Error(t, loadRepositoryFrom(cfg))
 	})
 
+	t.Run("Not a public SSH key", func(t *testing.T) {
+		sshSigningKeyPath, err := filepath.Abs("../../tests/integration/ssh-signing-key")
+		require.NoError(t, err)
+		iniStr := fmt.Sprintf(`
+[repository.signing]
+FORMAT = ssh
+SIGNING_KEY = %s
+`, sshSigningKeyPath)
+		cfg, err := NewConfigProviderFromData(iniStr)
+		require.NoError(t, err)
+		require.Error(t, loadRepositoryFrom(cfg))
+	})
+
 	t.Run("Normal", func(t *testing.T) {
 		sshSigningKeyPath, err := filepath.Abs("../../tests/integration/ssh-signing-key.pub")
 		require.NoError(t, err)
