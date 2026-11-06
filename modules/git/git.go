@@ -249,6 +249,13 @@ func syncGitConfig() (err error) {
 	if err := configSet("core.commitGraph", "true"); err != nil {
 		return err
 	}
+
+	// in git 2.54.0 geometric became the default strategy
+	// however this mess up the commitGraph
+	// https://codeberg.org/forgejo/forgejo/issues/15141
+	if err := configSet("maintenance.strategy", "gc"); err != nil {
+		return err
+	}
 	if err := configSet("gc.writeCommitGraph", "true"); err != nil {
 		return err
 	}
