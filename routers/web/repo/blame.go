@@ -71,7 +71,7 @@ func RefBlame(ctx *context.Context) {
 	ctx.Data["BranchLink"] = ctx.Repo.RepoLink + "/src/" + ctx.Repo.BranchNameSubURL()
 	// Blame doesn't "support" Git LFS; it makes sense to show the "raw" version of
 	// the content that is otherwise visible as-is to the user.
-	ctx.Data["RawFileLink"] = ctx.Repo.RepoLink + "/raw/" + ctx.Repo.BranchNameSubURL() + "/" + util.PathEscapeSegments(ctx.Repo.TreePath)
+	ctx.Data["TargetFileLink"] = ctx.Repo.RepoLink + "/raw/" + ctx.Repo.BranchNameSubURL() + "/" + util.PathEscapeSegments(ctx.Repo.TreePath)
 	ctx.Data["Paths"] = paths
 	ctx.Data["TreeNames"] = treeNames
 
