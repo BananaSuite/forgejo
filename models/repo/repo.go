@@ -337,12 +337,17 @@ func (repo *Repository) LoadAttributes(ctx context.Context) error {
 
 // FullName returns the repository full name
 func (repo *Repository) FullName() string {
-	return repo.OwnerName + "/" + repo.Name
+	return url.PathEscape(repo.OwnerName) + "/" + url.PathEscape(repo.Name)
+}
+
+// SubURL returns the repository sub URL
+func (repo *Repository) SubURL() string {
+	return setting.AppSubURL + "/" + repo.FullName()
 }
 
 // HTMLURL returns the repository HTML URL
 func (repo *Repository) HTMLURL() string {
-	return setting.AppURL + url.PathEscape(repo.OwnerName) + "/" + url.PathEscape(repo.Name)
+	return setting.AppURL + "/" + repo.FullName()
 }
 
 // SummaryCardURL returns the absolute URL to an image providing a summary of the repo

@@ -52,7 +52,7 @@ const (
 )
 
 // setCompareContext sets context data.
-func setCompareContext(ctx *context.Context, before, head *git.Commit, headOwner, headName string) {
+func setCompareContext(ctx *context.Context, before, head *git.Commit, headRepo *repo_model.Repository) {
 	ctx.Data["BeforeCommit"] = before
 	ctx.Data["HeadCommit"] = head
 	ctx.Data["SignInLink"] = setting.AppSubURL + "/user/login?redirect_to=" + url.QueryEscape(ctx.Data["Link"].(string))
@@ -84,34 +84,34 @@ func setCompareContext(ctx *context.Context, before, head *git.Commit, headOwner
 		return *fileInfo
 	}
 
-	setPathsCompareContext(ctx, before, head, headOwner, headName)
+	setPathsCompareContext(ctx, before, head, headRepo)
 	setImageCompareContext(ctx)
 	setCsvCompareContext(ctx)
 }
 
 // SourceCommitURL creates a relative URL for a commit in the given repository
-func SourceCommitURL(owner, name string, commit *git.Commit) string {
-	return setting.AppSubURL + "/" + url.PathEscape(owner) + "/" + url.PathEscape(name) + "/src/commit/" + url.PathEscape(commit.ID.String())
+func SourceCommitURL(repo *repo_model.Repository, commit *git.Commit) string {
+	return repo.SubURL() + "/src/commit/" + url.PathEscape(commit.ID.String())
 }
 
 // RawCommitURL creates a relative URL for the raw commit in the given repository
-func RawCommitURL(owner, name string, commit *git.Commit) string {
-	return setting.AppSubURL + "/" + url.PathEscape(owner) + "/" + url.PathEscape(name) + "/raw/commit/" + url.PathEscape(commit.ID.String())
+func RawCommitURL(repo *repo_model.Repository, commit *git.Commit) string {
+	return repo.SubURL() + "/raw/commit/" + url.PathEscape(commit.ID.String())
 }
 
 // MediaCommitURL gets the relative URL for the commit in the given repository
 // (with LFS support where necessary)
-func MediaCommitURL(owner, name string, commit *git.Commit) string {
-	return setting.AppSubURL + "/" + url.PathEscape(owner) + "/" + url.PathEscape(name) + "/media/commit/" + url.PathEscape(commit.ID.String())
+func MediaCommitURL(repo *repo_model.Repository, commit *git.Commit) string {
+	return repo.SubURL() + "/media/commit/" + url.PathEscape(commit.ID.String())
 }
 
 // setPathsCompareContext sets context data for source and raw paths
-func setPathsCompareContext(ctx *context.Context, base, head *git.Commit, headOwner, headName string) {
-	ctx.Data["SourcePath"] = SourceCommitURL(headOwner, headName, head)
-	ctx.Data["MediaPath"] = MediaCommitURL(headOwner, headName, head)
+func setPathsCompareContext(ctx *context.Context, base, head *git.Commit, headRepo *repo_model.Repository) {
+	ctx.Data["SourcePath"] = SourceCommitURL(headRepo, head)
+	ctx.Data["MediaPath"] = MediaCommitURL(headRepo, head)
 	if base != nil {
-		ctx.Data["BeforeSourcePath"] = SourceCommitURL(headOwner, headName, base)
-		ctx.Data["BeforeMediaPath"] = MediaCommitURL(headOwner, headName, base)
+		ctx.Data["BeforeSourcePath"] = SourceCommitURL(headRepo, base)
+		ctx.Data["BeforeMediaPath"] = MediaCommitURL(headRepo, base)
 	}
 }
 
@@ -698,7 +698,7 @@ func PrepareCompareDiff(
 	ctx.Data["Username"] = ci.HeadUser.Name
 	ctx.Data["Reponame"] = ci.HeadRepo.Name
 
-	setCompareContext(ctx, beforeCommit, headCommit, ci.HeadUser.Name, ci.HeadRepo.Name)
+	setCompareContext(ctx, beforeCommit, headCommit, ci.HeadRepo)
 
 	return false
 }

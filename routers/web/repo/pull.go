@@ -1202,7 +1202,7 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		}
 	}
 
-	setCompareContext(ctx, baseCommit, headCommit, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+	setCompareContext(ctx, baseCommit, headCommit, ctx.Repo.Repository)
 
 	assigneeUsers, err := repo_model.GetRepoAssignees(ctx, ctx.Repo.Repository)
 	if err != nil {

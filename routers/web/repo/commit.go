@@ -401,7 +401,7 @@ func Diff(ctx *context.Context) {
 			return
 		}
 	}
-	setCompareContext(ctx, parentCommit, commit, userName, repoName)
+	setCompareContext(ctx, parentCommit, commit, ctx.Repo.Repository)
 	ctx.Data["Title"] = commit.Summary() + " · " + base.ShortSha(commitID)
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff
