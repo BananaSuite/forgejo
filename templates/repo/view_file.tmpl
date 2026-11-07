@@ -53,7 +53,10 @@
 					{{if .SymlinkURL}}
 						<a class="ui mini basic button" href="{{$.SymlinkURL}}" data-kind="follow-symlink">{{ctx.Locale.Tr "repo.file_follow"}}</a>
 					{{end}}
-					<a class="ui mini basic button" href="{{$.TargetFileLink}}">{{ctx.Locale.Tr "repo.file_raw"}}</a>
+					{{if .RawFileLink}}
+						<a class="ui mini basic button" href="{{$.RawFileLink}}" data-test-name="pointer">{{ctx.Locale.Tr "repo.file_raw.lfs_pointer"}}</a>
+					{{end}}
+					<a class="ui mini basic button" href="{{$.TargetFileLink}}" data-test-name="media">{{ctx.Locale.Tr "repo.file_raw"}}</a>
 					{{if not .IsViewCommit}}
 						<a class="ui mini basic button" href="{{.RepoLink}}/src/commit/{{PathEscape .CommitID}}/{{PathEscapeSegments .TreePath}}">{{ctx.Locale.Tr "repo.file_permalink"}}</a>
 					{{end}}

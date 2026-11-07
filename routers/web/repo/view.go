@@ -240,6 +240,7 @@ func renderReadmeFile(ctx *context.Context, subfolder string, readmeFile *git.Tr
 
 	if fInfo.IsLFSFile {
 		filenameBase64 := base64.RawURLEncoding.EncodeToString([]byte(readmeFile.Name()))
+		ctx.Data["RawFileLink"] = ctx.Repo.RepoLink + "/raw/" + ctx.Repo.BranchNameSubURL() + "/" + util.PathEscapeSegments(ctx.Repo.TreePath)
 		ctx.Data["TargetFileLink"] = fmt.Sprintf("%s.git/info/lfs/objects/%s/%s", ctx.Repo.Repository.Link(), url.PathEscape(fInfo.LfsMeta.Oid), url.PathEscape(filenameBase64))
 	}
 
@@ -412,6 +413,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry) {
 	// contents of the pointer and not the contents of the Git LFS file that the
 	// pointer points at.
 	if fInfo.IsLFSFile && setting.LFS.StartServer {
+		ctx.Data["RawFileLink"] = ctx.Repo.RepoLink + "/raw/" + ctx.Repo.BranchNameSubURL() + "/" + util.PathEscapeSegments(ctx.Repo.TreePath)
 		ctx.Data["TargetFileLink"] = ctx.Repo.RepoLink + "/media/" + ctx.Repo.BranchNameSubURL() + "/" + util.PathEscapeSegments(ctx.Repo.TreePath)
 	}
 
