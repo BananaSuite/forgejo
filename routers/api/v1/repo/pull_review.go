@@ -366,6 +366,10 @@ func CreatePullReviewComment(ctx *context.APIContext) {
 		nil,
 	)
 	if err != nil {
+		if errors.Is(err, user_model.ErrBlockedByUser) {
+			ctx.Error(http.StatusUnauthorized, err.Error(), err)
+			return
+		}
 		ctx.InternalServerError(err)
 		return
 	}
