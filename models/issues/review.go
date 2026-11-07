@@ -939,7 +939,7 @@ func CanMarkConversation(ctx context.Context, issue *Issue, doer *user_model.Use
 		}
 	}
 
-	return user_model.IsBlockedMultiple(ctx, []int64{issue.PosterID, issue.Repo.OwnerID}, doer.ID), nil
+	return !user_model.IsBlockedMultiple(ctx, []int64{issue.PosterID, issue.Repo.OwnerID}, doer.ID), nil
 }
 
 // DeleteReview delete a review and it's code comments
