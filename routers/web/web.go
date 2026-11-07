@@ -1023,8 +1023,8 @@ func registerRoutes(m *web.Route) {
 			m.Get("", admin.RedirectToDefaultSetting)
 			addSettingsRunnersRoutes()
 			addSettingsVariablesRoutes()
-			m.Get("/tasks", admin.ActionsTasks)
-			m.Get("/jobs", admin.ActionsJobs)
+			m.Get("/past-tasks", admin.ActionsPastTasks)
+			m.Get("/pending-active-tasks", admin.ActionsActiveTasks)
 		})
 
 		if setting.Moderation.Enabled {

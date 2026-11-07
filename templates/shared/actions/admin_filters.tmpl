@@ -1,0 +1,75 @@
+{{/* Filters of the admin lists "Pending/active tasks" and "Past tasks", in the style of the Actor and Status filters on the actions page of a repository. */}}
+<div class="ui secondary filter menu tw-justify-end tw-flex tw-flex-wrap tw-items-center">
+	<!-- Status -->
+	<div id="status_dropdown" class="ui dropdown jump item">
+		<span class="text">{{ctx.Locale.Tr "actions.runs.status"}}</span>
+		{{svg "octicon-triangle-down" 14 "dropdown icon"}}
+		<div class="menu">
+			<div class="ui icon search input">
+				<i class="icon">{{svg "octicon-search"}}</i>
+				<input type="text" placeholder="{{ctx.Locale.Tr "actions.runs.status"}}">
+			</div>
+			<a class="item{{if not $.CurStatus}} active{{end}}" href="?status=0&label={{$.CurLabel}}&repo={{$.CurRepo}}&period={{$.CurPeriod}}">
+				{{ctx.Locale.Tr "actions.runs.status_no_select"}}
+			</a>
+			{{range .StatusOptions}}
+				<a class="item{{if eq .Status $.CurStatus}} active{{end}}" href="?status={{.Status}}&label={{$.CurLabel}}&repo={{$.CurRepo}}&period={{$.CurPeriod}}">
+					{{.Name}}
+				</a>
+			{{end}}
+		</div>
+	</div>
+	<!-- Labels -->
+	<div id="label_dropdown" class="ui{{if not .LabelOptions}} disabled{{end}} dropdown jump item">
+		<span class="text">{{ctx.Locale.Tr "actions.runners.labels"}}</span>
+		{{svg "octicon-triangle-down" 14 "dropdown icon"}}
+		<div class="menu">
+			<div class="ui icon search input">
+				<i class="icon">{{svg "octicon-search"}}</i>
+				<input type="text" placeholder="{{ctx.Locale.Tr "actions.runners.labels"}}">
+			</div>
+			<a class="item{{if not $.CurLabel}} active{{end}}" href="?status={{$.CurStatus}}&label=&repo={{$.CurRepo}}&period={{$.CurPeriod}}">
+				{{ctx.Locale.Tr "actions.filter.labels_no_select"}}
+			</a>
+			{{range .LabelOptions}}
+				<a class="item{{if eq . $.CurLabel}} active{{end}}" href="?status={{$.CurStatus}}&label={{.}}&repo={{$.CurRepo}}&period={{$.CurPeriod}}">
+					{{.}}
+				</a>
+			{{end}}
+		</div>
+	</div>
+	<!-- Repository -->
+	<div id="repo_dropdown" class="ui{{if not .RepoOptions}} disabled{{end}} dropdown jump item">
+		<span class="text">{{ctx.Locale.Tr "actions.runners.task_list.repository"}}</span>
+		{{svg "octicon-triangle-down" 14 "dropdown icon"}}
+		<div class="menu">
+			<div class="ui icon search input">
+				<i class="icon">{{svg "octicon-search"}}</i>
+				<input type="text" placeholder="{{ctx.Locale.Tr "actions.runners.task_list.repository"}}">
+			</div>
+			<a class="item{{if not $.CurRepo}} active{{end}}" href="?status={{$.CurStatus}}&label={{$.CurLabel}}&repo=0&period={{$.CurPeriod}}">
+				{{ctx.Locale.Tr "actions.filter.repos_no_select"}}
+			</a>
+			{{range .RepoOptions}}
+				<a class="item{{if eq .ID $.CurRepo}} active{{end}}" href="?status={{$.CurStatus}}&label={{$.CurLabel}}&repo={{.ID}}&period={{$.CurPeriod}}">
+					{{.FullName}}
+				</a>
+			{{end}}
+		</div>
+	</div>
+	<!-- Created or Done at -->
+	<div id="period_dropdown" class="ui dropdown jump item">
+		<span class="text">{{.PeriodTitle}}</span>
+		{{svg "octicon-triangle-down" 14 "dropdown icon"}}
+		<div class="menu">
+			<a class="item{{if not $.CurPeriod}} active{{end}}" href="?status={{$.CurStatus}}&label={{$.CurLabel}}&repo={{$.CurRepo}}&period=">
+				{{ctx.Locale.Tr "actions.filter.period_no_select"}}
+			</a>
+			{{range .PeriodOptions}}
+				<a class="item{{if eq . $.CurPeriod}} active{{end}}" href="?status={{$.CurStatus}}&label={{$.CurLabel}}&repo={{$.CurRepo}}&period={{.}}">
+					{{ctx.Locale.Tr (printf "repo.activity.period.%s" .)}}
+				</a>
+			{{end}}
+		</div>
+	</div>
+</div>

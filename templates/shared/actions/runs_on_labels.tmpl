@@ -1,0 +1,8 @@
+{{/* The runner labels a job asks for (runs-on), shown like the labels on the runners list. */}}
+{{if .}}
+	{{range .}}
+	<span class="ui label special">{{.}}</span>
+	{{end}}
+{{else}}
+	&mdash;
+{{end}}

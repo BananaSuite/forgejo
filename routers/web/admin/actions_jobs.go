@@ -13,32 +13,20 @@ import (
 
 const jobsPageSize = 30
 
-// activeJobsOptions finds the jobs that are not finished, newest first.
-type activeJobsOptions struct {
-	actions_model.FindRunJobOptions
-}
-
-func (opts activeJobsOptions) ToOrders() string {
-	return "`id` DESC"
-}
-
-// ActionsJobs shows the jobs of all repositories that are waiting for a
-// runner, blocked by another job, or running. A waiting job has no task yet,
-// so the tasks page cannot show it.
-func ActionsJobs(ctx *context.Context) {
+// ActionsActiveTasks shows the "Pending/active tasks" page: the jobs of all
+// repositories that are waiting for a runner, blocked by another job, or
+// running. A waiting job has no task yet, so the page lists jobs, not tasks.
+func ActionsActiveTasks(ctx *context.Context) {
 	page := max(ctx.FormInt("page"), 1)
+	filter := readActionsFilter(ctx, actions_model.ActiveJobStatuses)
 
-	opts := activeJobsOptions{actions_model.FindRunJobOptions{
+	opts := actions_model.FindActiveJobsOptions{
 		ListOptions: db.ListOptions{
 			Page:     page,
 			PageSize: jobsPageSize,
 		},
-		Statuses: []actions_model.Status{
-			actions_model.StatusWaiting,
-			actions_model.StatusBlocked,
-			actions_model.StatusRunning,
-		},
-	}}
+		AdminJobFilter: filter,
+	}
 
 	jobs, count, err := db.FindAndCount[actions_model.ActionRunJob](ctx, opts)
 	if err != nil {
@@ -56,15 +44,38 @@ func ActionsJobs(ctx *context.Context) {
 		ctx.ServerError("LoadRunners", err)
 		return
 	}
+	missing, err := actions_model.MissingRunnerLabels(ctx, jobs)
+	if err != nil {
+		ctx.ServerError("MissingRunnerLabels", err)
+		return
+	}
 
-	ctx.Data["Title"] = ctx.Tr("actions.jobs")
-	ctx.Data["PageType"] = "jobs"
-	ctx.Data["PageIsSharedSettingsJobs"] = true
+	labels, err := actions_model.GetActiveJobLabels(ctx)
+	if err != nil {
+		ctx.ServerError("GetActiveJobLabels", err)
+		return
+	}
+	repoIDs, err := actions_model.GetActiveJobRepoIDs(ctx)
+	if err != nil {
+		ctx.ServerError("GetActiveJobRepoIDs", err)
+		return
+	}
+
+	ctx.Data["Title"] = ctx.Tr("actions.active_tasks")
+	ctx.Data["PageType"] = "active_tasks"
+	ctx.Data["PageIsSharedSettingsActiveTasks"] = true
 	ctx.Data["Jobs"] = jobs
 	ctx.Data["JobRunners"] = runners
+	ctx.Data["MissingLabels"] = missing
 	ctx.Data["Total"] = count
+	ctx.Data["PeriodTitle"] = ctx.Tr("actions.jobs.created")
 
 	pager := context.NewPagination(int(count), opts.PageSize, opts.Page, 5)
+	choices := actionsFilterChoices{statuses: actions_model.ActiveJobStatuses, labels: labels, repoIDs: repoIDs}
+	if err := setActionsFilterChoices(ctx, choices, filter, pager); err != nil {
+		ctx.ServerError("setActionsFilterChoices", err)
+		return
+	}
 	ctx.Data["Page"] = pager
 
 	ctx.HTML(http.StatusOK, tplAdminActions)

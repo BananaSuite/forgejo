@@ -6,10 +6,10 @@
 	{{if eq .PageType "variables"}}
 		{{template "shared/actions/variables_list" .}}
 	{{end}}
-	{{if eq .PageType "tasks"}}
+	{{if eq .PageType "past_tasks"}}
 		{{template "shared/actions/task_list" .}}
 	{{end}}
-	{{if eq .PageType "jobs"}}
+	{{if eq .PageType "active_tasks"}}
 		{{template "shared/actions/job_list" .}}
 	{{end}}
 	</div>

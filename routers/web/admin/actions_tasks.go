@@ -16,16 +16,18 @@ const tplAdminActions base.TplName = "admin/actions"
 
 const tasksPageSize = 30
 
-// ActionsTasks shows the tasks of all runners on the instance, newest first:
-// waiting, running and finished ones.
-func ActionsTasks(ctx *context.Context) {
+// ActionsPastTasks shows the "Past tasks" page: the finished tasks of all
+// runners on the instance, the most recently finished first.
+func ActionsPastTasks(ctx *context.Context) {
 	page := max(ctx.FormInt("page"), 1)
+	filter := readActionsFilter(ctx, actions_model.FinishedTaskStatuses)
 
-	opts := actions_model.FindTaskOptions{
+	opts := actions_model.FindFinishedTasksOptions{
 		ListOptions: db.ListOptions{
 			Page:     page,
 			PageSize: tasksPageSize,
 		},
+		AdminJobFilter: filter,
 	}
 
 	tasks, count, err := db.FindAndCount[actions_model.ActionTask](ctx, opts)
@@ -45,15 +47,32 @@ func ActionsTasks(ctx *context.Context) {
 		return
 	}
 
-	ctx.Data["Title"] = ctx.Tr("actions.tasks")
-	ctx.Data["PageType"] = "tasks"
-	ctx.Data["PageIsSharedSettingsTasks"] = true
+	labels, err := actions_model.GetAllRunnerLabels(ctx)
+	if err != nil {
+		ctx.ServerError("GetAllRunnerLabels", err)
+		return
+	}
+	repoIDs, err := actions_model.GetTaskRepoIDs(ctx)
+	if err != nil {
+		ctx.ServerError("GetTaskRepoIDs", err)
+		return
+	}
+
+	ctx.Data["Title"] = ctx.Tr("actions.past_tasks")
+	ctx.Data["PageType"] = "past_tasks"
+	ctx.Data["PageIsSharedSettingsPastTasks"] = true
 	ctx.Data["Tasks"] = tasks
 	ctx.Data["TaskRunners"] = runners
-	ctx.Data["ShowTaskRunner"] = true
+	ctx.Data["IsAdminTaskList"] = true
 	ctx.Data["Total"] = count
+	ctx.Data["PeriodTitle"] = ctx.Tr("actions.runners.task_list.done_at")
 
 	pager := context.NewPagination(int(count), opts.PageSize, opts.Page, 5)
+	choices := actionsFilterChoices{statuses: actions_model.FinishedTaskStatuses, labels: labels, repoIDs: repoIDs}
+	if err := setActionsFilterChoices(ctx, choices, filter, pager); err != nil {
+		ctx.ServerError("setActionsFilterChoices", err)
+		return
+	}
 	ctx.Data["Page"] = pager
 
 	ctx.HTML(http.StatusOK, tplAdminActions)
