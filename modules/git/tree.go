@@ -15,7 +15,7 @@ import (
 type Tree struct {
 	ID         ObjectID
 	ResolvedID ObjectID
-	repo       *Repository
+	Repository *Repository
 
 	// parent tree
 	ptree *Tree
@@ -30,8 +30,8 @@ type Tree struct {
 // NewTree create a new tree according the repository and tree id
 func NewTree(repo *Repository, id ObjectID) *Tree {
 	return &Tree{
-		ID:   id,
-		repo: repo,
+		ID:         id,
+		Repository: repo,
 	}
 }
 
@@ -41,9 +41,9 @@ func (t *Tree) ListEntries() (Entries, error) {
 		return t.entries, nil
 	}
 
-	if t.repo != nil {
+	if t.Repository != nil {
 		var entries Entries
-		if err := t.repo.WithCatFileBatch(t.repo.Ctx, func(wr io.Writer, rd *bufio.Reader) error {
+		if err := t.Repository.WithCatFileBatch(t.Repository.Ctx, func(wr io.Writer, rd *bufio.Reader) error {
 			if _, err := wr.Write([]byte(t.ID.String() + "\n")); err != nil {
 				return err
 			}
@@ -85,7 +85,7 @@ func (t *Tree) ListEntries() (Entries, error) {
 		}
 	}
 
-	stdout, _, runErr := NewCommand(t.repo.Ctx, "ls-tree", "-l").AddDynamicArguments(t.ID.String()).RunStdBytes(&RunOpts{Dir: t.repo.Path})
+	stdout, _, runErr := NewCommand(t.Repository.Ctx, "ls-tree", "-l").AddDynamicArguments(t.ID.String()).RunStdBytes(&RunOpts{Dir: t.Repository.Path})
 	if runErr != nil {
 		if strings.Contains(runErr.Error(), "fatal: Not a valid object name") || strings.Contains(runErr.Error(), "fatal: not a tree object") {
 			return nil, ErrNotExist{
@@ -111,10 +111,10 @@ func (t *Tree) listEntriesRecursive(extraArgs TrustedCmdArgs) (Entries, error) {
 		return t.entriesRecursive, nil
 	}
 
-	stdout, _, runErr := NewCommand(t.repo.Ctx, "ls-tree", "-t", "-r").
+	stdout, _, runErr := NewCommand(t.Repository.Ctx, "ls-tree", "-t", "-r").
 		AddArguments(extraArgs...).
 		AddDynamicArguments(t.ID.String()).
-		RunStdBytes(&RunOpts{Dir: t.repo.Path})
+		RunStdBytes(&RunOpts{Dir: t.Repository.Path})
 	if runErr != nil {
 		return nil, runErr
 	}
@@ -157,7 +157,7 @@ func (t *Tree) SubTree(rpath string) (*Tree, error) {
 			return nil, err
 		}
 
-		g, err = t.repo.getTree(te.ID)
+		g, err = t.Repository.getTree(te.ID)
 		if err != nil {
 			return nil, err
 		}

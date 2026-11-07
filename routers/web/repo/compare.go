@@ -51,11 +51,37 @@ const (
 	tplDiffBox     base.TplName = "repo/diff/box"
 )
 
-// setCompareContext sets context data.
-func setCompareContext(ctx *context.Context, before, head *git.Commit, headRepo *repo_model.Repository) {
-	ctx.Data["BeforeCommit"] = before
-	ctx.Data["HeadCommit"] = head
+// setCompareContext sets context data relevant to commit comparisons.
+//
+// If headRepo is nil, the base repo will be used for the comparisons of the
+// base and the head commit. "baseCommit" and "headCommit" can both be accessed
+// from the baseRepo, so in theory, we could simply just work with "baseRepo"
+// and that would work (as we do when headRepo == nil). However, if headCommit
+// "contains" newly introduced files using Git LFS, those will be stored in the
+// head repository('s LFS storage).
+//
+// For the LFS pointer (layer of indirection) to "point at the right file",
+// we need to use the repository ID where the LFS file is stored, as the LFS
+// file is stored in the storage of the head repository (which might not be the
+// same as the base repository; in such cases, we cannot "access" or otherwise
+// "show" the LFS file using the base repository's ID, and only the pointer will
+// be shown). The "View file" button shown in the diff view should also point to
+// the file in the head repository, _as long as_ the head repository is
+// accessible to the user.
+func setCompareContext(ctx *context.Context, baseCommit, headCommit *git.Commit, baseRepo, headRepo *repo_model.Repository) {
+	ctx.Data["BeforeCommit"] = baseCommit
+	ctx.Data["HeadCommit"] = headCommit
 	ctx.Data["SignInLink"] = setting.AppSubURL + "/user/login?redirect_to=" + url.QueryEscape(ctx.Data["Link"].(string))
+
+	var afterRepo *repo_model.Repository
+	if headRepo == nil {
+		afterRepo = baseRepo
+	} else {
+		afterRepo = headRepo
+	}
+
+	ctx.Data["BeforeRepoID"] = baseRepo.ID
+	ctx.Data["AfterRepoID"] = afterRepo.ID
 
 	ctx.Data["GetDataByPathForCommit"] = func(commit *git.Commit, path string) *git.Blob {
 		if commit == nil {
@@ -69,12 +95,12 @@ func setCompareContext(ctx *context.Context, before, head *git.Commit, headRepo 
 		return blob
 	}
 
-	ctx.Data["GetFileInfoForBlob"] = func(blob *git.Blob) lfs_reader.FileInfo {
+	ctx.Data["GetFileInfoForBlob"] = func(blob *git.Blob, repoID int64) lfs_reader.FileInfo {
 		if blob == nil {
 			return lfs_reader.FileInfo{}
 		}
 
-		reader, fileInfo, err := lfs_reader.OpenReaderFromMaybeLFSBlob(ctx, ctx.Repo.Repository.ID, blob)
+		reader, fileInfo, err := lfs_reader.OpenReaderFromMaybeLFSBlob(ctx, repoID, blob)
 		if err != nil {
 			log.Error("OpenReaderFromMaybeLFSBlob failed: %v", err)
 			return lfs_reader.FileInfo{}
@@ -84,7 +110,7 @@ func setCompareContext(ctx *context.Context, before, head *git.Commit, headRepo 
 		return *fileInfo
 	}
 
-	setPathsCompareContext(ctx, before, head, headRepo)
+	setPathsCompareContext(ctx, baseCommit, headCommit, baseRepo, afterRepo)
 	setImageCompareContext(ctx)
 	setCsvCompareContext(ctx)
 }
@@ -106,12 +132,12 @@ func MediaCommitURL(repo *repo_model.Repository, commit *git.Commit) string {
 }
 
 // setPathsCompareContext sets context data for source and raw paths
-func setPathsCompareContext(ctx *context.Context, base, head *git.Commit, headRepo *repo_model.Repository) {
-	ctx.Data["SourcePath"] = SourceCommitURL(headRepo, head)
-	ctx.Data["MediaPath"] = MediaCommitURL(headRepo, head)
+func setPathsCompareContext(ctx *context.Context, base, head *git.Commit, beforeRepo, afterRepo *repo_model.Repository) {
+	ctx.Data["SourcePath"] = SourceCommitURL(afterRepo, head)
+	ctx.Data["MediaPath"] = MediaCommitURL(afterRepo, head)
 	if base != nil {
-		ctx.Data["BeforeSourcePath"] = SourceCommitURL(headRepo, base)
-		ctx.Data["BeforeMediaPath"] = MediaCommitURL(headRepo, base)
+		ctx.Data["BeforeSourcePath"] = SourceCommitURL(beforeRepo, base)
+		ctx.Data["BeforeMediaPath"] = MediaCommitURL(beforeRepo, base)
 	}
 }
 
@@ -698,7 +724,12 @@ func PrepareCompareDiff(
 	ctx.Data["Username"] = ci.HeadUser.Name
 	ctx.Data["Reponame"] = ci.HeadRepo.Name
 
-	setCompareContext(ctx, beforeCommit, headCommit, ci.HeadRepo)
+	headRepoIfAccessible, err := returnRepoIfCodeUnitIsAccessible(ctx, ci.HeadRepo)
+	if err != nil {
+		ctx.ServerError("returnRepoIfCodeUnitIsAccessible", err)
+		return false
+	}
+	setCompareContext(ctx, beforeCommit, headCommit, ctx.Repo.Repository, headRepoIfAccessible)
 
 	return false
 }

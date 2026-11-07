@@ -116,7 +116,7 @@ func (c *LastCommitCache) GetCommitByPath(commitID, entryPath string) (*Commit, 
 
 // CacheCommit will cache the commit from the gitRepository
 func (c *Commit) CacheCommit(ctx context.Context) error {
-	if c.repo.LastCommitCache == nil {
+	if c.Repository.LastCommitCache == nil {
 		return nil
 	}
 	return c.recursiveCache(ctx, &c.Tree, "", 1)
@@ -137,7 +137,7 @@ func (c *Commit) recursiveCache(ctx context.Context, tree *Tree, treePath string
 		entryPaths[i] = entry.Name()
 	}
 
-	_, err = WalkGitLog(ctx, c.repo, c, treePath, entryPaths...)
+	_, err = WalkGitLog(ctx, c.Repository, c, treePath, entryPaths...)
 	if err != nil {
 		return err
 	}

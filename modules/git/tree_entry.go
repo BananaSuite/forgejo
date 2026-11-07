@@ -45,7 +45,7 @@ func (te *TreeEntry) Size() int64 {
 		return te.size
 	}
 
-	if err := te.ptree.repo.WithCatFileBatchCheck(te.ptree.repo.Ctx, func(wr io.Writer, rd *bufio.Reader) error {
+	if err := te.ptree.Repository.WithCatFileBatchCheck(te.ptree.Repository.Ctx, func(wr io.Writer, rd *bufio.Reader) error {
 		_, err := wr.Write([]byte(te.ID.String() + "\n"))
 		if err != nil {
 			return err
@@ -53,7 +53,7 @@ func (te *TreeEntry) Size() int64 {
 		_, _, te.size, err = ReadBatchLine(rd)
 		return err
 	}); err != nil {
-		log.Debug("error whilst reading size for %s in %s. Error: %v", te.ID.String(), te.ptree.repo.Path, err)
+		log.Debug("error whilst reading size for %s in %s. Error: %v", te.ID.String(), te.ptree.Repository.Path, err)
 		return 0
 	}
 
@@ -89,11 +89,11 @@ func (te *TreeEntry) IsExecutable() bool {
 // Blob returns the blob object the entry
 func (te *TreeEntry) Blob() *Blob {
 	return &Blob{
-		ID:      te.ID,
-		name:    te.Name(),
-		size:    te.size,
-		gotSize: te.sized,
-		repo:    te.ptree.repo,
+		ID:         te.ID,
+		name:       te.Name(),
+		size:       te.size,
+		gotSize:    te.sized,
+		Repository: te.ptree.Repository,
 	}
 }
 
@@ -195,7 +195,7 @@ func (te *TreeEntry) FollowLinks() (*TreeEntry, error) {
 
 // returns the Tree pointed to by this TreeEntry, or nil if this is not a tree
 func (te *TreeEntry) Tree() *Tree {
-	t, err := te.ptree.repo.getTree(te.ID)
+	t, err := te.ptree.Repository.getTree(te.ID)
 	if err != nil {
 		return nil
 	}

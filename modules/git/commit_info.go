@@ -34,9 +34,9 @@ func (tes Entries) GetCommitsInfo(ctx context.Context, commit *Commit, treePath 
 	var err error
 
 	var revs map[string]*Commit
-	if commit.repo.LastCommitCache != nil {
+	if commit.Repository.LastCommitCache != nil {
 		var unHitPaths []string
-		revs, unHitPaths, err = getLastCommitForPathsByCache(commit.ID.String(), treePath, entryPaths, commit.repo.LastCommitCache)
+		revs, unHitPaths, err = getLastCommitForPathsByCache(commit.ID.String(), treePath, entryPaths, commit.Repository.LastCommitCache)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -94,7 +94,7 @@ func (tes Entries) GetCommitsInfo(ctx context.Context, commit *Commit, treePath 
 	if treePath == "" {
 		treeCommit = commit
 	} else if treeCommit, ok = revs[""]; ok {
-		treeCommit.repo = commit.repo
+		treeCommit.Repository = commit.Repository
 	}
 	return commitsInfo, treeCommit, nil
 }
@@ -121,13 +121,13 @@ func getLastCommitForPathsByCache(commitID, treePath string, paths []string, cac
 // GetLastCommitForPaths returns last commit information
 func GetLastCommitForPaths(ctx context.Context, commit *Commit, treePath string, paths []string) (map[string]*Commit, error) {
 	// We read backwards from the commit to obtain all of the commits
-	revs, err := WalkGitLog(ctx, commit.repo, commit, treePath, paths...)
+	revs, err := WalkGitLog(ctx, commit.Repository, commit, treePath, paths...)
 	if err != nil {
 		return nil, err
 	}
 
 	commitCommits := map[string]*Commit{}
-	if err := commit.repo.WithCatFileBatch(ctx, func(batchStdinWriter io.Writer, batchReader *bufio.Reader) error {
+	if err := commit.Repository.WithCatFileBatch(ctx, func(batchStdinWriter io.Writer, batchReader *bufio.Reader) error {
 		commitsMap := map[string]*Commit{}
 		commitsMap[commit.ID.String()] = commit
 
@@ -157,7 +157,7 @@ func GetLastCommitForPaths(ctx context.Context, commit *Commit, treePath string,
 				err := fmt.Errorf("unexpected type: %s for commit id: %s", typ, commitID)
 				return err
 			}
-			c, err = CommitFromReader(commit.repo, MustIDFromString(commitID), io.LimitReader(batchReader, size))
+			c, err = CommitFromReader(commit.Repository, MustIDFromString(commitID), io.LimitReader(batchReader, size))
 			if err != nil {
 				return err
 			}

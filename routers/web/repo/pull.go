@@ -92,7 +92,28 @@ func generatePullRequestTemplateLocations() []string {
 
 var pullRequestTemplateCandidates = generatePullRequestTemplateLocations()
 
-func getRepository(ctx *context.Context, repoID int64) *repo_model.Repository {
+// Returns the provided repository if the user/doer has access to it, otherwise
+// nil.
+//
+// Although we might use data from head repositories for e.g. compare
+// information regardless of the permission level of the user (and that's fine),
+// we still want to know whether the user can access the repository before e.g.
+// showing UI buttons that point to a head repository that is inaccessible or
+// e.g. accessing the LFS storage.
+func returnRepoIfCodeUnitIsAccessible(ctx *context.Context, repo *repo_model.Repository) (*repo_model.Repository, error) {
+	perm, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+	if err != nil {
+		log.Trace("Could not establish user permission %-v for user %-v of repo %-v", unit.TypeCode, ctx.Doer, repo)
+		return nil, err
+	}
+
+	if !perm.CanRead(unit.TypeCode) {
+		repo = nil
+	}
+	return repo, nil
+}
+
+func getRepositoryByID(ctx *context.Context, repoID int64) *repo_model.Repository {
 	repo, err := repo_model.GetRepositoryByID(ctx, repoID)
 	if err != nil {
 		if repo_model.IsErrRepoNotExist(err) {
@@ -103,23 +124,11 @@ func getRepository(ctx *context.Context, repoID int64) *repo_model.Repository {
 		return nil
 	}
 
-	perm, err := access_model.GetUserRepoPermission(ctx, repo, ctx.Doer)
+	repoObjectToReturn, err := returnRepoIfCodeUnitIsAccessible(ctx, repo)
 	if err != nil {
-		ctx.ServerError("GetUserRepoPermission", err)
-		return nil
+		ctx.ServerError("returnRepoIfCodeUnitIsAccessible", err)
 	}
-
-	if !perm.CanRead(unit.TypeCode) {
-		log.Trace("Permission Denied: User %-v cannot read %-v of repo %-v\n"+
-			"User in repo has Permissions: %-+v",
-			ctx.Doer,
-			unit.TypeCode,
-			ctx.Repo,
-			perm)
-		ctx.NotFound("getRepository", nil)
-		return nil
-	}
-	return repo
+	return repoObjectToReturn
 }
 
 func updateForkRepositoryInContext(ctx *context.Context, forkRepo *repo_model.Repository) bool {
@@ -1202,7 +1211,12 @@ func viewPullFiles(ctx *context.Context, specifiedStartCommit, specifiedEndCommi
 		}
 	}
 
-	setCompareContext(ctx, baseCommit, headCommit, ctx.Repo.Repository)
+	headRepoIfAccessible, err := returnRepoIfCodeUnitIsAccessible(ctx, pull.HeadRepo)
+	if err != nil {
+		ctx.ServerError("returnRepoIfCodeUnitIsAccessible", err)
+		return
+	}
+	setCompareContext(ctx, baseCommit, headCommit, ctx.Repo.PullRequest.BaseRepo, headRepoIfAccessible)
 
 	assigneeUsers, err := repo_model.GetRepoAssignees(ctx, ctx.Repo.Repository)
 	if err != nil {

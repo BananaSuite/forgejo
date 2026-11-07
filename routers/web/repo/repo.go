@@ -271,7 +271,7 @@ func CreatePost(ctx *context.Context) {
 			return
 		}
 
-		templateRepo := getRepository(ctx, form.RepoTemplate)
+		templateRepo := getRepositoryByID(ctx, form.RepoTemplate)
 		if ctx.Written() {
 			return
 		}

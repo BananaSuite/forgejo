@@ -17,16 +17,16 @@ import (
 
 // Blob represents a Git object.
 type Blob struct {
-	ID ObjectID
+	ID         ObjectID
+	Repository *Repository
 
 	gotSize bool
 	size    int64
 	name    string
-	repo    *Repository
 }
 
 func (b *Blob) newReader() (*bufio.Reader, int64, func(error), error) {
-	wr, rd, cancel, err := b.repo.CatFileBatch(b.repo.Ctx)
+	wr, rd, cancel, err := b.Repository.CatFileBatch(b.Repository.Ctx)
 	if err != nil {
 		return nil, 0, nil, err
 	}
@@ -52,7 +52,7 @@ func (b *Blob) Size() int64 {
 		return b.size
 	}
 
-	if err := b.repo.WithCatFileBatchCheck(b.repo.Ctx, func(wr io.Writer, rd *bufio.Reader) error {
+	if err := b.Repository.WithCatFileBatchCheck(b.Repository.Ctx, func(wr io.Writer, rd *bufio.Reader) error {
 		_, err := wr.Write([]byte(b.ID.String() + "\n"))
 		if err != nil {
 			return nil
@@ -63,7 +63,7 @@ func (b *Blob) Size() int64 {
 		}
 		return nil
 	}); err != nil {
-		log.Debug("error whilst reading size for %s in %s. Error: %v", b.ID.String(), b.repo.Path, err)
+		log.Debug("error whilst reading size for %s in %s. Error: %v", b.ID.String(), b.Repository.Path, err)
 		return 0
 	}
 
@@ -232,7 +232,7 @@ func (repo *Repository) GetBlob(idStr string) (*Blob, error) {
 		return nil, ErrNotExist{id.String(), ""}
 	}
 	return &Blob{
-		ID:   id,
-		repo: repo,
+		ID:         id,
+		Repository: repo,
 	}, nil
 }

@@ -401,7 +401,10 @@ func Diff(ctx *context.Context) {
 			return
 		}
 	}
-	setCompareContext(ctx, parentCommit, commit, ctx.Repo.Repository)
+
+	// Not a pull request, so the base repo (where the parent commit is) is always
+	// equal to the head repo (where the current commit also is).
+	setCompareContext(ctx, parentCommit, commit, ctx.Repo.Repository, nil)
 	ctx.Data["Title"] = commit.Summary() + " · " + base.ShortSha(commitID)
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff
