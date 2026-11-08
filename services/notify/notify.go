@@ -9,6 +9,7 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
 	packages_model "forgejo.org/models/packages"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
@@ -316,6 +317,13 @@ func ForkRepository(ctx context.Context, doer *user_model.User, oldRepo, repo *r
 func RenameRepository(ctx context.Context, doer *user_model.User, repo *repo_model.Repository, oldName string) {
 	for _, notifier := range notifiers {
 		notifier.RenameRepository(ctx, doer, repo, oldName)
+	}
+}
+
+// AddTeamMember notifies the addition of a member to a team
+func AddTeamMember(ctx context.Context, doer, newMember *user_model.User, team *org_model.Team) {
+	for _, notifier := range notifiers {
+		notifier.AddTeamMember(ctx, doer, newMember, team)
 	}
 }
 

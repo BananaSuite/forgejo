@@ -8,6 +8,7 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
 	packages_model "forgejo.org/models/packages"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
@@ -183,6 +184,10 @@ func (*NullNotifier) RenameRepository(ctx context.Context, doer *user_model.User
 
 // TransferRepository places a place holder function
 func (*NullNotifier) TransferRepository(ctx context.Context, doer *user_model.User, repo *repo_model.Repository, oldOwnerName string) {
+}
+
+// AddTeamMember is a place holder function
+func (*NullNotifier) AddTeamMember(ctx context.Context, doer, newMember *user_model.User, team *org_model.Team) {
 }
 
 // SyncPushCommits places a place holder function

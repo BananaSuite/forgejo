@@ -8,6 +8,7 @@ import (
 
 	actions_model "forgejo.org/models/actions"
 	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
 	packages_model "forgejo.org/models/packages"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
@@ -29,6 +30,8 @@ type Notifier interface {
 	RenameRepository(ctx context.Context, doer *user_model.User, repo *repo_model.Repository, oldRepoName string)
 	TransferRepository(ctx context.Context, doer *user_model.User, repo *repo_model.Repository, oldOwnerName string)
 	RepoPendingTransfer(ctx context.Context, doer, newOwner *user_model.User, repo *repo_model.Repository)
+
+	AddTeamMember(ctx context.Context, doer, newMember *user_model.User, team *org_model.Team)
 
 	NewIssue(ctx context.Context, issue *issues_model.Issue, mentions []*user_model.User)
 	IssueChangeStatus(ctx context.Context, doer *user_model.User, prInfo *issues_model.PRNotificationInfo, issue *issues_model.Issue, actionComment *issues_model.Comment, closeOrReopen bool)

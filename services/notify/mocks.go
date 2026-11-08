@@ -9,6 +9,7 @@ import (
 
 	"forgejo.org/models/actions"
 	"forgejo.org/models/issues"
+	"forgejo.org/models/organization"
 	"forgejo.org/models/packages"
 	"forgejo.org/models/repo"
 	"forgejo.org/models/user"
@@ -25,10 +26,19 @@ func NewMockNotifier(t interface {
 	Cleanup(func())
 },
 ) *MockNotifier {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockNotifier{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -44,6 +54,64 @@ type MockNotifier_Expecter struct {
 
 func (_m *MockNotifier) EXPECT() *MockNotifier_Expecter {
 	return &MockNotifier_Expecter{mock: &_m.Mock}
+}
+
+// AddTeamMember provides a mock function for the type MockNotifier
+func (_mock *MockNotifier) AddTeamMember(ctx context.Context, doer, newMember *user.User, team *organization.Team) {
+	_mock.Called(ctx, doer, newMember, team)
+	return
+}
+
+// MockNotifier_AddTeamMember_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddTeamMember'
+type MockNotifier_AddTeamMember_Call struct {
+	*mock.Call
+}
+
+// AddTeamMember is a helper method to define mock.On call
+//   - ctx context.Context
+//   - doer *user.User
+//   - newMember *user.User
+//   - team *organization.Team
+func (_e *MockNotifier_Expecter) AddTeamMember(ctx, doer, newMember, team any) *MockNotifier_AddTeamMember_Call {
+	return &MockNotifier_AddTeamMember_Call{Call: _e.mock.On("AddTeamMember", ctx, doer, newMember, team)}
+}
+
+func (_c *MockNotifier_AddTeamMember_Call) Run(run func(ctx context.Context, doer, newMember *user.User, team *organization.Team)) *MockNotifier_AddTeamMember_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *user.User
+		if args[1] != nil {
+			arg1 = args[1].(*user.User)
+		}
+		var arg2 *user.User
+		if args[2] != nil {
+			arg2 = args[2].(*user.User)
+		}
+		var arg3 *organization.Team
+		if args[3] != nil {
+			arg3 = args[3].(*organization.Team)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNotifier_AddTeamMember_Call) Return() *MockNotifier_AddTeamMember_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockNotifier_AddTeamMember_Call) RunAndReturn(run func(ctx context.Context, doer, newMember *user.User, team *organization.Team)) *MockNotifier_AddTeamMember_Call {
+	_c.Run(run)
+	return _c
 }
 
 // AdoptRepository provides a mock function for the type MockNotifier
