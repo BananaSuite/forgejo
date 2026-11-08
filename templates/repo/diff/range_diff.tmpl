@@ -1,10 +1,10 @@
 {{template "base/head" .}}
-<div role="main" aria-label="{{.Title}}" class="page-content repository diff {{if .PageIsComparePull}}compare pull{{end}}">
+<div role="main" aria-label="{{.Title}}" class="page-content repository diff">
 	{{template "repo/header" .}}
 	<div class="ui container padded">
-	<h2 class="ui header">
+	<h1 class="ui header">
 		{{ctx.Locale.Tr "compare.range-diff.title"}}
-	</h2>
+	</h1>
 	</div>
 
 	<div class="ui container padded">
@@ -41,8 +41,94 @@
 				))
 			}}
 		</div>
-		<div class="ui secondary segment tw-font-mono">
-			git range-diff {{ShortSha .OldBase}}..{{ShortSha .OldHead}} {{ShortSha .NewBase}}..{{ShortSha .NewHead}}
+
+		<div id="range-diff-list" class="flex-list">
+			{{range .RangeDiff}}
+				{{$old := .Old.ValueOrZeroValue}}
+				{{$new := .New.ValueOrZeroValue}}
+				{{$isOldCommitValid := false}}
+				{{$isNewCommitValid := false}}
+				{{if $old.OID}}
+					{{$isOldCommitValid = ($.Repo.IsCommitValid ctx $old.OID)}}
+				{{end}}
+				{{if $new.OID}}
+					{{$isNewCommitValid = ($.Repo.IsCommitValid ctx $new.OID)}}
+				{{end}}
+				<div class="flex-item">
+					<div class="flex-item-leading ui label {{if eq .Status $.CommitAdded}}green{{else if eq .Status $.CommitRemoved}}red{{else if eq .Status $.CommitChanged}}yellow{{end}}">
+						{{svg "octicon-git-commit" 32}}
+					</div>
+					<div class="flex-item-main">
+						<div class="flex-item-title">{{.Subject}}</div>
+						{{if or (eq .Status $.CommitEqual) (eq .Status $.CommitChanged)}}
+							{{$oldCommitTemplate := (ExecuteTemplate ctx "repo/commit_link" (dict
+								"Repo" $.Repo
+								"CommitID" $old.OID
+								"Status" (dict)
+								"Statuses" (dict)
+								"IsValid" $isOldCommitValid
+							))}}
+							{{$newCommitTemplate := (ExecuteTemplate ctx "repo/commit_link" (dict
+								"Repo" $.Repo
+								"CommitID" $new.OID
+								"Status" (dict)
+								"Statuses" (dict)
+								"IsValid" $isNewCommitValid
+							))}}
+							<div class="flex-item-body">
+								{{if eq .Status $.CommitEqual}}
+									{{ctx.Locale.Tr "compare.range-diff.equal" $oldCommitTemplate $newCommitTemplate}}
+								{{else if eq .Status $.CommitChanged}}
+									{{ctx.Locale.Tr "compare.range-diff.changed" $oldCommitTemplate $newCommitTemplate}}
+								{{end}}
+							</div>
+							{{if ne $old.Index $new.Index}}
+								<div class="flex-item-body">
+									{{ctx.Locale.Tr "compare.range-diff.order-changed" $old.Index $new.Index}}
+								</div>
+							{{end}}
+						{{else if eq .Status $.CommitAdded}}
+							<div class="flex-item-body">
+								{{ctx.Locale.Tr "compare.range-diff.added"
+									(ExecuteTemplate ctx "repo/commit_link" (dict
+										"Repo" $.Repo
+										"CommitID" $new.OID
+										"Status" (dict)
+										"Statuses" (dict)
+										"IsValid" $isNewCommitValid
+									))
+								}}
+							</div>
+						{{else if eq .Status $.CommitRemoved}}
+							<div class="flex-item-body">
+								{{ctx.Locale.Tr "compare.range-diff.removed"
+									(ExecuteTemplate ctx "repo/commit_link" (dict
+										"Repo" $.Repo
+										"CommitID" $old.OID
+										"Status" (dict)
+										"Statuses" (dict)
+										"IsValid" $isOldCommitValid
+									))
+								}}
+							</div>
+						{{end}}
+					</div>
+					<div class="flex-item-trailing">
+						{{if eq .Status $.CommitChanged}}
+							{{if $isOldCommitValid}}
+								<a class="ui basic button" href="{{$.Repo.CommitLink $old.OID}}">{{ctx.Locale.Tr "compare.range-diff.view-original"}}</a>
+							{{end}}
+							{{if $isNewCommitValid}}
+								<a class="ui basic button" href="{{$.Repo.CommitLink $new.OID}}">{{ctx.Locale.Tr "compare.range-diff.view-changed"}}</a>
+							{{end}}
+						{{else if and (eq .Status $.CommitAdded) $isNewCommitValid}}
+							<a class="ui basic button" href="{{$.Repo.CommitLink $new.OID}}">{{ctx.Locale.Tr "compare.range-diff.view-added"}}</a>
+						{{else if and (eq .Status $.CommitRemoved) $isOldCommitValid}}
+							<a class="ui basic button" href="{{$.Repo.CommitLink $old.OID}}">{{ctx.Locale.Tr "compare.range-diff.view-removed"}}</a>
+						{{end}}
+					</div>
+				</div>
+			{{end}}
 		</div>
 	</div>
 </div>

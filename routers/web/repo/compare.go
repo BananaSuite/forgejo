@@ -6,6 +6,7 @@ package repo
 
 import (
 	"bufio"
+	"bytes"
 	gocontext "context"
 	"encoding/csv"
 	"errors"
@@ -1060,6 +1061,44 @@ func RangeDiff(ctx *context.Context) {
 	ctx.Data["OldHead"] = oldHead.ID.String()
 	ctx.Data["NewBase"] = newBase.ID.String()
 	ctx.Data["NewHead"] = newHead.ID.String()
+
+	cmd := git.NewCommand(ctx,
+		"range-diff",
+		"--no-patch",  // patch content is not displayed, and PargeRangeDiff does not support it
+		"--no-color",  // ParseRangeDiff requires no color output
+		"--abbrev=64", // full length commit IDs, even for sha256 repos
+	).AddDynamicArguments(
+		fmt.Sprintf("%s..%s", oldBase.ID.String(), oldHead.ID.String()),
+		fmt.Sprintf("%s..%s", newBase.ID.String(), newHead.ID.String()),
+	)
+	stdout := bytes.Buffer{}
+	stderr := bytes.Buffer{}
+	err := cmd.Run(&git.RunOpts{
+		Dir:    ctx.Repo.GitRepo.Path,
+		Stdout: &stdout,
+		Stderr: &stderr,
+	})
+	if err != nil {
+		// Failure can be easily triggered by providing an invalid set of commits, such as base..head where base isn't
+		// an ancestor of head.  Treat these as 400 Bad Requests, but provide more information in the server logs (not
+		// at error level).
+		log.Warn("git range-diff failed: %s", stderr.String())
+		ctx.Error(http.StatusBadRequest, "git range-diff failed; if this is unexpected, more information is in the server logs")
+		return
+	}
+
+	parsedOutput, err := git.ParseRangeDiff(&stdout)
+	if err != nil {
+		ctx.ServerError("failed to parse range-diff", err)
+		return
+	}
+
+	ctx.Data["RangeDiff"] = parsedOutput
+
+	ctx.Data["CommitEqual"] = git.CommitEqual
+	ctx.Data["CommitChanged"] = git.CommitChanged
+	ctx.Data["CommitAdded"] = git.CommitAdded
+	ctx.Data["CommitRemoved"] = git.CommitRemoved
 
 	ctx.Data["Repo"] = ctx.Repo.Repository
 	ctx.HTML(http.StatusOK, tplRangeDiff)
