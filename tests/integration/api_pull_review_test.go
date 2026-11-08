@@ -909,6 +909,7 @@ type reviewConversation struct {
 	token      string
 	root       api.PullReviewComment
 	reply      api.PullReviewComment
+	review     api.PullReview
 	getComment func(commentID int64) api.PullReviewComment
 }
 
@@ -947,6 +948,7 @@ func prepareReviewConversation(t *testing.T) reviewConversation {
 		token:     token,
 		root:      *rootComments[0],
 		reply:     reply,
+		review:    review,
 		getComment: func(commentID int64) api.PullReviewComment {
 			var comment api.PullReviewComment
 			req := NewRequestf(t, http.MethodGet, "/api/v1/repos/%s/pulls/%d/reviews/%d/comments/%d", repo.FullName(), pullIssue.Index, review.ID, commentID).AddTokenAuth(token)
@@ -1049,6 +1051,20 @@ func TestAPIPullReviewResolveConversation(t *testing.T) {
 		DecodeJSON(t, MakeRequest(t, req, http.StatusOK), &resolved)
 		require.NotNil(t, resolved.Resolver)
 		assert.Equal(t, author.Name, resolved.Resolver.UserName)
+	})
+
+	t.Run("Blocked user can not create code comments", func(t *testing.T) {
+		blockedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+
+		require.NoError(t, db.Insert(t.Context(), &user_model.BlockedUser{UserID: c.repo.OwnerID, BlockID: blockedUser.ID}))
+
+		blockedUserToken := getTokenForLoggedInUser(t, loginUser(t, blockedUser.Name), auth_model.AccessTokenScopeWriteRepository)
+		req := NewRequestWithJSON(t, http.MethodPost, fmt.Sprintf("/api/v1/repos/%s/pulls/%d/reviews/%d/comments", c.repo.FullName(), c.pullIndex, c.review.ID), &api.CreatePullReviewCommentOptions{
+			Path:       "README.md",
+			Body:       "reply",
+			NewLineNum: 1,
+		}).AddTokenAuth(blockedUserToken)
+		MakeRequest(t, req, http.StatusForbidden)
 	})
 
 	t.Run("Resolve via a reply resolves the conversation root", func(t *testing.T) {
