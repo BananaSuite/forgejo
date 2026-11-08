@@ -14,6 +14,7 @@ var wellKnownMimeTypesLower = map[string]string{
 	".html": "text/html; charset=utf-8",
 	".jpeg": "image/jpeg",
 	".jpg":  "image/jpeg",
+	".jxl":  "image/jxl",
 	".js":   "text/javascript; charset=utf-8",
 	".json": "application/json",
 	".mjs":  "text/javascript; charset=utf-8",
