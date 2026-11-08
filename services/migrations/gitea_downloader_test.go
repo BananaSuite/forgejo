@@ -370,6 +370,11 @@ func TestForgejoDownloadRepo(t *testing.T) {
 			RepoName:  "agit-test",
 			OwnerName: "Gusted",
 		},
+		Reactions: []*base.Reaction{{
+			UserID:   89,
+			UserName: "oliverpool",
+			Content:  "+1",
+		}},
 		Flow: 1,
 	}, prs[0])
 }
