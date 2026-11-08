@@ -16,6 +16,7 @@ import (
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/optional"
+	"forgejo.org/services/notify"
 
 	"xorm.io/builder"
 )
@@ -28,7 +29,11 @@ import (
 //     or the inviter if they add the user to the team directly
 func AddTeamMemberByCooptation(ctx context.Context, team *organization.Team, invited, inviter, doer *user_model.User) error {
 	_, err := models.InsertTeamMember(ctx, team, invited.ID, organization.MembershipReasonAddedByUser, optional.Some(inviter.ID), optional.None[int64]())
-	return err
+	if err != nil {
+		return err
+	}
+	notify.AddTeamMember(ctx, doer, invited, team)
+	return nil
 }
 
 // AddTeamMemberByLoginSource adds a user to a team based on some metadata offered by a login source

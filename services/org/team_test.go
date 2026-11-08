@@ -15,8 +15,10 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/optional"
+	notify_service "forgejo.org/services/notify"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,6 +38,12 @@ func TestAddTeamMemberByCooptation(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			notifier := notify_service.NewMockNotifier(t)
+			notifier.On("Run").Return().Maybe()
+			notifier.On("AddTeamMember", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
+			notify_service.RegisterNotifier(notifier)
+			defer notify_service.UnregisterNotifier(notifier)
+
 			team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: testCase.teamID})
 			invitedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: testCase.userID})
 			inviterUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: testCase.inviterID})
@@ -46,6 +54,20 @@ func TestAddTeamMemberByCooptation(t *testing.T) {
 				unittest.AssertExistsAndLoadBean(t, &organization.TeamUser{UID: testCase.userID, TeamID: testCase.teamID})
 			}
 			unittest.CheckConsistencyFor(t, &organization.Team{ID: testCase.teamID}, &user_model.User{ID: team.OrgID})
+
+			notifier.AssertNumberOfCalls(t, "AddTeamMember", 1)
+			notifier.AssertCalled(
+				t, "AddTeamMember", mock.Anything,
+				mock.MatchedBy(func(doer *user_model.User) bool {
+					return doer.ID == inviterUser.ID
+				}),
+				mock.MatchedBy(func(invited *user_model.User) bool {
+					return invited.ID == invitedUser.ID
+				}),
+				mock.MatchedBy(func(team *organization.Team) bool {
+					return team.ID == testCase.teamID
+				}),
+			)
 		})
 	}
 }
