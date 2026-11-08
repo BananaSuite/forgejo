@@ -486,7 +486,7 @@ func TestLDAPGroupTeamSyncRemoveMember(t *testing.T) {
 	err = organization.AddOrgUser(db.DefaultContext, org.ID, user.ID)
 	require.NoError(t, err)
 	inviterUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
-	err = org_service.AddTeamMemberByCooptation(db.DefaultContext, team, user, inviterUser)
+	err = org_service.AddTeamMemberByCooptation(db.DefaultContext, team, user, inviterUser, user)
 	require.NoError(t, err)
 	isMember, err := organization.IsOrganizationMember(db.DefaultContext, org.ID, user.ID)
 	require.NoError(t, err)

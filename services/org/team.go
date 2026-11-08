@@ -20,9 +20,14 @@ import (
 	"xorm.io/builder"
 )
 
-// AddTeamMemberByCooptation adds a user to a team upon invitation of another user
-func AddTeamMemberByCooptation(ctx context.Context, team *organization.Team, user, inviter *user_model.User) error {
-	_, err := models.InsertTeamMember(ctx, team, user.ID, organization.MembershipReasonAddedByUser, optional.Some(inviter.ID), optional.None[int64]())
+// AddTeamMemberByCooptation adds a user to a team upon invitation of another user.
+// It takes three users:
+//   - invited: the user being added to the team
+//   - inviter: the user who has the permission to invite them to the team
+//   - doer: the user actually triggering the change: either the invited user if they accept an invite,
+//     or the inviter if they add the user to the team directly
+func AddTeamMemberByCooptation(ctx context.Context, team *organization.Team, invited, inviter, doer *user_model.User) error {
+	_, err := models.InsertTeamMember(ctx, team, invited.ID, organization.MembershipReasonAddedByUser, optional.Some(inviter.ID), optional.None[int64]())
 	return err
 }
 

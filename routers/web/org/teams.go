@@ -85,7 +85,7 @@ func TeamsAction(ctx *context.Context) {
 			ctx.Error(http.StatusNotFound)
 			return
 		}
-		err = org_service.AddTeamMemberByCooptation(ctx, ctx.Org.Team, ctx.Doer, ctx.Doer)
+		err = org_service.AddTeamMemberByCooptation(ctx, ctx.Org.Team, ctx.Doer, ctx.Doer, ctx.Doer)
 	case "leave":
 		err = org_service.RemoveTeamMember(ctx, ctx.Org.Team, ctx.Doer, ctx.Doer)
 		if err != nil {
