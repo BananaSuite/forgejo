@@ -9,7 +9,14 @@
 		{{template "repo/issue/view_title" .}}
 		{{template "repo/pulls/tab_menu" .}}
 		{{template "repo/diff/box" .}}
+
+		{{if .IsBlocked}}
+			<div class="ui warning message">
+				{{ctx.Locale.Tr "repo.comment.blocked_by_user"}}
+			</div>
+		{{end}}
 	</div>
 </div>
+
 {{if .HeadBranchIsEditable}}{{template "repo/diff/suggestion_apply_modal" .}}{{end}}
 {{template "base/footer" .}}
