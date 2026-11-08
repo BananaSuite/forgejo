@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no">
+</head>
+<body>
+	<p>{{.locale.Tr "mail.add_team_member.text_1" (DotEscape .Team.Name) (DotEscape .Organization.DisplayName)}}</p>
+	<p>{{.locale.Tr "mail.add_team_member.text_2"}}</p>
+	<p><a href="{{.TeamURL}}">{{.TeamURL}}</a></p>
+	<p>{{.locale.Tr "mail.link_not_working_do_paste"}}</p>
+	<p>© <a target="_blank" rel="noopener noreferrer" href="{{AppUrl}}">{{AppName}}</a></p>
+</body>
+</html>

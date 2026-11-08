@@ -16,7 +16,9 @@ import (
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
+	"forgejo.org/modules/translation"
 	auth_service "forgejo.org/services/auth"
+	"forgejo.org/services/mailer"
 	org_service "forgejo.org/services/org"
 	user_service "forgejo.org/services/user"
 	"forgejo.org/tests"
@@ -134,6 +136,49 @@ func TestDisplayInvites(t *testing.T) {
 	assert.Equal(t, 4, doc.Find(fmt.Sprintf("form[action='%s/action/remove_invite'] button:contains('Remove')", teamURL)).Length())
 	// and buttons to renew the expired ones
 	assert.Equal(t, 2, doc.Find(fmt.Sprintf("form[action='%s/action/add'] button:contains('Renew')", teamURL)).Length())
+}
+
+func TestAddMemberDirectly(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	org := unittest.AssertExistsAndLoadBean(t, &organization.Organization{ID: 3})
+	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 2})
+	user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+	user31 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 31})
+
+	mailerCalled := false
+	defer test.MockVariableValue(&mailer.SendAsync, func(msgs ...*mailer.Message) {
+		assert.Len(t, msgs, 1)
+		assert.Equal(t, user31.EmailTo(), msgs[0].To)
+		locale := translation.NewLocale("en-US")
+		subject := locale.TrString("mail.add_team_member.subject", team.Name, org.DisplayName())
+		assert.Equal(t, msgs[0].Subject, subject)
+		mailerCalled = true
+	})()
+
+	session := loginUser(t, user.Name)
+
+	teamURL := fmt.Sprintf("/org/%s/teams/%s", org.Name, team.LowerName)
+	body := session.MakeRequest(t, NewRequest(t, "GET", teamURL), http.StatusOK).Body
+
+	// the button to add a team member says "add" (not invite)
+	doc := NewHTMLParser(t, body)
+	doc.AssertElement(t, "button.primary:contains('Add team member')", true)
+
+	// add user "user31" to the team
+	req := NewRequestWithValues(t, "POST", fmt.Sprintf("%s/action/add", teamURL), map[string]string{
+		"uname": "user31",
+	})
+	resp := session.MakeRequest(t, req, http.StatusSeeOther)
+	assert.Equal(t, teamURL, resp.Header().Get("Location"))
+
+	// the added user is listed on the team page
+	body = session.MakeRequest(t, NewRequest(t, "GET", teamURL), http.StatusOK).Body
+	doc = NewHTMLParser(t, body)
+	assert.Equal(t, "/user31", doc.Find("a:contains('user31')").AttrOr("href", ""))
+
+	// they got an email about it
+	assert.True(t, mailerCalled)
 }
 
 func TestAddMembersByInvitations(t *testing.T) {

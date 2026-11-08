@@ -10,6 +10,7 @@ import (
 	actions_model "forgejo.org/models/actions"
 	activities_model "forgejo.org/models/activities"
 	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/log"
@@ -209,6 +210,14 @@ func (m *mailNotifier) NewRelease(ctx context.Context, rel *repo_model.Release) 
 func (m *mailNotifier) RepoPendingTransfer(ctx context.Context, doer, newOwner *user_model.User, repo *repo_model.Repository) {
 	if err := SendRepoTransferNotifyMail(ctx, doer, newOwner, repo); err != nil {
 		log.Error("SendRepoTransferNotifyMail: %v", err)
+	}
+}
+
+func (m *mailNotifier) AddTeamMember(ctx context.Context, doer, newMember *user_model.User, team *org_model.Team) {
+	if doer != newMember {
+		if err := MailAddTeamMember(ctx, newMember, team); err != nil {
+			log.Error("AddTeamMember: %v", err)
+		}
 	}
 }
 

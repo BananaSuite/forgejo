@@ -531,6 +531,9 @@
 		"one": "This invitation will expire in %d day.",
 		"other": "This invitation will expire in %d days."
 	},
+	"mail.add_team_member.subject": "You've been added to the \"%[1]s\" team on the \"%[2]s\" organization",
+	"mail.add_team_member.text_1": "You've been added to the \"%[1]s\" team on the \"%[2]s\" organization.",
+	"mail.add_team_member.text_2": "If this is an error, you can leave the team at:",
 	"repo.diff.commit.next-short": "Next",
 	"repo.diff.commit.previous-short": "Prev",
 	"repo.diff.lfs.tooltip": "This is a pointer to a Git LFS file.",
