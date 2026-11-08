@@ -351,7 +351,7 @@ func TestForgejoDownloadRepo(t *testing.T) {
 		Number:      1,
 		PosterID:    63,
 		PosterName:  "Gusted",
-		PosterEmail: "postmaster@gusted.xyz",
+		PosterEmail: "gusted@noreply.code.forgejo.org",
 		Title:       "Add extra information",
 		State:       "open",
 		Created:     time.Date(2025, time.April, 1, 20, 28, 45, 0, time.UTC),
