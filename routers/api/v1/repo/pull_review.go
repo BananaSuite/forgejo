@@ -367,7 +367,7 @@ func CreatePullReviewComment(ctx *context.APIContext) {
 	)
 	if err != nil {
 		if errors.Is(err, user_model.ErrBlockedByUser) {
-			ctx.Error(http.StatusForbidden, "CreateIssueComment", err)
+			ctx.Error(http.StatusForbidden, "CreatePullReviewComment", err)
 			return
 		}
 		ctx.InternalServerError(err)
