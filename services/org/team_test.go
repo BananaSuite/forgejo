@@ -33,7 +33,9 @@ func TestAddTeamMemberByCooptation(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: testCase.teamID})
-			require.NoError(t, AddTeamMemberByCooptation(db.DefaultContext, team, testCase.userID, testCase.inviterID))
+			invitedUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: testCase.userID})
+			inviterUser := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: testCase.inviterID})
+			require.NoError(t, AddTeamMemberByCooptation(db.DefaultContext, team, invitedUser, inviterUser))
 			if testCase.userID == 4 {
 				unittest.AssertExistsAndLoadBean(t, &organization.TeamUser{UID: testCase.userID, TeamID: testCase.teamID, Reason: organization.MembershipReasonAddedByUser, CreatedByUserID: optional.Some(testCase.inviterID)})
 			} else {
