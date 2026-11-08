@@ -337,6 +337,8 @@ func TestPullForcePushRef(t *testing.T) {
 		firstCommit := forcePushRefFirstCommit
 		amendCommit := forcePushRefAmendCommit
 
+		baseCommitID := revParse(t, baseRepo.RepoPath(), baseRepo.DefaultBranch)
+
 		testCases := []struct {
 			name                   string
 			inputKeepForcePushRefs bool
@@ -440,6 +442,12 @@ func TestPullForcePushRef(t *testing.T) {
 				forcePushComment := forcePushRefGetSingleComment(t, pr)
 				assert.Equal(t, firstCommitID, forcePushComment.OldCommit)
 				assert.Equal(t, secondCommitID, forcePushComment.NewCommit)
+
+				// Incidental to TestPullForcePushRef, when a force push occurs the `git merge-base` for the commits is
+				// recorded in the comment.  As we're testing all the necessary cases (inline repo, fork repo, AGit PR)
+				// + force-push here already, we confirm that the merge base is recorded:
+				assert.Equal(t, baseCommitID, forcePushComment.OldCommitMergeBase)
+				assert.Equal(t, baseCommitID, forcePushComment.NewCommitMergeBase)
 
 				if tc.outcomeRefsPresent {
 					// firstCommitID is probably an orphan in the base repo, except that w/

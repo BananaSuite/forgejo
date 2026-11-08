@@ -82,6 +82,30 @@ func CreatePushPullComment(ctx context.Context, pusher *user_model.User, pr *iss
 		return nil, err
 	}
 
+	// Record the current merge-base of the commits during a force push.  This allows us to accurately `git range-diff`
+	// in the future to see the changes made during this force push.  Without the merge-base recorded now, if the base
+	// branch of the PR changed, or the base branch was force pushed, or the new commit was merged into the base branch,
+	// we wouldn't be able to compute the same merge-base and therefore provide the same `range-diff` command:
+	if data.IsForcePush {
+		gitRepo, closer, err := gitrepo.RepositoryFromContextOrOpen(ctx, pr.BaseRepo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open repository: %w", err)
+		}
+		defer closer.Close()
+		oldMergeBase, err := gitRepo.GetMergeBase(pr.BaseBranch, data.CommitIDs[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to get old commit's merge-base: %w", err)
+		}
+		newMergeBase, err := gitRepo.GetMergeBase(pr.BaseBranch, data.CommitIDs[1])
+		if err != nil {
+			return nil, fmt.Errorf("failed to get new commit's merge-base: %w", err)
+		}
+		data.ForcePush = &issues_model.ForcePushInfo{
+			OldMergeBase: oldMergeBase,
+			NewMergeBase: newMergeBase,
+		}
+	}
+
 	if err := pr.LoadIssue(ctx); err != nil {
 		return nil, err
 	}
