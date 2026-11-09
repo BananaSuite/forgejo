@@ -5,6 +5,7 @@ go 1.26.0
 toolchain go1.27.3
 
 require (
+	code.forgejo.org/crystal/ar v0.0.0-20190502131153-809d4375e1fb
 	code.forgejo.org/forgejo-contrib/go-libravatar v0.0.0-20260301104140-add494e31dab
 	code.forgejo.org/forgejo/actions-proto v0.8.0
 	code.forgejo.org/forgejo/go-rpmutils v1.0.0
@@ -116,7 +117,6 @@ require (
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	code.forgejo.org/crystal/ar v0.0.0-20190502131153-809d4375e1fb // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	git.sr.ht/~mariusor/go-xsd-duration v0.0.0-20220703122237-02e73435a078 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.19.0 // indirect
