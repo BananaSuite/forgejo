@@ -178,7 +178,7 @@ func (Project) DeleteProject(ctx *context.APIContext) {
 func (Project) ListProjectIssues(ctx *context.APIContext) {
 	// swagger:operation GET /repos/{username}/{reponame}/projects/{project_id}/issues repository repoListProjectIssues
 	// ---
-	// summary: List ProjectIssues
+	// summary: List issues of the project
 	// produces:
 	// - application/json
 	// parameters:
@@ -212,7 +212,7 @@ func (Project) ListProjectIssues(ctx *context.APIContext) {
 func (Project) CreateProjectIssue(ctx *context.APIContext) {
 	// swagger:operation POST /repos/{username}/{reponame}/projects/{project_id}/issues repository repoCreateProjectIssue
 	// ---
-	// summary: Create a ProjectIssue for project
+	// summary: Add an issue to the project default column
 	// consumes:
 	// - application/json
 	// produces:

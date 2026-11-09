@@ -153,7 +153,7 @@ func (Project) DeleteProject(ctx *context.APIContext) {
 func (Project) ListProjectIssues(ctx *context.APIContext) {
 	// swagger:operation GET /orgs/{org}/projects/{project_id}/issues organization orgListProjectIssues
 	// ---
-	// summary: List ProjectIssues
+	// summary: List issues of the project
 	// produces:
 	// - application/json
 	// parameters:
@@ -178,11 +178,11 @@ func (Project) ListProjectIssues(ctx *context.APIContext) {
 	projects.ListProjectIssues(ctx)
 }
 
-// CreateProjectIssue creates an issue in the default column of the project
+// CreateProjectIssue adds an issue in the default column of the project
 func (Project) CreateProjectIssue(ctx *context.APIContext) {
 	// swagger:operation POST /orgs/{org}/projects/{project_id}/issues organization orgCreateProjectIssue
 	// ---
-	// summary: Create a ProjectIssue for project
+	// summary: Add an issue to the project default column
 	// consumes:
 	// - application/json
 	// produces:
