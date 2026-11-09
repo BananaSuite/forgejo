@@ -208,7 +208,7 @@ func loadRepositoryDefaults() {
 			MaxFiles     int
 		}{
 			Enabled:      true,
-			TempPath:     "data/tmp/uploads",
+			TempPath:     path.Join(AppWorkPath, "data/tmp/uploads"),
 			AllowedTypes: "",
 			FileMaxSize:  50,
 			MaxFiles:     5,
@@ -377,7 +377,6 @@ func loadRepositoryFrom(rootCfg ConfigProvider) error {
 		}
 	}
 
-	Repository.Upload.TempPath = rootCfg.Section("repository.upload").Key("TEMP_PATH").MustString(path.Join(AppWorkPath, "data/tmp/uploads"))
 	if !filepath.IsAbs(Repository.Upload.TempPath) {
 		Repository.Upload.TempPath = path.Join(AppWorkPath, Repository.Upload.TempPath)
 	}
