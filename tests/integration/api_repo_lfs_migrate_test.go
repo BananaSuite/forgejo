@@ -35,7 +35,7 @@ func TestAPIRepoLFSMigrateLocal(t *testing.T) {
 	token := getTokenForLoggedInUser(t, session, auth_model.AccessTokenScopeWriteRepository)
 
 	req := NewRequestWithJSON(t, "POST", "/api/v1/repos/migrate", &api.MigrateRepoOptions{
-		CloneAddr:   path.Join(setting.RepoRootPath, "migration/lfs-test.git"),
+		CloneAddr:   path.Join(setting.Repository.RootPath, "migration/lfs-test.git"),
 		RepoOwnerID: user.ID,
 		RepoName:    "lfs-test-local",
 		LFS:         true,

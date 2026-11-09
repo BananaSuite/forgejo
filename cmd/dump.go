@@ -323,7 +323,7 @@ func runDump(stdCtx context.Context, ctx *cli.Command) error {
 	if ctx.IsSet("skip-repository") && ctx.Bool("skip-repository") {
 		log.Info("Skipping local repositories")
 	} else {
-		log.Info("Dumping local repositories... %s", setting.RepoRootPath)
+		log.Info("Dumping local repositories... %s", setting.Repository.RootPath)
 		wg.Add(1)
 		go dumpRepos(ctx, archiveJobs, &wg, absFileName, verbose)
 	}
@@ -452,7 +452,7 @@ func dumpData(ctx *cli.Command, archiveJobs chan archives.ArchiveAsyncJob, wg *s
 		excludes = append(excludes, setting.RepoArchive.Storage.Path)
 	}
 
-	excludes = append(excludes, setting.RepoRootPath)
+	excludes = append(excludes, setting.Repository.RootPath)
 	excludes = append(excludes, setting.LFS.Storage.Path)
 	excludes = append(excludes, setting.Attachment.Storage.Path)
 	excludes = append(excludes, setting.Packages.Storage.Path)
@@ -532,7 +532,7 @@ func dumpDatabase(ctx *cli.Command, archiveJobs chan archives.ArchiveAsyncJob, w
 func dumpRepos(ctx *cli.Command, archiveJobs chan archives.ArchiveAsyncJob, wg *sync.WaitGroup, absFileName string, verbose bool) {
 	defer wg.Done()
 
-	if err := addRecursiveExclude(archiveJobs, "repos", setting.RepoRootPath, []string{absFileName}, verbose); err != nil {
+	if err := addRecursiveExclude(archiveJobs, "repos", setting.Repository.RootPath, []string{absFileName}, verbose); err != nil {
 		fatal("Failed to include repositories: %v", err)
 	}
 

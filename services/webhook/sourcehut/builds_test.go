@@ -30,7 +30,7 @@ func gitInit(t testing.TB) {
 
 func TestSourcehutBuildsPayload(t *testing.T) {
 	gitInit(t)
-	defer test.MockVariableValue(&setting.RepoRootPath, ".")()
+	defer test.MockVariableValue(&setting.Repository.RootPath, ".")()
 	defer test.MockVariableValue(&setting.AppURL, "https://example.forgejo.org/")()
 
 	repo := &api.Repository{
@@ -333,7 +333,7 @@ triggers:
 
 func TestSourcehutJSONPayload(t *testing.T) {
 	gitInit(t)
-	defer test.MockVariableValue(&setting.RepoRootPath, ".")()
+	defer test.MockVariableValue(&setting.Repository.RootPath, ".")()
 	defer test.MockVariableValue(&setting.AppURL, "https://example.forgejo.org/")()
 
 	repo := &api.Repository{

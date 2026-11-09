@@ -315,7 +315,7 @@ func ListUnadoptedRepositories(ctx context.Context, query string, opts *db.ListO
 	var userName string
 
 	// We're going to iterate by pagesize.
-	root := filepath.Clean(setting.RepoRootPath)
+	root := filepath.Clean(setting.Repository.RootPath)
 	if err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err

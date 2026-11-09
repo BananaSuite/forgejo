@@ -159,7 +159,7 @@ func MainTest(m *testing.M, testOpts ...*TestOptions) {
 	if err != nil {
 		fatalTestError("TempDir: %v\n", err)
 	}
-	setting.RepoRootPath = repoRootPath
+	setting.Repository.RootPath = repoRootPath
 	appDataPath, err := os.MkdirTemp(os.TempDir(), "appdata")
 	if err != nil {
 		fatalTestError("TempDir: %v\n", err)
@@ -196,14 +196,14 @@ func MainTest(m *testing.M, testOpts ...*TestOptions) {
 	if err = util.RemoveAll(repoRootPath); err != nil {
 		fatalTestError("util.RemoveAll: %v\n", err)
 	}
-	if err = CopyDir(filepath.Join(projectRoot, "tests", "gitea-repositories-meta"), setting.RepoRootPath); err != nil {
+	if err = CopyDir(filepath.Join(projectRoot, "tests", "gitea-repositories-meta"), setting.Repository.RootPath); err != nil {
 		fatalTestError("util.CopyDir: %v\n", err)
 	}
 
 	if err = git.InitFull(context.Background()); err != nil {
 		fatalTestError("git.Init: %v\n", err)
 	}
-	ownerDirs, err := os.ReadDir(setting.RepoRootPath)
+	ownerDirs, err := os.ReadDir(setting.Repository.RootPath)
 	if err != nil {
 		fatalTestError("unable to read the new repo root: %v\n", err)
 	}
@@ -211,15 +211,15 @@ func MainTest(m *testing.M, testOpts ...*TestOptions) {
 		if !ownerDir.Type().IsDir() {
 			continue
 		}
-		repoDirs, err := os.ReadDir(filepath.Join(setting.RepoRootPath, ownerDir.Name()))
+		repoDirs, err := os.ReadDir(filepath.Join(setting.Repository.RootPath, ownerDir.Name()))
 		if err != nil {
 			fatalTestError("unable to read the new repo root: %v\n", err)
 		}
 		for _, repoDir := range repoDirs {
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "objects", "pack"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "objects", "info"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "refs", "heads"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "refs", "tag"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "objects", "pack"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "objects", "info"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "refs", "heads"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "refs", "tag"), 0o755)
 		}
 	}
 
@@ -306,23 +306,23 @@ func PrepareTestDatabase() error {
 // by tests that use the above MainTest(..) function.
 func PrepareTestEnv(t testing.TB) {
 	require.NoError(t, PrepareTestDatabase())
-	require.NoError(t, util.RemoveAll(setting.RepoRootPath))
+	require.NoError(t, util.RemoveAll(setting.Repository.RootPath))
 	projectRoot = base.SetupProjectRoot() // Makes sure PROJECT_ROOT is set
 	metaPath := filepath.Join(projectRoot, "tests", "gitea-repositories-meta")
-	require.NoError(t, CopyDir(metaPath, setting.RepoRootPath))
-	ownerDirs, err := os.ReadDir(setting.RepoRootPath)
+	require.NoError(t, CopyDir(metaPath, setting.Repository.RootPath))
+	ownerDirs, err := os.ReadDir(setting.Repository.RootPath)
 	require.NoError(t, err)
 	for _, ownerDir := range ownerDirs {
 		if !ownerDir.Type().IsDir() {
 			continue
 		}
-		repoDirs, err := os.ReadDir(filepath.Join(setting.RepoRootPath, ownerDir.Name()))
+		repoDirs, err := os.ReadDir(filepath.Join(setting.Repository.RootPath, ownerDir.Name()))
 		require.NoError(t, err)
 		for _, repoDir := range repoDirs {
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "objects", "pack"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "objects", "info"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "refs", "heads"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "refs", "tag"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "objects", "pack"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "objects", "info"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "refs", "heads"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "refs", "tag"), 0o755)
 		}
 	}
 }

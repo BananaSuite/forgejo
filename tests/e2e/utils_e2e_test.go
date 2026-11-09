@@ -56,7 +56,7 @@ func onForgejoRunTB(t testing.TB, callback func(testing.TB, *url.URL), prepare .
 	// Override repository root in config.
 	conf, err := os.ReadFile(setting.CustomConf)
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(setting.CustomConf, rootPathRe.ReplaceAll(conf, []byte("[repository]\nROOT = "+setting.RepoRootPath)), 0o644))
+	require.NoError(t, os.WriteFile(setting.CustomConf, rootPathRe.ReplaceAll(conf, []byte("[repository]\nROOT = "+setting.Repository.RootPath)), 0o644))
 
 	defer func() {
 		require.NoError(t, os.WriteFile(setting.CustomConf, conf, 0o644))

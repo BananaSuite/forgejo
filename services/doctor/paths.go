@@ -70,7 +70,7 @@ func checkConfigurationFiles(ctx context.Context, logger log.Logger, autofix boo
 
 	configurationFiles := []configurationFile{
 		{"Configuration File Path", setting.CustomConf, false, true, false},
-		{"Repository Root Path", setting.RepoRootPath, true, true, true},
+		{"Repository Root Path", setting.Repository.RootPath, true, true, true},
 		{"Data Root Path", setting.AppDataPath, true, true, true},
 		{"Custom File Root Path", setting.CustomPath, true, false, false},
 		{"Work directory", setting.AppWorkPath, true, true, false},

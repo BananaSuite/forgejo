@@ -21,7 +21,7 @@ func repoPath(userName, repoName string) string {
 }
 
 func userPath(userName string) string {
-	return filepath.Join(setting.RepoRootPath, strings.ToLower(userName))
+	return filepath.Join(setting.Repository.RootPath, strings.ToLower(userName))
 }
 
 func FixPublisherIDforTagReleases(x *xorm.Engine) error {

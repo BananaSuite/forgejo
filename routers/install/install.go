@@ -115,7 +115,7 @@ func Install(ctx *context.Context) {
 	// Application general settings
 	form.AppName = "Forgejo"
 	form.AppSlogan = "Beyond coding. We Forge."
-	form.RepoRootPath = setting.RepoRootPath
+	form.RepoRootPath = setting.Repository.RootPath
 	form.LFSRootPath = setting.LFS.Storage.Path
 	form.RunUser = setting.RunUser
 	form.Domain = setting.Domain

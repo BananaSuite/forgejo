@@ -19,11 +19,11 @@ type Repository interface {
 }
 
 func repoPath(repo Repository) string {
-	return filepath.Join(setting.RepoRootPath, strings.ToLower(repo.GetOwnerName()), strings.ToLower(repo.GetName())+".git")
+	return filepath.Join(setting.Repository.RootPath, strings.ToLower(repo.GetOwnerName()), strings.ToLower(repo.GetName())+".git")
 }
 
 func wikiPath(repo Repository) string {
-	return filepath.Join(setting.RepoRootPath, strings.ToLower(repo.GetOwnerName()), strings.ToLower(repo.GetName())+".wiki.git")
+	return filepath.Join(setting.Repository.RootPath, strings.ToLower(repo.GetOwnerName()), strings.ToLower(repo.GetName())+".wiki.git")
 }
 
 // OpenRepository opens the repository at the given relative path with the provided context.

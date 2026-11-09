@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,7 +19,7 @@ func TestSettingRepositoryMapping(t *testing.T) {
 		cfg, err := NewConfigProviderFromData("")
 		require.NoError(t, err)
 		require.NoError(t, loadRepositoryFrom(cfg))
-		assert.Equal(t, path.Join(AppDataPath, "forgejo-repositories"), RepoRootPath)
+		assert.Equal(t, path.Join(AppDataPath, "forgejo-repositories"), Repository.RootPath)
 		assert.Equal(t, "bash", ScriptType)
 		assert.Equal(t, []string{"UTF-8", "UTF-16BE", "UTF-16LE", "UTF-32BE", "UTF-32LE", "ISO-8859-1", "windows-1252", "ISO-8859-2", "windows-1250", "ISO-8859-5", "ISO-8859-6", "ISO-8859-7", "windows-1253", "ISO-8859-8-I", "windows-1255", "ISO-8859-8", "windows-1251", "windows-1256", "KOI8-R", "ISO-8859-9", "windows-1254", "Shift_JIS", "GB18030", "EUC-JP", "EUC-KR", "Big5", "ISO-2022-JP", "ISO-2022-KR", "ISO-2022-CN", "IBM424_rtl", "IBM424_ltr", "IBM420_rtl", "IBM420_ltr"}, Repository.DetectedCharsetsOrder)
 		assert.Equal(t, map[string]int{"big5": 25, "euc-jp": 23, "euc-kr": 24, "gb18030": 22, "ibm420_ltr": 32, "ibm420_rtl": 31, "ibm424_ltr": 30, "ibm424_rtl": 29, "iso-2022-cn": 28, "iso-2022-jp": 26, "iso-2022-kr": 27, "iso-8859-1": 5, "iso-8859-2": 7, "iso-8859-5": 9, "iso-8859-6": 10, "iso-8859-7": 11, "iso-8859-8": 15, "iso-8859-8-i": 13, "iso-8859-9": 19, "koi8-r": 18, "shift_jis": 21, "utf-16be": 1, "utf-16le": 2, "utf-32be": 3, "utf-32le": 4, "utf-8": 0, "windows-1250": 8, "windows-1251": 16, "windows-1252": 6, "windows-1253": 12, "windows-1254": 20, "windows-1255": 14, "windows-1256": 17}, Repository.DetectedCharsetScore)
@@ -98,7 +97,6 @@ func TestSettingRepositoryMapping(t *testing.T) {
 	t.Run("Specified", func(t *testing.T) {
 		cfg, err := NewConfigProviderFromData(`
 [repository]
-ROOT = git-repos
 SCRIPT_TYPE = sh
 FORCE_PRIVATE = true
 [repository.editor]
@@ -118,7 +116,6 @@ SIGNING_KEY = none
 `)
 		require.NoError(t, err)
 		require.NoError(t, loadRepositoryFrom(cfg))
-		assert.True(t, strings.HasSuffix(RepoRootPath, "git-repos"))
 		assert.Equal(t, "sh", ScriptType)
 		assert.True(t, Repository.ForcePrivate)
 		assert.Equal(t, []string{".txt"}, Repository.Editor.LineWrapExtensions)
@@ -128,6 +125,35 @@ SIGNING_KEY = none
 		assert.Equal(t, 5, Repository.Issue.MaxPinned)
 		assert.Equal(t, ".zip,text/plain", Repository.Release.AllowedTypes)
 		assert.Equal(t, "none", Repository.Signing.SigningKey)
+	})
+}
+
+func TestSettingRepositoryRootPath(t *testing.T) {
+	t.Run("Absolute", func(t *testing.T) {
+		cfg, err := NewConfigProviderFromData(`
+[repository]
+ROOT = /path/to/git-repos
+`)
+		require.NoError(t, err)
+		require.NoError(t, loadRepositoryFrom(cfg))
+		assert.Equal(t, "/path/to/git-repos", Repository.RootPath)
+	})
+
+	t.Run("Relative", func(t *testing.T) {
+		cfg, err := NewConfigProviderFromData(`
+[repository]
+ROOT = git-repos
+`)
+		require.NoError(t, err)
+		require.NoError(t, loadRepositoryFrom(cfg))
+		assert.Equal(t, path.Join(AppWorkPath, "git-repos"), Repository.RootPath)
+	})
+
+	t.Run("Default", func(t *testing.T) {
+		cfg, err := NewConfigProviderFromData("")
+		require.NoError(t, err)
+		require.NoError(t, loadRepositoryFrom(cfg))
+		assert.Equal(t, path.Join(AppDataPath, "forgejo-repositories"), Repository.RootPath)
 	})
 }
 

@@ -75,7 +75,7 @@ func TestListUnadoptedRepositories_ListOptions(t *testing.T) {
 	unadoptedList = append(unadoptedList, path.Join("user44", "not-uppercase"))
 
 	for _, unadopted := range unadoptedList {
-		_ = os.MkdirAll(path.Join(setting.RepoRootPath, unadopted+".git"), 0o755)
+		_ = os.MkdirAll(path.Join(setting.Repository.RootPath, unadopted+".git"), 0o755)
 	}
 
 	opts := db.ListOptions{Page: 1, PageSize: 1}
@@ -108,7 +108,7 @@ func TestAdoptRepository(t *testing.T) {
 	unadopted := "unadopted"
 	require.NoError(t, unittest.CopyDir(
 		"../../modules/git/tests/repos/repo1_bare",
-		path.Join(setting.RepoRootPath, username, unadopted+".git"),
+		path.Join(setting.Repository.RootPath, username, unadopted+".git"),
 	))
 
 	opts := db.ListOptions{Page: 2, PageSize: 1}

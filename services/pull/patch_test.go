@@ -54,7 +54,7 @@ func TestLoadHeadRevision(t *testing.T) {
 		require.NoError(t, ctx.LoadHeadRevision(t.Context(), pr))
 
 		if assert.NotEmpty(t, ctx.env) {
-			assert.Equal(t, fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s/user13/repo11.git/objects", setting.RepoRootPath), ctx.env[len(ctx.env)-1])
+			assert.Equal(t, fmt.Sprintf("GIT_ALTERNATE_OBJECT_DIRECTORIES=%s/user13/repo11.git/objects", setting.Repository.RootPath), ctx.env[len(ctx.env)-1])
 		}
 		assert.Equal(t, "0abcb056019adb8336cf9db3ad9d9cf80cd4b141", ctx.headRev)
 		assert.True(t, ctx.headIsCommitID)

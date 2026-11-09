@@ -175,7 +175,7 @@ func PushMirrorsIterate(ctx context.Context, limit int, f func(idx int, bean any
 
 // GetPushMirrorRemoteAddress returns the address of associated with a repository's given remote.
 func GetPushMirrorRemoteAddress(ownerName, repoName, remoteName string) (string, error) {
-	repoPath := filepath.Join(setting.RepoRootPath, strings.ToLower(ownerName), strings.ToLower(repoName)+".git")
+	repoPath := filepath.Join(setting.Repository.RootPath, strings.ToLower(ownerName), strings.ToLower(repoName)+".git")
 
 	remoteURL, err := git.GetRemoteAddress(context.Background(), repoPath, remoteName)
 	if err != nil {

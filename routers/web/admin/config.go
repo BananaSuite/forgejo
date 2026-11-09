@@ -130,7 +130,7 @@ func Config(ctx *context.Context) {
 	ctx.Data["GitVersion"] = git.VersionInfo()
 
 	ctx.Data["AppDataPath"] = setting.AppDataPath
-	ctx.Data["RepoRootPath"] = setting.RepoRootPath
+	ctx.Data["RepoRootPath"] = setting.Repository.RootPath
 	ctx.Data["CustomRootPath"] = setting.CustomPath
 	ctx.Data["LogRootPath"] = setting.Log.RootPath
 	ctx.Data["ScriptType"] = setting.ScriptType

@@ -100,7 +100,7 @@ func replaceTestRepo(t *testing.T, owner, repo, replacement string) {
 	t.Helper()
 
 	// Copy the repository into the target path that `gitrepo.OpenRepository` will look for it.
-	repoPath := filepath.Join(setting.RepoRootPath, strings.ToLower(owner), strings.ToLower(repo)+".git")
+	repoPath := filepath.Join(setting.Repository.RootPath, strings.ToLower(owner), strings.ToLower(repo)+".git")
 	err := os.RemoveAll(repoPath) // there's a default repo copied here by the fixture setup that we want to replace
 	require.NoError(t, err)
 	err = os.CopyFS(repoPath, os.DirFS(replacement))

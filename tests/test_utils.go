@@ -316,8 +316,8 @@ func allGoroutineStacks() []byte {
 }
 
 func PrepareGitRepoDirectory(t testing.TB) {
-	setting.RepoRootPath = t.TempDir()
-	require.NoError(t, unittest.CopyDir(preparedDir, setting.RepoRootPath))
+	setting.Repository.RootPath = t.TempDir()
+	require.NoError(t, unittest.CopyDir(preparedDir, setting.Repository.RootPath))
 }
 
 func PrepareArtifactsStorage(t testing.TB) {

@@ -66,10 +66,10 @@ func initMigrationTest(t *testing.T) func() {
 
 	unittest.InitSettings()
 
-	assert.NotEmpty(t, setting.RepoRootPath)
-	require.NoError(t, util.RemoveAll(setting.RepoRootPath))
-	require.NoError(t, unittest.CopyDir(path.Join(setting.AppWorkPath, "tests/gitea-repositories-meta"), setting.RepoRootPath))
-	ownerDirs, err := os.ReadDir(setting.RepoRootPath)
+	assert.NotEmpty(t, setting.Repository.RootPath)
+	require.NoError(t, util.RemoveAll(setting.Repository.RootPath))
+	require.NoError(t, unittest.CopyDir(path.Join(setting.AppWorkPath, "tests/gitea-repositories-meta"), setting.Repository.RootPath))
+	ownerDirs, err := os.ReadDir(setting.Repository.RootPath)
 	if err != nil {
 		require.NoError(t, err, "unable to read the new repo root: %v\n", err)
 	}
@@ -77,15 +77,15 @@ func initMigrationTest(t *testing.T) func() {
 		if !ownerDir.Type().IsDir() {
 			continue
 		}
-		repoDirs, err := os.ReadDir(filepath.Join(setting.RepoRootPath, ownerDir.Name()))
+		repoDirs, err := os.ReadDir(filepath.Join(setting.Repository.RootPath, ownerDir.Name()))
 		if err != nil {
 			require.NoError(t, err, "unable to read the new repo root: %v\n", err)
 		}
 		for _, repoDir := range repoDirs {
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "objects", "pack"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "objects", "info"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "refs", "heads"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "refs", "tag"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "objects", "pack"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "objects", "info"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "refs", "heads"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "refs", "tag"), 0o755)
 		}
 	}
 

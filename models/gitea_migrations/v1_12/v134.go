@@ -74,7 +74,7 @@ func RefixMergeBase(x *xorm.Engine) error {
 				log.Error("Missing base repo with id %d for PR ID %d", pr.BaseRepoID, pr.ID)
 				continue
 			}
-			userPath := filepath.Join(setting.RepoRootPath, strings.ToLower(baseRepo.OwnerName))
+			userPath := filepath.Join(setting.Repository.RootPath, strings.ToLower(baseRepo.OwnerName))
 			repoPath := filepath.Join(userPath, strings.ToLower(baseRepo.Name)+".git")
 
 			gitRefName := fmt.Sprintf("refs/pull/%d/head", pr.Index)

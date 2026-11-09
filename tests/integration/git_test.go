@@ -1204,7 +1204,7 @@ func doCreateAgitFlowPull(dstPath string, ctx *APITestContext, headBranch string
 			})
 		})
 
-		upstreamGitRepo, err := git.OpenRepository(git.DefaultContext, filepath.Join(setting.RepoRootPath, ctx.Username, ctx.Reponame+".git"))
+		upstreamGitRepo, err := git.OpenRepository(git.DefaultContext, filepath.Join(setting.Repository.RootPath, ctx.Username, ctx.Reponame+".git"))
 		require.NoError(t, err)
 		defer upstreamGitRepo.Close()
 

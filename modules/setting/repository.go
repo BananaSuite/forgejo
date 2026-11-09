@@ -18,7 +18,6 @@ import (
 )
 
 var (
-	RepoRootPath        string
 	ScriptType          string
 	Repository          RepositorySetting
 	MaxUserCardsPerPage int
@@ -35,6 +34,7 @@ const (
 
 // Repository settings
 type RepositorySetting struct {
+	RootPath                                string         `ini:"ROOT"`
 	DetectedCharsetsOrder                   []string
 	DetectedCharsetScore                    map[string]int `ini:"-"`
 	AnsiCharset                             string
@@ -127,9 +127,9 @@ type RepositorySetting struct {
 }
 
 func loadRepositoryDefaults() {
-	RepoRootPath = path.Join(AppDataPath, "forgejo-repositories")
 	ScriptType = "bash"
 	Repository = RepositorySetting{
+		RootPath:              path.Join(AppDataPath, "forgejo-repositories"),
 		DetectedCharsetsOrder: []string{
 			"UTF-8",
 			"UTF-16BE",
@@ -306,12 +306,6 @@ func loadRepositoryFrom(rootCfg ConfigProvider) error {
 	loadRepositoryDefaults()
 	// Determine and create root git repository path.
 	sec := rootCfg.Section("repository")
-	RepoRootPath = sec.Key("ROOT").MustString(path.Join(AppDataPath, "forgejo-repositories"))
-	if !filepath.IsAbs(RepoRootPath) {
-		RepoRootPath = filepath.Join(AppWorkPath, RepoRootPath)
-	} else {
-		RepoRootPath = filepath.Clean(RepoRootPath)
-	}
 	defaultDetectedCharsetsOrder := make([]string, 0, len(Repository.DetectedCharsetsOrder))
 	for _, charset := range Repository.DetectedCharsetsOrder {
 		defaultDetectedCharsetsOrder = append(defaultDetectedCharsetsOrder, strings.ToLower(strings.TrimSpace(charset)))
@@ -324,6 +318,12 @@ func loadRepositoryFrom(rootCfg ConfigProvider) error {
 
 	if err := sec.MapTo(&Repository); err != nil {
 		return fmt.Errorf("Failed to map Repository settings: %v", err)
+	}
+
+	if !filepath.IsAbs(Repository.RootPath) {
+		Repository.RootPath = filepath.Join(AppWorkPath, Repository.RootPath)
+	} else {
+		Repository.RootPath = filepath.Clean(Repository.RootPath)
 	}
 
 	if !rootCfg.Section("packages").Key("ENABLED").MustBool(Packages.Enabled) {

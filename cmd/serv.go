@@ -68,8 +68,8 @@ func setup(ctx context.Context, debug, gitNeeded bool) {
 	}
 	setting.MustInstalled()
 	// Sanity check to ensure path is not relative, see: https://github.com/go-gitea/gitea/pull/19317
-	if _, err := os.Stat(setting.RepoRootPath); err != nil {
-		_ = fail(ctx, "Unable to access repository path", "Unable to access repository path %q, err: %v", setting.RepoRootPath, err)
+	if _, err := os.Stat(setting.Repository.RootPath); err != nil {
+		_ = fail(ctx, "Unable to access repository path", "Unable to access repository path %q, err: %v", setting.Repository.RootPath, err)
 		return
 	}
 	if gitNeeded {
@@ -348,7 +348,7 @@ func runServ(ctx context.Context, c *cli.Command) error {
 	}
 
 	process.SetupCancellableCommand(gitcmd)
-	gitcmd.Dir = setting.RepoRootPath
+	gitcmd.Dir = setting.Repository.RootPath
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr

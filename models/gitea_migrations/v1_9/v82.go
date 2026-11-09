@@ -35,7 +35,7 @@ func FixReleaseSha1OnReleaseTable(x *xorm.Engine) error {
 
 	// UserPath returns the path absolute path of user repositories.
 	UserPath := func(userName string) string {
-		return filepath.Join(setting.RepoRootPath, strings.ToLower(userName))
+		return filepath.Join(setting.Repository.RootPath, strings.ToLower(userName))
 	}
 
 	// RepoPath returns repository path by given user and repository name.

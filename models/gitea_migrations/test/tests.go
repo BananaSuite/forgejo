@@ -39,9 +39,9 @@ func PrepareTestEnv(t *testing.T, skip int, syncModels ...any) (*xorm.Engine, fu
 	ourSkip := 2
 	ourSkip += skip
 	deferFn := testlogger.PrintCurrentTest(t, ourSkip)
-	require.NoError(t, os.RemoveAll(setting.RepoRootPath))
-	require.NoError(t, unittest.CopyDir(path.Join(setting.AppWorkPath, "tests/gitea-repositories-meta"), setting.RepoRootPath))
-	ownerDirs, err := os.ReadDir(setting.RepoRootPath)
+	require.NoError(t, os.RemoveAll(setting.Repository.RootPath))
+	require.NoError(t, unittest.CopyDir(path.Join(setting.AppWorkPath, "tests/gitea-repositories-meta"), setting.Repository.RootPath))
+	ownerDirs, err := os.ReadDir(setting.Repository.RootPath)
 	if err != nil {
 		require.NoError(t, err, "unable to read the new repo root: %v\n", err)
 	}
@@ -49,15 +49,15 @@ func PrepareTestEnv(t *testing.T, skip int, syncModels ...any) (*xorm.Engine, fu
 		if !ownerDir.Type().IsDir() {
 			continue
 		}
-		repoDirs, err := os.ReadDir(filepath.Join(setting.RepoRootPath, ownerDir.Name()))
+		repoDirs, err := os.ReadDir(filepath.Join(setting.Repository.RootPath, ownerDir.Name()))
 		if err != nil {
 			require.NoError(t, err, "unable to read the new repo root: %v\n", err)
 		}
 		for _, repoDir := range repoDirs {
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "objects", "pack"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "objects", "info"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "refs", "heads"), 0o755)
-			_ = os.MkdirAll(filepath.Join(setting.RepoRootPath, ownerDir.Name(), repoDir.Name(), "refs", "tag"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "objects", "pack"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "objects", "info"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "refs", "heads"), 0o755)
+			_ = os.MkdirAll(filepath.Join(setting.Repository.RootPath, ownerDir.Name(), repoDir.Name(), "refs", "tag"), 0o755)
 		}
 	}
 
@@ -162,7 +162,7 @@ func MainTest(m *testing.M) {
 	if err := testlogger.WriterCloser.Reset(); err != nil && exitStatus == 0 {
 		fmt.Printf("testlogger.WriterCloser.Reset: error ignored: %v\n", err)
 	}
-	if err := removeAllWithRetry(setting.RepoRootPath); err != nil {
+	if err := removeAllWithRetry(setting.Repository.RootPath); err != nil {
 		fmt.Fprintf(os.Stderr, "os.RemoveAll: %v\n", err)
 	}
 	if err := removeAllWithRetry(tmpDataPath); err != nil {
