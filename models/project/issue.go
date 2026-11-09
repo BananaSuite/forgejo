@@ -114,13 +114,13 @@ func (p *Project) NumOpenIssues(ctx context.Context) int {
 }
 
 // GetProjectIssue fetches a ProjectIssue
-func GetProjectIssue(ctx context.Context, issueID int64) (*ProjectIssue, error) {
+func GetProjectIssue(ctx context.Context, projectIssueID int64) (*ProjectIssue, error) {
 	issue := new(ProjectIssue)
-	has, err := db.GetEngine(ctx).ID(issueID).Get(issue)
+	has, err := db.GetEngine(ctx).ID(projectIssueID).Get(issue)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrProjectIssueNotExist{IssueID: issueID}
+		return nil, ErrProjectIssueNotExist{IssueID: projectIssueID}
 	}
 	return issue, nil
 }

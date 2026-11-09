@@ -30,29 +30,29 @@ func ValidIssueIDs(ctx context.Context, ownerID int64, issues issues_model.Issue
 }
 
 // getProjectIssueByID gets a single ProjectIssue by its ID.
-func getProjectIssueByID(ctx context.Context, issueID int64) (*project_model.ProjectIssue, error) {
-	issue, err := project_model.GetProjectIssue(ctx, issueID)
+func getProjectIssueByID(ctx context.Context, projectIssueID int64) (*project_model.ProjectIssue, error) {
+	issue, err := project_model.GetProjectIssue(ctx, projectIssueID)
 	if err != nil {
-		return nil, fmt.Errorf("Could not get issue %d: %w", issueID, err)
+		return nil, fmt.Errorf("Could not get issue %d: %w", projectIssueID, err)
 	}
 	return issue, nil
 }
 
 // GetValidProjectIssueByID gets a single ProjectIssue by its ID.
 // Makes sure the ID is not zero and the ProjectID and ColumnID match for that issue.
-func GetValidProjectIssueByID(ctx context.Context, projectID, columnID, issueID int64) (*project_model.ProjectIssue, error) {
-	if issueID == int64(0) {
+func GetValidProjectIssueByID(ctx context.Context, projectID, columnID, projectIssueID int64) (*project_model.ProjectIssue, error) {
+	if projectIssueID == int64(0) {
 		return nil, validation.ErrNotValid{
 			Message: "issueID must not be empty",
 		}
 	}
-	i, err := getProjectIssueByID(ctx, issueID)
+	i, err := getProjectIssueByID(ctx, projectIssueID)
 	if err != nil {
 		return nil, err
 	}
 	if i.ProjectID != projectID || i.ProjectColumnID != columnID {
 		return nil, project_module.ErrMismatchedID{
-			Message: fmt.Sprintf("issue %d mismatched with column %d or project %d", issueID, columnID, projectID),
+			Message: fmt.Sprintf("issue %d mismatched with column %d or project %d", projectIssueID, columnID, projectID),
 		}
 	}
 	return i, nil
