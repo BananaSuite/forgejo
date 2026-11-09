@@ -97,6 +97,7 @@ type RepositorySetting struct {
 		DefaultUpdateStyle                       string
 		PopulateSquashCommentWithCommitMessages  bool
 		RetargetChildrenOnMerge                  bool
+		KeepForcePushRefs                        bool
 	} `ini:"repository.pull-request"`
 
 	// Issue Setting
@@ -236,6 +237,7 @@ func loadRepositoryDefaults() {
 			DefaultUpdateStyle                       string
 			PopulateSquashCommentWithCommitMessages  bool
 			RetargetChildrenOnMerge                  bool
+			KeepForcePushRefs                        bool
 		}{
 			WorkInProgressPrefixes: []string{"WIP:", "[WIP]"},
 			// Same as GitHub. See
@@ -251,6 +253,7 @@ func loadRepositoryDefaults() {
 			DefaultUpdateStyle:                       "merge",
 			PopulateSquashCommentWithCommitMessages:  false,
 			RetargetChildrenOnMerge:                  true,
+			KeepForcePushRefs:                        true,
 		},
 
 		// Issue settings
