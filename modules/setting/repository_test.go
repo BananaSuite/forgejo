@@ -75,6 +75,7 @@ func TestSettingRepositoryMapping(t *testing.T) {
 		assert.Equal(t, "merge", Repository.PullRequest.DefaultUpdateStyle)
 		assert.False(t, Repository.PullRequest.PopulateSquashCommentWithCommitMessages)
 		assert.True(t, Repository.PullRequest.RetargetChildrenOnMerge)
+		assert.True(t, Repository.PullRequest.KeepForcePushRefs)
 		assert.Equal(t, []string{"Too heated", "Off-topic", "Spam", "Resolved"}, Repository.Issue.LockReasons)
 		assert.Equal(t, 3, Repository.Issue.MaxPinned)
 		assert.Empty(t, Repository.Release.AllowedTypes)
