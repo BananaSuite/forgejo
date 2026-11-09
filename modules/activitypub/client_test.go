@@ -6,9 +6,7 @@ package activitypub_test
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -119,78 +117,13 @@ func TestClientKeyRSA(t *testing.T) {
 		clientKey := activitypub.NewClientKey(bytes.Bytes(), keyID, alg)
 		_, err = clientKey.RSAPrivateKey()
 		require.Error(t, err)
-		_, err = clientKey.ECDSAPrivateKey()
-		require.Error(t, err)
 		_, err = clientKey.Ed25519PrivateKey()
 		require.Error(t, err)
 
 		_, err = clientKey.RSAPublicKey()
 		require.Error(t, err)
-		_, err = clientKey.ECDSAPublicKey()
-		require.Error(t, err)
 		_, err = clientKey.Ed25519PublicKey()
 		require.Error(t, err)
-	}
-}
-
-func TestClientKeyECDSA(t *testing.T) {
-	for _, curve := range []elliptic.Curve{elliptic.P256(), elliptic.P384()} {
-		ecdsaKey, err := ecdsa.GenerateKey(curve, rand.Reader)
-		require.NoError(t, err)
-
-		ecdsaPubKey, ok := ecdsaKey.Public().(*ecdsa.PublicKey)
-		assert.True(t, ok)
-
-		derKey, err := x509.MarshalPKCS8PrivateKey(ecdsaKey)
-		require.NoError(t, err)
-		bytes := bytes.NewBufferString("")
-		derBlock := &pem.Block{Bytes: derKey}
-		require.NoError(t, pem.Encode(bytes, derBlock))
-
-		algs := []setting.Algorithm{
-			setting.AlgorithmP256CAVAGE,
-			setting.AlgorithmP256RFC9421,
-			setting.AlgorithmP384CAVAGE,
-			setting.AlgorithmP384RFC9421,
-		}
-
-		for _, alg := range algs {
-			clientKey := activitypub.NewClientKey(bytes.Bytes(), keyID, alg)
-			clientPrivKey, err := clientKey.ECDSAPrivateKey()
-			require.NoError(t, err)
-			assert.Equal(t, clientPrivKey, ecdsaKey)
-
-			clientPubKey, err := clientKey.ECDSAPublicKey()
-			require.NoError(t, err)
-			assert.Equal(t, clientPubKey, ecdsaPubKey)
-		}
-
-		otherAlgs := []setting.Algorithm{
-			setting.AlgorithmRSASHA256CAVAGE,
-			setting.AlgorithmRSASHA512CAVAGE,
-			setting.AlgorithmRSARFC9421,
-			setting.AlgorithmRSAPSSRFC9421,
-			setting.AlgorithmEd25519,
-			setting.AlgorithmHMACSHA256,
-			setting.AlgorithmNone,
-		}
-
-		for _, alg := range otherAlgs {
-			clientKey := activitypub.NewClientKey(bytes.Bytes(), keyID, alg)
-			_, err = clientKey.ECDSAPrivateKey()
-			require.Error(t, err)
-			_, err = clientKey.RSAPrivateKey()
-			require.Error(t, err)
-			_, err = clientKey.Ed25519PrivateKey()
-			require.Error(t, err)
-
-			_, err = clientKey.ECDSAPublicKey()
-			require.Error(t, err)
-			_, err = clientKey.RSAPublicKey()
-			require.Error(t, err)
-			_, err = clientKey.Ed25519PublicKey()
-			require.Error(t, err)
-		}
 	}
 }
 
@@ -230,15 +163,11 @@ func TestClientKeyEd25519(t *testing.T) {
 
 	for _, alg := range otherAlgs {
 		clientKey := activitypub.NewClientKey(bytes.Bytes(), keyID, alg)
-		_, err = clientKey.ECDSAPrivateKey()
-		require.Error(t, err)
 		_, err = clientKey.RSAPrivateKey()
 		require.Error(t, err)
 		_, err = clientKey.Ed25519PrivateKey()
 		require.Error(t, err)
 
-		_, err = clientKey.ECDSAPublicKey()
-		require.Error(t, err)
 		_, err = clientKey.RSAPublicKey()
 		require.Error(t, err)
 		_, err = clientKey.Ed25519PublicKey()

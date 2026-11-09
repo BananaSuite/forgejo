@@ -5,7 +5,6 @@ package activitypub
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
@@ -61,61 +60,6 @@ func (k ClientKey) RSAPublicKey() (*rsa.PublicKey, error) {
 		pk, ok := priv.Public().(*rsa.PublicKey)
 		if !ok {
 			return nil, fmt.Errorf("invalid RSA public key")
-		}
-		return pk, nil
-	}
-}
-
-// ECDSAPrivateKey attempts to parse an ECDSA private key from the [ClientKey].
-func (k ClientKey) ECDSAPrivateKey() (*ecdsa.PrivateKey, error) {
-	if k.privKey == nil {
-		return nil, fmt.Errorf("nil private key")
-	}
-
-	switch k.alg {
-	case setting.AlgorithmP256CAVAGE, setting.AlgorithmP256RFC9421, setting.AlgorithmP384CAVAGE, setting.AlgorithmP384RFC9421:
-		privPem, _ := pem.Decode(k.privKey)
-		pk, err := x509.ParsePKCS8PrivateKey(privPem.Bytes)
-		if err != nil {
-			return nil, err
-		}
-		ecdsaPriv, ok := pk.(*ecdsa.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf("invalid ECDSA private key")
-		}
-		return ecdsaPriv, nil
-	default:
-		return nil, fmt.Errorf("invalid ECDSA algorithm: %v", k.alg)
-	}
-}
-
-// ECDSAPublicKey attempts to parse an ECDSA public key from the [ClientKey].
-func (k ClientKey) ECDSAPublicKey() (*ecdsa.PublicKey, error) {
-	if k.privKey == nil {
-		pk, err := x509.ParsePKIXPublicKey(k.pubKey)
-		if err != nil {
-			return nil, err
-		}
-
-		switch k.alg {
-		case setting.AlgorithmP256CAVAGE, setting.AlgorithmP256RFC9421,
-			setting.AlgorithmP384CAVAGE, setting.AlgorithmP384RFC9421:
-			k, ok := pk.(*ecdsa.PublicKey)
-			if !ok {
-				return nil, fmt.Errorf("invalid ECDSA public key")
-			}
-			return k, nil
-		default:
-			return nil, fmt.Errorf("invalid ECDSA algorithm: %v", k.alg)
-		}
-	} else {
-		priv, err := k.ECDSAPrivateKey()
-		if err != nil {
-			return nil, err
-		}
-		pk, ok := priv.Public().(*ecdsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("invalid ECDSA public key")
 		}
 		return pk, nil
 	}
@@ -204,49 +148,6 @@ func (k ClientKey) VerifierRFC9421Ed25519(config RFC9421Config, fields httpsign9
 	return httpsign9421.NewEd25519Verifier(*pk, config.Verifier, fields)
 }
 
-func (k ClientKey) SignerRFC9421HMACSHA256(config RFC9421Config, fields httpsign9421.Fields) (*httpsign9421.Signer, error) {
-	if k.privKey == nil {
-		return nil, fmt.Errorf("ClientKey: nil HMAC-SHA256 signing key")
-	}
-	return httpsign9421.NewHMACSHA256Signer(k.privKey, config.Signer, fields)
-}
-
-func (k ClientKey) VerifierRFC9421HMACSHA256(config RFC9421Config, fields httpsign9421.Fields) (*httpsign9421.Verifier, error) {
-	return httpsign9421.NewHMACSHA256Verifier(k.pubKey, config.Verifier, fields)
-}
-
-func (k ClientKey) SignerRFC9421P256(config RFC9421Config, fields httpsign9421.Fields) (*httpsign9421.Signer, error) {
-	pk, err := k.ECDSAPrivateKey()
-	if err != nil {
-		return nil, err
-	}
-	return httpsign9421.NewP256Signer(*pk, config.Signer, fields)
-}
-
-func (k ClientKey) VerifierRFC9421P256(config RFC9421Config, fields httpsign9421.Fields) (*httpsign9421.Verifier, error) {
-	pk, err := k.ECDSAPublicKey()
-	if err != nil {
-		return nil, err
-	}
-	return httpsign9421.NewP256Verifier(*pk, config.Verifier, fields)
-}
-
-func (k ClientKey) SignerRFC9421P384(config RFC9421Config, fields httpsign9421.Fields) (*httpsign9421.Signer, error) {
-	pk, err := k.ECDSAPrivateKey()
-	if err != nil {
-		return nil, err
-	}
-	return httpsign9421.NewP384Signer(*pk, config.Signer, fields)
-}
-
-func (k ClientKey) VerifierRFC9421P384(config RFC9421Config, fields httpsign9421.Fields) (*httpsign9421.Verifier, error) {
-	pk, err := k.ECDSAPublicKey()
-	if err != nil {
-		return nil, err
-	}
-	return httpsign9421.NewP384Verifier(*pk, config.Verifier, fields)
-}
-
 func (k ClientKey) SignerRFC9421RSA(config RFC9421Config, fields httpsign9421.Fields) (*httpsign9421.Signer, error) {
 	pk, err := k.RSAPrivateKey()
 	if err != nil {
@@ -261,22 +162,6 @@ func (k ClientKey) VerifierRFC9421RSA(config RFC9421Config, fields httpsign9421.
 		return nil, err
 	}
 	return httpsign9421.NewRSAVerifier(*pk, config.Verifier, fields)
-}
-
-func (k ClientKey) SignerRFC9421RSAPSS(config RFC9421Config, fields httpsign9421.Fields) (*httpsign9421.Signer, error) {
-	pk, err := k.RSAPrivateKey()
-	if err != nil {
-		return nil, err
-	}
-	return httpsign9421.NewRSAPSSSigner(*pk, config.Signer, fields)
-}
-
-func (k ClientKey) VerifierRFC9421RSAPSS(config RFC9421Config, fields httpsign9421.Fields) (*httpsign9421.Verifier, error) {
-	pk, err := k.RSAPublicKey()
-	if err != nil {
-		return nil, err
-	}
-	return httpsign9421.NewRSAPSSVerifier(*pk, config.Verifier, fields)
 }
 
 // SignerRFC9421 attempts to create a valid RFC 9421 HTTP Message signer.
@@ -294,16 +179,8 @@ func (k ClientKey) SignerRFC9421(config *httpsign9421.SignConfig, fields httpsig
 	switch k.alg {
 	case setting.AlgorithmEd25519:
 		return k.SignerRFC9421Ed25519(signConfig, fields)
-	case setting.AlgorithmHMACSHA256:
-		return k.SignerRFC9421HMACSHA256(signConfig, fields)
-	case setting.AlgorithmP256RFC9421:
-		return k.SignerRFC9421P256(signConfig, fields)
-	case setting.AlgorithmP384RFC9421:
-		return k.SignerRFC9421P384(signConfig, fields)
 	case setting.AlgorithmRSARFC9421:
 		return k.SignerRFC9421RSA(signConfig, fields)
-	case setting.AlgorithmRSAPSSRFC9421:
-		return k.SignerRFC9421RSAPSS(signConfig, fields)
 	default:
 		return nil, fmt.Errorf("invalid RFC 9421 signature algorithm: %v", k.alg)
 	}
@@ -324,16 +201,8 @@ func (k ClientKey) VerifierRFC9421(config *httpsign9421.VerifyConfig, fields htt
 	switch k.alg {
 	case setting.AlgorithmEd25519:
 		return k.VerifierRFC9421Ed25519(verifyConfig, fields)
-	case setting.AlgorithmHMACSHA256:
-		return k.VerifierRFC9421HMACSHA256(verifyConfig, fields)
-	case setting.AlgorithmP256RFC9421:
-		return k.VerifierRFC9421P256(verifyConfig, fields)
-	case setting.AlgorithmP384RFC9421:
-		return k.VerifierRFC9421P384(verifyConfig, fields)
 	case setting.AlgorithmRSARFC9421:
 		return k.VerifierRFC9421RSA(verifyConfig, fields)
-	case setting.AlgorithmRSAPSSRFC9421:
-		return k.VerifierRFC9421RSAPSS(verifyConfig, fields)
 	default:
 		return nil, fmt.Errorf("invalid RFC 9421 signature algorithm: %v", k.alg)
 	}
