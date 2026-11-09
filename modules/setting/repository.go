@@ -17,6 +17,15 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+var (
+	RepoRootPath        string
+	ScriptType          string
+	Repository          RepositorySetting
+	MaxUserCardsPerPage int
+	MaxForksPerPage     int
+	SSHInstanceKey      ssh.PublicKey
+)
+
 // enumerates all the policy repository creating
 const (
 	RepoCreatingLastUserVisibility = "last"
@@ -24,108 +33,103 @@ const (
 	RepoCreatingPublic             = "public"
 )
 
-// MaxUserCardsPerPage sets maximum amount of watchers and stargazers shown per page
-// those pages use 2 or 3 column layout, so the value should be divisible by 2 and 3
-var MaxUserCardsPerPage = 36
-
-// MaxForksPerPage sets maximum amount of forks shown per page
-var MaxForksPerPage = 40
-
-var SSHInstanceKey ssh.PublicKey
-
 // Repository settings
-var (
-	Repository = struct {
-		DetectedCharsetsOrder                   []string
-		DetectedCharsetScore                    map[string]int `ini:"-"`
-		AnsiCharset                             string
-		ForcePrivate                            bool
-		DefaultPrivate                          string
-		DefaultPushCreatePrivate                bool
-		MaxCreationLimit                        int
-		PreferredLicenses                       []string
-		DisableHTTPGit                          bool
-		AccessControlAllowOrigin                string
-		UseCompatSSHURI                         bool
-		GoGetCloneURLProtocol                   string
-		DefaultCloseIssuesViaCommitsInAnyBranch bool
-		EnablePushCreateUser                    bool
-		EnablePushCreateOrg                     bool
-		DisabledRepoUnits                       []string
-		DefaultRepoUnits                        []string
-		DefaultForkRepoUnits                    []string
-		DefaultMirrorRepoUnits                  []string
-		PrefixArchiveFiles                      bool
-		DisableMigrations                       bool
-		DisableStars                            bool
-		DisableForks                            bool
-		DefaultBranch                           string
-		AllowAdoptionOfUnadoptedRepositories    bool
-		AllowDeleteOfUnadoptedRepositories      bool
-		DisableDownloadSourceArchives           bool
-		AllowForkWithoutMaximumLimit            bool
+type RepositorySetting struct {
+	DetectedCharsetsOrder                   []string
+	DetectedCharsetScore                    map[string]int `ini:"-"`
+	AnsiCharset                             string
+	ForcePrivate                            bool
+	DefaultPrivate                          string
+	DefaultPushCreatePrivate                bool
+	MaxCreationLimit                        int
+	PreferredLicenses                       []string
+	DisableHTTPGit                          bool
+	AccessControlAllowOrigin                string
+	UseCompatSSHURI                         bool
+	GoGetCloneURLProtocol                   string
+	DefaultCloseIssuesViaCommitsInAnyBranch bool
+	EnablePushCreateUser                    bool
+	EnablePushCreateOrg                     bool
+	DisabledRepoUnits                       []string
+	DefaultRepoUnits                        []string
+	DefaultForkRepoUnits                    []string
+	DefaultMirrorRepoUnits                  []string
+	PrefixArchiveFiles                      bool
+	DisableMigrations                       bool
+	DisableStars                            bool
+	DisableForks                            bool
+	DefaultBranch                           string
+	AllowAdoptionOfUnadoptedRepositories    bool
+	AllowDeleteOfUnadoptedRepositories      bool
+	DisableDownloadSourceArchives           bool
+	AllowForkWithoutMaximumLimit            bool
 
-		// Repository editor settings
-		Editor struct {
-			LineWrapExtensions []string
-		} `ini:"repository.editor"`
+	// Repository editor settings
+	Editor struct {
+		LineWrapExtensions []string
+	} `ini:"repository.editor"`
 
-		// Repository upload settings
-		Upload struct {
-			Enabled      bool
-			TempPath     string
-			AllowedTypes string
-			FileMaxSize  int64
-			MaxFiles     int
-		} `ini:"repository.upload"`
+	// Repository upload settings
+	Upload struct {
+		Enabled      bool
+		TempPath     string
+		AllowedTypes string
+		FileMaxSize  int64
+		MaxFiles     int
+	} `ini:"repository.upload"`
 
-		// Repository local settings
-		Local struct {
-			LocalCopyPath string
-		} `ini:"repository.local"`
+	// Repository local settings
+	Local struct {
+		LocalCopyPath string
+	} `ini:"repository.local"`
 
-		// Pull request settings
-		PullRequest struct {
-			WorkInProgressPrefixes                   []string
-			CloseKeywords                            []string
-			ReopenKeywords                           []string
-			DefaultMergeStyle                        string
-			DefaultMergeMessageCommitsLimit          int
-			DefaultMergeMessageSize                  int
-			DefaultMergeMessageAllAuthors            bool
-			DefaultMergeMessageMaxApprovers          int
-			DefaultMergeMessageOfficialApproversOnly bool
-			DefaultUpdateStyle                       string
-			PopulateSquashCommentWithCommitMessages  bool
-			RetargetChildrenOnMerge                  bool
-		} `ini:"repository.pull-request"`
+	// Pull request settings
+	PullRequest struct {
+		WorkInProgressPrefixes                   []string
+		CloseKeywords                            []string
+		ReopenKeywords                           []string
+		DefaultMergeStyle                        string
+		DefaultMergeMessageCommitsLimit          int
+		DefaultMergeMessageSize                  int
+		DefaultMergeMessageAllAuthors            bool
+		DefaultMergeMessageMaxApprovers          int
+		DefaultMergeMessageOfficialApproversOnly bool
+		DefaultUpdateStyle                       string
+		PopulateSquashCommentWithCommitMessages  bool
+		RetargetChildrenOnMerge                  bool
+	} `ini:"repository.pull-request"`
 
-		// Issue Setting
-		Issue struct {
-			LockReasons []string
-			MaxPinned   int
-		} `ini:"repository.issue"`
+	// Issue Setting
+	Issue struct {
+		LockReasons []string
+		MaxPinned   int
+	} `ini:"repository.issue"`
 
-		Release struct {
-			AllowedTypes     string
-			DefaultPagingNum int
-		} `ini:"repository.release"`
+	Release struct {
+		AllowedTypes     string
+		DefaultPagingNum int
+	} `ini:"repository.release"`
 
-		Signing struct {
-			SigningKey        string
-			SigningName       string
-			SigningEmail      string
-			Format            string
-			InitialCommit     []string
-			CRUDActions       []string `ini:"CRUD_ACTIONS"`
-			Merges            []string
-			Wiki              []string
-			DefaultTrustModel string
-		} `ini:"repository.signing"`
+	Signing struct {
+		SigningKey        string
+		SigningName       string
+		SigningEmail      string
+		Format            string
+		InitialCommit     []string
+		CRUDActions       []string `ini:"CRUD_ACTIONS"`
+		Merges            []string
+		Wiki              []string
+		DefaultTrustModel string
+	} `ini:"repository.signing"`
 
-		SettableFlags []string
-		EnableFlags   bool
-	}{
+	SettableFlags []string
+	EnableFlags   bool
+}
+
+func loadRepositoryDefaults() {
+	RepoRootPath = path.Join(AppDataPath, "forgejo-repositories")
+	ScriptType = "bash"
+	Repository = RepositorySetting{
 		DetectedCharsetsOrder: []string{
 			"UTF-8",
 			"UTF-16BE",
@@ -183,6 +187,9 @@ var (
 		DisableStars:                            false,
 		DisableForks:                            false,
 		DefaultBranch:                           "main",
+		AllowAdoptionOfUnadoptedRepositories:    false,
+		AllowDeleteOfUnadoptedRepositories:      false,
+		DisableDownloadSourceArchives:           false,
 		AllowForkWithoutMaximumLimit:            true,
 
 		// Repository editor settings
@@ -287,11 +294,15 @@ var (
 
 		EnableFlags: false,
 	}
-	RepoRootPath string
-	ScriptType   = "bash"
-)
+	// MaxUserCardsPerPage sets maximum amount of watchers and stargazers shown per page
+	// those pages use 2 or 3 column layout, so the value should be divisible by 2 and 3
+	MaxUserCardsPerPage = 36
+	// MaxForksPerPage sets maximum amount of forks shown per page
+	MaxForksPerPage = 40
+}
 
 func loadRepositoryFrom(rootCfg ConfigProvider) error {
+	loadRepositoryDefaults()
 	// Determine and create root git repository path.
 	sec := rootCfg.Section("repository")
 	Repository.DisableHTTPGit = sec.Key("DISABLE_HTTP_GIT").MustBool()
