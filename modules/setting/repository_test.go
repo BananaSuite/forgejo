@@ -14,11 +14,15 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+func loadRepositoryFromData(t *testing.T, config string) error {
+	cfg, err := NewConfigProviderFromData(config)
+	require.NoError(t, err)
+	return loadRepositoryFrom(cfg)
+}
+
 func TestSettingRepositoryMapping(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
-		cfg, err := NewConfigProviderFromData("")
-		require.NoError(t, err)
-		require.NoError(t, loadRepositoryFrom(cfg))
+		require.NoError(t, loadRepositoryFromData(t, ""))
 		assert.Equal(t, path.Join(AppDataPath, "forgejo-repositories"), Repository.RootPath)
 		assert.Equal(t, "bash", ScriptType)
 		assert.Equal(t, []string{"UTF-8", "UTF-16BE", "UTF-16LE", "UTF-32BE", "UTF-32LE", "ISO-8859-1", "windows-1252", "ISO-8859-2", "windows-1250", "ISO-8859-5", "ISO-8859-6", "ISO-8859-7", "windows-1253", "ISO-8859-8-I", "windows-1255", "ISO-8859-8", "windows-1251", "windows-1256", "KOI8-R", "ISO-8859-9", "windows-1254", "Shift_JIS", "GB18030", "EUC-JP", "EUC-KR", "Big5", "ISO-2022-JP", "ISO-2022-KR", "ISO-2022-CN", "IBM424_rtl", "IBM424_ltr", "IBM420_rtl", "IBM420_ltr"}, Repository.DetectedCharsetsOrder)
@@ -95,7 +99,7 @@ func TestSettingRepositoryMapping(t *testing.T) {
 	})
 
 	t.Run("Specified", func(t *testing.T) {
-		cfg, err := NewConfigProviderFromData(`
+		require.NoError(t, loadRepositoryFromData(t, `
 [repository]
 SCRIPT_TYPE = sh
 FORCE_PRIVATE = true
@@ -113,9 +117,7 @@ MAX_PINNED = 5
 ALLOWED_TYPES = .zip,text/plain
 [repository.signing]
 SIGNING_KEY = none
-`)
-		require.NoError(t, err)
-		require.NoError(t, loadRepositoryFrom(cfg))
+`))
 		assert.Equal(t, "sh", ScriptType)
 		assert.True(t, Repository.ForcePrivate)
 		assert.Equal(t, []string{".txt"}, Repository.Editor.LineWrapExtensions)
@@ -130,98 +132,77 @@ SIGNING_KEY = none
 
 func TestSettingRepositoryRootPath(t *testing.T) {
 	t.Run("Absolute", func(t *testing.T) {
-		cfg, err := NewConfigProviderFromData(`
+		require.NoError(t, loadRepositoryFromData(t, `
 [repository]
 ROOT = /path/to/git-repos
-`)
-		require.NoError(t, err)
-		require.NoError(t, loadRepositoryFrom(cfg))
+`))
 		assert.Equal(t, "/path/to/git-repos", Repository.RootPath)
 	})
 
 	t.Run("Relative", func(t *testing.T) {
-		cfg, err := NewConfigProviderFromData(`
+		require.NoError(t, loadRepositoryFromData(t, `
 [repository]
 ROOT = git-repos
-`)
-		require.NoError(t, err)
-		require.NoError(t, loadRepositoryFrom(cfg))
+`))
 		assert.Equal(t, path.Join(AppWorkPath, "git-repos"), Repository.RootPath)
 	})
 
 	t.Run("Default", func(t *testing.T) {
-		cfg, err := NewConfigProviderFromData("")
-		require.NoError(t, err)
-		require.NoError(t, loadRepositoryFrom(cfg))
+		require.NoError(t, loadRepositoryFromData(t, ""))
 		assert.Equal(t, path.Join(AppDataPath, "forgejo-repositories"), Repository.RootPath)
 	})
 }
 
 func TestSSHInstanceKey(t *testing.T) {
 	t.Run("Default value", func(t *testing.T) {
-		cfg, err := NewConfigProviderFromData(`
+		require.Error(t, loadRepositoryFromData(t, `
 [repository.signing]
 FORMAT = ssh
-`)
-		require.NoError(t, err)
-		require.Error(t, loadRepositoryFrom(cfg))
+`))
 	})
 
 	t.Run("No value", func(t *testing.T) {
-		cfg, err := NewConfigProviderFromData(`
+		require.Error(t, loadRepositoryFromData(t, `
 [repository.signing]
 FORMAT = ssh
 SIGNING_KEY =
-`)
-		require.NoError(t, err)
-		require.Error(t, loadRepositoryFrom(cfg))
+`))
 	})
 
 	t.Run("None value", func(t *testing.T) {
-		cfg, err := NewConfigProviderFromData(`
+		require.Error(t, loadRepositoryFromData(t, `
 [repository.signing]
 FORMAT = ssh
 SIGNING_KEY = none
-`)
-		require.NoError(t, err)
-		require.Error(t, loadRepositoryFrom(cfg))
+`))
 	})
 
 	t.Run("Key does not exist", func(t *testing.T) {
-		cfg, err := NewConfigProviderFromData(`
+		require.Error(t, loadRepositoryFromData(t, `
 [repository.signing]
 FORMAT = ssh
 SIGNING_KEY = /file/does/not/exist
-`)
-		require.NoError(t, err)
-		require.Error(t, loadRepositoryFrom(cfg))
+`))
 	})
 
 	t.Run("Not a public SSH key", func(t *testing.T) {
 		sshSigningKeyPath, err := filepath.Abs("../../tests/integration/ssh-signing-key")
 		require.NoError(t, err)
-		iniStr := fmt.Sprintf(`
+		require.Error(t, loadRepositoryFromData(t, fmt.Sprintf(`
 [repository.signing]
 FORMAT = ssh
 SIGNING_KEY = %s
-`, sshSigningKeyPath)
-		cfg, err := NewConfigProviderFromData(iniStr)
-		require.NoError(t, err)
-		require.Error(t, loadRepositoryFrom(cfg))
+`, sshSigningKeyPath)))
 	})
 
 	t.Run("Normal", func(t *testing.T) {
 		sshSigningKeyPath, err := filepath.Abs("../../tests/integration/ssh-signing-key.pub")
 		require.NoError(t, err)
-		iniStr := fmt.Sprintf(`
+		require.NoError(t, loadRepositoryFromData(t, fmt.Sprintf(`
 [repository.signing]
 FORMAT = ssh
 SIGNING_KEY = %s
-`, sshSigningKeyPath)
-		cfg, err := NewConfigProviderFromData(iniStr)
-		require.NoError(t, err)
-		require.NoError(t, loadRepositoryFrom(cfg))
-
+`, sshSigningKeyPath)))
 		assert.NotNil(t, SSHInstanceKey)
 		assert.Equal(t, "ssh-ed25519", SSHInstanceKey.Type())
 		assert.EqualValues(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFeRC8GfFyXtiy0f1E7hLv77BXW7e68tFvIcs8/29YqH\n", ssh.MarshalAuthorizedKey(SSHInstanceKey))
