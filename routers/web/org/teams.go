@@ -87,7 +87,7 @@ func TeamsAction(ctx *context.Context) {
 		}
 		err = org_service.AddTeamMemberByCooptation(ctx, ctx.Org.Team, ctx.Doer, ctx.Doer)
 	case "leave":
-		err = org_service.RemoveTeamMember(ctx, ctx.Org.Team, ctx.Doer.ID)
+		err = org_service.RemoveTeamMember(ctx, ctx.Org.Team, ctx.Doer, ctx.Doer)
 		if err != nil {
 			if org_model.IsErrLastOrgOwner(err) {
 				ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
@@ -114,7 +114,12 @@ func TeamsAction(ctx *context.Context) {
 			return
 		}
 
-		err = org_service.RemoveTeamMember(ctx, ctx.Org.Team, uid)
+		u, err := user_model.GetUserByID(ctx, uid)
+		if err != nil {
+			ctx.Error(http.StatusNotAcceptable)
+			return
+		}
+		err = org_service.RemoveTeamMember(ctx, ctx.Org.Team, u, ctx.Doer)
 		if err != nil {
 			if org_model.IsErrLastOrgOwner(err) {
 				ctx.Flash.Error(ctx.Tr("form.last_org_owner"))

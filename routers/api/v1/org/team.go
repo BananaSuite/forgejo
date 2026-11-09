@@ -540,7 +540,7 @@ func RemoveTeamMember(ctx *context.APIContext) {
 		return
 	}
 
-	if err := org_service.RemoveTeamMember(ctx, ctx.Org().Team, u.ID); err != nil {
+	if err := org_service.RemoveTeamMember(ctx, ctx.Org().Team, u, ctx.Doer()); err != nil {
 		ctx.Error(http.StatusInternalServerError, "RemoveTeamMember", err)
 		return
 	}

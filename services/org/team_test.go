@@ -82,17 +82,18 @@ func TestTeam_RemoveMember(t *testing.T) {
 
 	testSuccess := func(teamID, userID int64) {
 		team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: teamID})
-		require.NoError(t, RemoveTeamMember(db.DefaultContext, team, userID))
+		user := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: userID})
+		require.NoError(t, RemoveTeamMember(db.DefaultContext, team, user, user))
 		unittest.AssertNotExistsBean(t, &organization.TeamUser{UID: userID, TeamID: teamID})
 		unittest.CheckConsistencyFor(t, &organization.Team{ID: teamID})
 	}
 	testSuccess(1, 4)
 	testSuccess(2, 2)
 	testSuccess(3, 2)
-	testSuccess(3, unittest.NonexistentID)
 
 	team := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 1})
-	err := RemoveTeamMember(db.DefaultContext, team, 2)
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	err := RemoveTeamMember(db.DefaultContext, team, user2, user2)
 	assert.True(t, organization.IsErrLastOrgOwner(err))
 }
 

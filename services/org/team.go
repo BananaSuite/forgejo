@@ -33,13 +33,13 @@ func AddTeamMemberByLoginSource(ctx context.Context, team *organization.Team, us
 }
 
 // RemoveTeamMember removes member from given team of given organization.
-func RemoveTeamMember(ctx context.Context, team *organization.Team, userID int64) error {
+func RemoveTeamMember(ctx context.Context, team *organization.Team, oldMember, doer *user_model.User) error {
 	ctx, committer, err := db.TxContext(ctx)
 	if err != nil {
 		return err
 	}
 	defer committer.Close()
-	if err := removeTeamMember(ctx, team, userID); err != nil {
+	if err := removeTeamMember(ctx, team, oldMember.ID); err != nil {
 		return err
 	}
 	return committer.Commit()

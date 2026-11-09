@@ -453,7 +453,7 @@ func TestLDAPGroupTeamSyncAddMember(t *testing.T) {
 			assert.True(t, isMember, "Membership should be added to the right team")
 			// check that the login source is marked as reason for the team membership
 			unittest.AssertExistsAndLoadBean(t, &organization.TeamUser{TeamID: team.ID, UID: user.ID, Reason: organization.MembershipReasonAddedByAuthProvider, CreatedByLoginSourceID: optional.Some(loginSource.ID)})
-			err = org_service.RemoveTeamMember(db.DefaultContext, team, user.ID)
+			err = org_service.RemoveTeamMember(db.DefaultContext, team, user, user)
 			require.NoError(t, err)
 			err = org_service.RemoveOrgUser(db.DefaultContext, usersOrgs[0].ID, user.ID)
 			require.NoError(t, err)
