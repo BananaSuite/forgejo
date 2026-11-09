@@ -34,7 +34,7 @@ const (
 
 // Repository settings
 type RepositorySetting struct {
-	RootPath                                string         `ini:"ROOT"`
+	RootPath                                string `ini:"ROOT"`
 	DetectedCharsetsOrder                   []string
 	DetectedCharsetScore                    map[string]int `ini:"-"`
 	AnsiCharset                             string
@@ -43,10 +43,10 @@ type RepositorySetting struct {
 	DefaultPushCreatePrivate                bool
 	MaxCreationLimit                        int
 	PreferredLicenses                       []string
-	DisableHTTPGit                          bool           `ini:"DISABLE_HTTP_GIT"`
+	DisableHTTPGit                          bool `ini:"DISABLE_HTTP_GIT"`
 	AccessControlAllowOrigin                string
-	UseCompatSSHURI                         bool           `ini:"USE_COMPAT_SSH_URI"`
-	GoGetCloneURLProtocol                   string         `ini:"GO_GET_CLONE_URL_PROTOCOL"`
+	UseCompatSSHURI                         bool   `ini:"USE_COMPAT_SSH_URI"`
+	GoGetCloneURLProtocol                   string `ini:"GO_GET_CLONE_URL_PROTOCOL"`
 	DefaultCloseIssuesViaCommitsInAnyBranch bool
 	EnablePushCreateUser                    bool
 	EnablePushCreateOrg                     bool
@@ -130,7 +130,7 @@ type RepositorySetting struct {
 func loadRepositoryDefaults() {
 	ScriptType = "bash"
 	Repository = RepositorySetting{
-		RootPath:              path.Join(AppDataPath, "forgejo-repositories"),
+		RootPath: path.Join(AppDataPath, "forgejo-repositories"),
 		DetectedCharsetsOrder: []string{
 			"UTF-8",
 			"UTF-16BE",
