@@ -292,7 +292,6 @@ var (
 )
 
 func loadRepositoryFrom(rootCfg ConfigProvider) error {
-	var err error
 	// Determine and create root git repository path.
 	sec := rootCfg.Section("repository")
 	Repository.DisableHTTPGit = sec.Key("DISABLE_HTTP_GIT").MustBool()
@@ -316,7 +315,7 @@ func loadRepositoryFrom(rootCfg ConfigProvider) error {
 		log.Warn("SCRIPT_TYPE %q is not on the current PATH. Are you sure that this is the correct SCRIPT_TYPE?", ScriptType)
 	}
 
-	if err = sec.MapTo(&Repository); err != nil {
+	if err := sec.MapTo(&Repository); err != nil {
 		return fmt.Errorf("Failed to map Repository settings: %v", err)
 	}
 
