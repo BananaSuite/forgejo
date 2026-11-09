@@ -43,10 +43,10 @@ type RepositorySetting struct {
 	DefaultPushCreatePrivate                bool
 	MaxCreationLimit                        int
 	PreferredLicenses                       []string
-	DisableHTTPGit                          bool
+	DisableHTTPGit                          bool           `ini:"DISABLE_HTTP_GIT"`
 	AccessControlAllowOrigin                string
-	UseCompatSSHURI                         bool
-	GoGetCloneURLProtocol                   string
+	UseCompatSSHURI                         bool           `ini:"USE_COMPAT_SSH_URI"`
+	GoGetCloneURLProtocol                   string         `ini:"GO_GET_CLONE_URL_PROTOCOL"`
 	DefaultCloseIssuesViaCommitsInAnyBranch bool
 	EnablePushCreateUser                    bool
 	EnablePushCreateOrg                     bool
@@ -175,6 +175,7 @@ func loadRepositoryDefaults() {
 		DisableHTTPGit:                          false,
 		AccessControlAllowOrigin:                "",
 		UseCompatSSHURI:                         true,
+		GoGetCloneURLProtocol:                   "https",
 		DefaultCloseIssuesViaCommitsInAnyBranch: false,
 		EnablePushCreateUser:                    false,
 		EnablePushCreateOrg:                     false,
@@ -305,11 +306,6 @@ func loadRepositoryFrom(rootCfg ConfigProvider) error {
 	loadRepositoryDefaults()
 	// Determine and create root git repository path.
 	sec := rootCfg.Section("repository")
-	Repository.DisableHTTPGit = sec.Key("DISABLE_HTTP_GIT").MustBool()
-	Repository.UseCompatSSHURI = sec.Key("USE_COMPAT_SSH_URI").MustBool(true)
-	Repository.GoGetCloneURLProtocol = sec.Key("GO_GET_CLONE_URL_PROTOCOL").MustString("https")
-	Repository.MaxCreationLimit = sec.Key("MAX_CREATION_LIMIT").MustInt(-1)
-	Repository.DefaultBranch = sec.Key("DEFAULT_BRANCH").MustString(Repository.DefaultBranch)
 	RepoRootPath = sec.Key("ROOT").MustString(path.Join(AppDataPath, "forgejo-repositories"))
 	if !filepath.IsAbs(RepoRootPath) {
 		RepoRootPath = filepath.Join(AppWorkPath, RepoRootPath)
