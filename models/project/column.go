@@ -19,18 +19,6 @@ import (
 	"xorm.io/builder"
 )
 
-// Errors when creating ProjectColumns
-var (
-	ErrMaximumColumnsReached = errors.New("NewBoard: maximum number of columns reached")
-)
-
-// Errors when moving ProjectColumns
-var (
-	ErrDuplicateColumnInReorderRequest = errors.New("duplicate column ID in reorder request")
-	ErrNotAllColumnsInReorderRequest   = errors.New("all columns in the project must be included in the reorder request")
-	ErrNotAllColumnsInProject          = errors.New("some columns do not exist in this project")
-)
-
 type (
 	// ColumnList is a list of all project columns in a repository
 	ColumnList []*Column
@@ -100,19 +88,6 @@ func (err ErrProjectColumnNotExist) Unwrap() error {
 	return util.ErrNotExist
 }
 
-// ErrBadColorCode is an error for a bad color code.
-type ErrBadColorCode struct {
-	Color string
-}
-
-func (err ErrBadColorCode) Error() string {
-	return fmt.Sprintf("bad color code: %s", err.Color)
-}
-
-func (err ErrBadColorCode) Unwrap() error {
-	return util.ErrInvalidArgument
-}
-
 func createDefaultColumnsForProject(ctx context.Context, project *Project) error {
 	var items []string
 
@@ -166,7 +141,7 @@ const maxProjectColumns = 20
 // CreateColumn adds a new project column to a given project
 func CreateColumn(ctx context.Context, column *Column) error {
 	if len(column.Color) != 0 && !ColumnColorPattern.MatchString(column.Color) {
-		return ErrBadColorCode{column.Color}
+		return fmt.Errorf("bad color code: %s", column.Color)
 	}
 	res := struct {
 		MaxSorting  int64
@@ -177,7 +152,7 @@ func CreateColumn(ctx context.Context, column *Column) error {
 		return err
 	}
 	if res.ColumnCount >= maxProjectColumns {
-		return ErrMaximumColumnsReached
+		return errors.New("maximum number of columns reached")
 	}
 	// This is the first column in this project to be created, so we make it default
 	if res.ColumnCount == 0 {
@@ -258,7 +233,7 @@ func UpdateColumn(ctx context.Context, column *Column) error {
 	}
 
 	if len(column.Color) != 0 && !ColumnColorPattern.MatchString(column.Color) {
-		return ErrBadColorCode{column.Color}
+		return fmt.Errorf("bad color code: %s", column.Color)
 	}
 	fieldToUpdate = append(fieldToUpdate, "color")
 
@@ -350,7 +325,7 @@ func MoveColumnsOnProject(ctx context.Context, projectID int64, sortedColumnIDs 
 		columnIDSet := make(container.Set[int64], len(sortedColumnIDs))
 		for _, columnID := range sortedColumnIDs {
 			if !columnIDSet.Add(columnID) {
-				return ErrDuplicateColumnInReorderRequest
+				return errors.New("duplicate column ID in reorder request")
 			}
 		}
 
@@ -362,7 +337,7 @@ func MoveColumnsOnProject(ctx context.Context, projectID int64, sortedColumnIDs 
 			return err
 		}
 		if len(allColumns) != len(sortedColumnIDs) {
-			return ErrNotAllColumnsInReorderRequest
+			return errors.New("all columns in the project must be included in the reorder request")
 		}
 
 		columnIDs := util.ValuesOfMap(sortedColumnIDs)
@@ -371,7 +346,7 @@ func MoveColumnsOnProject(ctx context.Context, projectID int64, sortedColumnIDs 
 			return err
 		}
 		if len(movedColumns) != len(sortedColumnIDs) {
-			return ErrNotAllColumnsInProject
+			return errors.New("some columns do not exist in this project")
 		}
 
 		// Build reverse map: columnID → target sorting

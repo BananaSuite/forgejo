@@ -16,12 +16,6 @@ import (
 	"xorm.io/builder"
 )
 
-// Errors when moving ProjectIssues
-var (
-	ErrDuplicateIssuesInReorderRequest = errors.New("duplicate issue IDs in reorder request")
-	ErrNotAllIssuesInProject           = errors.New("all issues must belong to the specified project")
-)
-
 // ProjectIssue saves relation from issue to a project
 type ProjectIssue struct { //revive:disable-line:exported
 	ID        int64 `xorm:"pk autoincr"`
@@ -143,7 +137,7 @@ func MoveIssuesOnProjectColumn(ctx context.Context, column *Column, sortedIssueI
 			sortingByIssue[issueID] = sorting
 		}
 		if len(sortingByIssue) != len(sortedIssueIDs) {
-			return ErrDuplicateIssuesInReorderRequest
+			return errors.New("duplicate issue IDs in reorder request")
 		}
 
 		// Validate all issues exist and belong to this project
@@ -154,7 +148,7 @@ func MoveIssuesOnProjectColumn(ctx context.Context, column *Column, sortedIssueI
 			return err
 		}
 		if int(count) != len(sortedIssueIDs) {
-			return ErrNotAllIssuesInProject
+			return errors.New("all issues must belong to the specified project")
 		}
 
 		// Sort issue IDs to ensure consistent lock ordering across concurrent transactions.
