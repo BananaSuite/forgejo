@@ -408,9 +408,19 @@ func TestGitPushMirror(t *testing.T) {
 		doGitCreateBranch(repoPath, branchName)(t)
 		doGitAddSomeCommits(repoPath, branchName)(t)
 
+		divergingBranch := "diverging-branch"
+		doGitCheckoutBranch(repoPath, "main")(t)
+		doGitCreateBranch(repoPath, divergingBranch)(t)
+		doGitAddSomeCommits(repoPath, divergingBranch)(t)
+
 		// create an agit PR (1)
 		err := git.NewCommand(git.DefaultContext, "push", "origin").
 			AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/first-pr", branchName)).Run(&git.RunOpts{Dir: repoPath})
+		require.NoError(t, err)
+
+		// force-push to this PR to create a refs/pull/XX/comment/YY/new reference
+		err = git.NewCommand(git.DefaultContext, "push", "origin", "-o", "force-push=true").
+			AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/first-pr", divergingBranch)).Run(&git.RunOpts{Dir: repoPath})
 		require.NoError(t, err)
 
 		// create a branch PR (2)
