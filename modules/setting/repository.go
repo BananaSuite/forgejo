@@ -366,6 +366,7 @@ func loadRepositoryFrom(rootCfg ConfigProvider) error {
 		}
 	}
 
+	Repository.Upload.TempPath = rootCfg.Section("repository.upload").Key("TEMP_PATH").MustString(path.Join(AppWorkPath, "data/tmp/uploads"))
 	if !filepath.IsAbs(Repository.Upload.TempPath) {
 		Repository.Upload.TempPath = path.Join(AppWorkPath, Repository.Upload.TempPath)
 	}
