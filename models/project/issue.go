@@ -6,7 +6,6 @@ package project
 import (
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 
 	"forgejo.org/models/db"
@@ -55,25 +54,6 @@ func init() {
 	db.RegisterModel(new(ProjectIssue))
 }
 
-// ErrProjectIssueNotExist represents a "ErrProjectIssueNotExist" kind of error.
-type ErrProjectIssueNotExist struct {
-	IssueID int64
-}
-
-// IsErrProjectIssueNotExist checks if an error is a ErrProjectIssueNotExist
-func IsErrProjectIssueNotExist(err error) bool {
-	_, ok := errors.AsType[ErrProjectIssueNotExist](err)
-	return ok
-}
-
-func (err ErrProjectIssueNotExist) Error() string {
-	return fmt.Sprintf("project issue does not exist [id: %d]", err.IssueID)
-}
-
-func (err ErrProjectIssueNotExist) Unwrap() error {
-	return util.ErrNotExist
-}
-
 func deleteProjectIssuesByProjectID(ctx context.Context, projectID int64) error {
 	_, err := db.GetEngine(ctx).Where("project_id=?", projectID).Delete(&ProjectIssue{})
 	return err
@@ -105,18 +85,6 @@ func (p *Project) NumOpenIssues(ctx context.Context) int {
 		return 0
 	}
 	return int(c)
-}
-
-// GetProjectIssue fetches a ProjectIssue
-func GetProjectIssue(ctx context.Context, projectIssueID int64) (*ProjectIssue, error) {
-	issue := new(ProjectIssue)
-	has, err := db.GetEngine(ctx).ID(projectIssueID).Get(issue)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrProjectIssueNotExist{IssueID: projectIssueID}
-	}
-	return issue, nil
 }
 
 // MoveIssuesOnProjectColumn moves or keeps issues in a column and sorts them inside that column.

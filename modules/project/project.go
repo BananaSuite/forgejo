@@ -44,11 +44,6 @@ func (err ErrMismatchedID) Unwrap() error {
 	return util.ErrInvalidArgument
 }
 
-func IsErrMismatchedID(err error) bool {
-	_, ok := errors.AsType[ErrMismatchedID](err)
-	return ok
-}
-
 // Model Types
 
 type TemplateType uint8
