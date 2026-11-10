@@ -35,8 +35,8 @@ dlv exec ./gitea
 (use-modules (guix packages)
              (guix utils))
 
-(define go-1.26                         ;minimal version required by Forgejo
-  (specification->package "go@1.26"))
+(define go-1.27                         ;minimal version required by Forgejo
+  (specification->package "go@1.27"))
 
 (define (package-with-go base go)
   "Return a variant of BASE, a Guix package object built with GO, another
@@ -47,13 +47,13 @@ package."
 
 (define packages-for-debugging
   (list (specification->package "procps")   ;pgrep
-        (package-with-go (specification->package "delve") go-1.26)     ;debugger
-        (package-with-go (specification->package "gomacro") go-1.26))) ;Go REPL
+        (package-with-go (specification->package "delve") go-1.27)     ;debugger
+        (package-with-go (specification->package "gomacro") go-1.27))) ;Go REPL
 
 (concatenate-manifests
  (list
   (packages->manifest
-   (append (list go-1.26)
+   (append (list go-1.27)
            packages-for-debugging))
   (specifications->manifest
    (list "bash-minimal"
