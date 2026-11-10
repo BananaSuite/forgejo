@@ -11,9 +11,7 @@ import (
 	issues_model "forgejo.org/models/issues"
 	project_model "forgejo.org/models/project"
 	user_model "forgejo.org/models/user"
-	project_module "forgejo.org/modules/project"
 	project_types "forgejo.org/modules/structs"
-	"forgejo.org/modules/validation"
 )
 
 // ValidIssueIDs checks if the IDs of the given issue list are valid.
@@ -27,35 +25,6 @@ func ValidIssueIDs(ctx context.Context, ownerID int64, issues issues_model.Issue
 		}
 	}
 	return nil
-}
-
-// getProjectIssueByID gets a single ProjectIssue by its ID.
-func getProjectIssueByID(ctx context.Context, projectIssueID int64) (*project_model.ProjectIssue, error) {
-	issue, err := project_model.GetProjectIssue(ctx, projectIssueID)
-	if err != nil {
-		return nil, fmt.Errorf("Could not get issue %d: %w", projectIssueID, err)
-	}
-	return issue, nil
-}
-
-// GetValidProjectIssueByID gets a single ProjectIssue by its ID.
-// Makes sure the ID is not zero and the ProjectID and ColumnID match for that issue.
-func GetValidProjectIssueByID(ctx context.Context, projectID, columnID, projectIssueID int64) (*project_model.ProjectIssue, error) {
-	if projectIssueID == int64(0) {
-		return nil, validation.ErrNotValid{
-			Message: "issueID must not be empty",
-		}
-	}
-	i, err := getProjectIssueByID(ctx, projectIssueID)
-	if err != nil {
-		return nil, err
-	}
-	if i.ProjectID != projectID || i.ProjectColumnID != columnID {
-		return nil, project_module.ErrMismatchedID{
-			Message: fmt.Sprintf("issue %d mismatched with column %d or project %d", projectIssueID, columnID, projectID),
-		}
-	}
-	return i, nil
 }
 
 // CreateIssueInProject creates a ProjectIssue in a Project in the column with the given ID.

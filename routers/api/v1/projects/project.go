@@ -46,46 +46,6 @@ func getOwnerTypeAndOwnerAndRepoFromData(ctx *context.APIContext) (
 	return ownerType, owner, repo
 }
 
-func getValidColumnOrIssue(ctx *context.APIContext, getIssue bool) (*project_model.Column, *project_model.ProjectIssue) {
-	if ctx.Project().ProjectID == 0 {
-		ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", "Project ID must not be zero")
-		return nil, nil
-	}
-	var err error
-	var projectColumn *project_model.Column
-	var projectIssue *project_model.ProjectIssue
-
-	// Did we get the right columnID?
-	projectColumn, err = project_service.GetValidProjectColumnByID(ctx, ctx.Project().ProjectID, ctx.Project().ProjectColumnID)
-	if err != nil {
-		if project_model.IsErrProjectColumnNotExist(err) || project_module.IsErrMismatchedID(err) {
-			ctx.NotFound("getValidColumnAndIssue", err)
-		} else if validation.IsErrNotValid(err) {
-			ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", err)
-		} else {
-			ctx.ServerError("getValidColumnAndIssue", err)
-		}
-		return nil, nil
-	}
-
-	// Did we get the right issueID?
-	if getIssue {
-		projectIssue, err = project_service.GetValidProjectIssueByID(ctx, ctx.Project().ProjectID, ctx.Project().ProjectColumnID, ctx.Project().ProjectIssueID)
-		if err != nil {
-			if project_model.IsErrProjectIssueNotExist(err) || project_module.IsErrMismatchedID(err) {
-				ctx.NotFound("getValidColumnAndIssue", err)
-			} else if validation.IsErrNotValid(err) {
-				ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", err)
-			} else {
-				ctx.ServerError("getValidColumnAndIssue", err)
-			}
-			return nil, nil
-		}
-	}
-
-	return projectColumn, projectIssue
-}
-
 // CreateProject creates a project for the user/org/repo
 func CreateProject(ctx *context.APIContext) {
 	form := web.GetForm(ctx).(*api.CreateOrUpdateProjectOptions)
@@ -241,13 +201,6 @@ func createProjectColumnIssue(ctx *context.APIContext, defaultColumn bool) {
 	if issueID == 0 {
 		ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", "Issue ID must not be zero")
 		return
-	}
-
-	if !defaultColumn {
-		getValidColumnOrIssue(ctx, false)
-		if ctx.Written() {
-			return
-		}
 	}
 
 	// get issue
