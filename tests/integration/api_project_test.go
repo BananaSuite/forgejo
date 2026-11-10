@@ -523,7 +523,7 @@ func TestProjectAPICreateProjectColumnIssueErrors(t *testing.T) {
 		{"Column ID 0", project.ID, 0, issue.ID, http.StatusUnprocessableEntity, "column ID must not be empty"},
 		{"Mismatching IDs", column.ProjectID + 1, column.ID, issue.ID, http.StatusNotFound, "did not belong to project"},
 		{"Not existing Column", project.ID, column.ID + 1, issue.ID, http.StatusNotFound, "project column does not exist"},
-		{"Pull Request", project.ID, column.ID, pull.ID, http.StatusUnprocessableEntity, "Issue was pull request"},
+		{"Pull Request", project.ID, column.ID, pull.ID, http.StatusCreated, fmt.Sprintf("%d", pull.ID)},
 		{"Issue ID 0", project.ID, column.ID, 0, http.StatusUnprocessableEntity, "Issue ID must not be zero"},
 		{"Not existing Issue", project.ID, column.ID, otherIssue.ID + 1, http.StatusNotFound, "issue does not exist"},
 		{"Not writable Issue", project.ID, column.ID, otherIssue.ID, http.StatusNotFound, ""},
