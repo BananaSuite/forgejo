@@ -61,15 +61,15 @@ func GetValidProjectIssueByID(ctx context.Context, projectID, columnID, issueID 
 // CreateIssueInProject creates a ProjectIssue in a Project in the column with the given ID.
 // If columnID is 0, adds to the DefaultColumn.
 func CreateIssueInProject(ctx context.Context, issue *issues_model.Issue, doer *user_model.User, projectID, colID int64) (*project_model.ProjectIssue, error) {
-	projIssue := &project_model.ProjectIssue{
+	projectIssue := &project_model.ProjectIssue{
 		ProjectID:       projectID,
 		ProjectColumnID: colID,
 	}
 	// CreateProjectIssue checks if the colID is 0 and then assigns to defaultCol
-	if err := issues_model.CreateProjectIssue(ctx, issue, doer, projIssue); err != nil {
+	if err := issues_model.IssueAssignOrRemoveProject(ctx, issue, doer, projectIssue); err != nil {
 		return nil, fmt.Errorf("could not create issue in project %d: %w", projectID, err)
 	}
-	return projIssue, nil
+	return projectIssue, nil
 }
 
 // GetIssues gets an issue list by IssueIDs and checks for completeness, returns false if not complete.
@@ -94,5 +94,9 @@ func MoveIssuesOnProjectColumn(ctx context.Context, column *project_model.Column
 
 // RemoveIssueFromProject removes a ProjectIssue from a Project.
 func RemoveIssueFromProject(ctx context.Context, issue *issues_model.Issue, doer *user_model.User, columnID int64) error {
-	return issues_model.IssueAssignOrRemoveProject(ctx, issue, doer, 0, columnID)
+	projectIssue := &project_model.ProjectIssue{
+		ProjectID:       0,
+		ProjectColumnID: columnID,
+	}
+	return issues_model.IssueAssignOrRemoveProject(ctx, issue, doer, projectIssue)
 }
