@@ -183,16 +183,16 @@ func (wpf webhookPayloadFormatter) getPullRequestPayloadInfo(p *api.PullRequestP
 		color = greenColor
 	case api.HookIssueClosed:
 		if p.PullRequest.HasMerged {
-			text = fmt.Sprintf("Pull request merged: %s %s", titleLink)
+			text = fmt.Sprintf("Pull request merged: %s", titleLink)
 			color = purpleColor
 		} else {
-			text = fmt.Sprintf("Pull request closed: %s %s", titleLink)
+			text = fmt.Sprintf("Pull request closed: %s", titleLink)
 			color = redColor
 		}
 	case api.HookIssueReOpened:
-		text = fmt.Sprintf("Pull request re-opened: %s %s", titleLink)
+		text = fmt.Sprintf("Pull request re-opened: %s", titleLink)
 	case api.HookIssueEdited:
-		text = fmt.Sprintf("Pull request edited: %s %s", titleLink)
+		text = fmt.Sprintf("Pull request edited: %s", titleLink)
 		attachmentText = p.PullRequest.Body
 	case api.HookIssueAssigned:
 		list := make([]string, len(p.PullRequest.Assignees))
@@ -214,12 +214,12 @@ func (wpf webhookPayloadFormatter) getPullRequestPayloadInfo(p *api.PullRequestP
 	case api.HookIssueDemilestoned:
 		text = fmt.Sprintf("Pull request milestone cleared: %s", titleLink)
 	case api.HookIssueReviewed:
-		text = fmt.Sprintf("Pull request reviewed: %s %s", titleLink)
+		text = fmt.Sprintf("Pull request reviewed: %s", titleLink)
 		attachmentText = p.Review.Content
 	case api.HookIssueReviewRequested:
-		text = fmt.Sprintf("Pull request review requested: %s %s", titleLink)
+		text = fmt.Sprintf("Pull request review requested: %s", titleLink)
 	case api.HookIssueReviewRequestRemoved:
-		text = fmt.Sprintf("Pull request review request removed: %s %s", titleLink)
+		text = fmt.Sprintf("Pull request review request removed: %s", titleLink)
 	}
 	if wpf.withRepoName {
 		text = fmt.Sprintf("[%s] %s", p.Repository.FullName, text)
