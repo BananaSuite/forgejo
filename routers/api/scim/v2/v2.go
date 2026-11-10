@@ -83,6 +83,8 @@ func Handler() http.HandlerFunc {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
+
+		// TODO If we want an internal token, we'd retrieve its hash here
 		token := authHeader[len(bearerPrefix):]
 		if cfg.ScimToken == "" || subtle.ConstantTimeCompare([]byte(token), []byte(cfg.ScimToken)) != 1 {
 			w.Header().Set("WWW-Authenticate", `Bearer realm="SCIM"`)
