@@ -100,6 +100,7 @@ type TeamInvite struct {
 	InviterID   int64                               `xorm:"NOT NULL DEFAULT 0"`
 	InviterUser *user_model.User                    `xorm:"-"`
 	OrgID       int64                               `xorm:"INDEX NOT NULL DEFAULT 0"`
+	Org         *Organization                       `xorm:"-"`
 	TeamID      int64                               `xorm:"UNIQUE(team_mail) INDEX NOT NULL DEFAULT 0"`
 	Email       string                              `xorm:"UNIQUE(team_mail) NOT NULL DEFAULT ''"`
 	InvitedID   optional.Option[int64]              `xorm:"index REFERENCES(user, id)"`
@@ -334,6 +335,17 @@ func (i *TeamInvite) LoadInviterUser(ctx context.Context) error {
 			return err
 		}
 		i.InviterUser = user
+	}
+	return nil
+}
+
+func (i *TeamInvite) LoadOrg(ctx context.Context) error {
+	if i.Org == nil {
+		org, err := GetOrgByID(ctx, i.OrgID)
+		if err != nil {
+			return err
+		}
+		i.Org = org
 	}
 	return nil
 }

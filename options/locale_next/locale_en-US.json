@@ -731,6 +731,8 @@
 	"notification.subscriptions": "Subscriptions",
 	"notification.watching": "Watching",
 	"notification.no_subscriptions": "You have no subscriptions.",
+	"notification.pending_invite_notification_single_team": "You are invited to join %[1]s in team %[2]s.",
+	"notification.pending_invite_notification_multiple_teams": "You are invited to join %[1]s, in the following teams: %[2]s.",
 	"dropzone.default_message": "Drop files or click here to upload.",
 	"dropzone.invalid_input_type": "Files of this type cannot be uploaded.",
 	"dropzone.file_too_big": "File size ({{filesize}} MB) exceeds the maximum size of ({{maxFilesize}} MB).",
