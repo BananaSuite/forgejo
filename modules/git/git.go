@@ -159,6 +159,18 @@ func InitFull(ctx context.Context) (err error) {
 		return err
 	}
 
+	// HOME is managed by Forgejo, Forgejo's git should use "HOME/.gitconfig".
+	// However git would prefer editing "XDG_CONFIG_HOME/git/config" if the XDG_CONFIG_HOME
+	// is set and the file exists.
+	_ = os.Unsetenv("XDG_CONFIG_HOME")
+
+	_ = os.Unsetenv("GIT_AUTHOR_NAME")
+	_ = os.Unsetenv("GIT_AUTHOR_EMAIL")
+	_ = os.Unsetenv("GIT_AUTHOR_DATE")
+	_ = os.Unsetenv("GIT_COMMITTER_NAME")
+	_ = os.Unsetenv("GIT_COMMITTER_EMAIL")
+	_ = os.Unsetenv("GIT_COMMITTER_DATE")
+
 	// when git works with gnupg (commit signing), there should be a stable home for gnupg commands
 	if _, ok := os.LookupEnv("GNUPGHOME"); !ok {
 		_ = os.Setenv("GNUPGHOME", filepath.Join(HomeDir(), ".gnupg"))
@@ -310,6 +322,11 @@ func syncGitConfig() (err error) {
 	}
 	// "" was erroneously set in https://codeberg.org/forgejo/forgejo/pulls/13661
 	if err = configUnsetAll("receive.hideRefs", ""); err != nil {
+		return err
+	}
+	// Hide PullRequestForcePush prefix so that `git push --mirror` from a remote into a Forgejo repository doesn't find
+	// and attempt to delete the force-push commit references; those references are read-only.
+	if err = configSet("receive.hideRefs", PullRequestForcePush); err != nil {
 		return err
 	}
 
