@@ -266,6 +266,7 @@ type SearchInvitesOptions struct {
 	TeamID    int64
 	OrgID     int64
 	InvitedID int64
+	Expired   optional.Option[bool]
 }
 
 func (opts SearchInvitesOptions) ToConds() builder.Cond {
@@ -278,6 +279,14 @@ func (opts SearchInvitesOptions) ToConds() builder.Cond {
 	}
 	if opts.InvitedID > 0 {
 		cond = cond.And(builder.Eq{"invited_id": opts.InvitedID})
+	}
+	isSet, expired := opts.Expired.Get()
+	if isSet {
+		if expired {
+			cond = cond.And(builder.NewCond().And(builder.Lte{"expiry_unix": timeutil.TimeStampNow()}).And(builder.Neq{"expiry_unix": nil}))
+		} else {
+			cond = cond.And(builder.NewCond().Or(builder.Gt{"expiry_unix": timeutil.TimeStampNow()}).Or(builder.Eq{"expiry_unix": nil}))
+		}
 	}
 	return cond
 }

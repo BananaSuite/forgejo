@@ -221,4 +221,42 @@ func TestTeamInvite(t *testing.T) {
 			assert.NotNil(t, invite.InviterUser)
 		}
 	})
+
+	t.Run("FindExpiredTeamInvites", func(t *testing.T) {
+		user1 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 1})
+		user5 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 5})
+		user8 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 8})
+
+		invite5, err := organization.CreateTeamInviteForUser(t.Context(), user1, user5, team)
+		assert.NotNil(t, invite5)
+		require.NoError(t, err)
+
+		invite8, err := organization.CreateTeamInviteForUser(t.Context(), user1, user8, team)
+		assert.NotNil(t, invite8)
+		require.NoError(t, err)
+		// manually make the invite never expire
+		_, err = db.GetEngine(t.Context()).Table("team_invite").Cols("expiry_unix").Where("id=?", invite8.ID).Update(
+			&organization.TeamInvite{ExpiryUnix: optional.Some[timeutil.TimeStamp](0)},
+		)
+		require.NoError(t, err)
+
+		expiredInvite, err := organization.CreateTeamInviteByEmail(db.DefaultContext, user1, team, "hello@example.com")
+		assert.NotNil(t, expiredInvite)
+		require.NoError(t, err)
+		// manually make the invite expire
+		_, err = db.GetEngine(t.Context()).Table("team_invite").Cols("expiry_unix").Where("id=?", expiredInvite.ID).Update(
+			&organization.TeamInvite{ExpiryUnix: optional.Some(timeutil.TimeStamp(int64(timeutil.TimeStampNow()) - 500))},
+		)
+		require.NoError(t, err)
+
+		invites, err := organization.GetTeamInvites(t.Context(), &organization.SearchInvitesOptions{Expired: optional.Some(true)})
+		require.NoError(t, err)
+
+		assert.Len(t, invites, 1)
+		assert.Equal(t, invites[0].ID, expiredInvite.ID)
+
+		invites, err = organization.GetTeamInvites(t.Context(), &organization.SearchInvitesOptions{Expired: optional.Some(false)})
+		require.NoError(t, err)
+		assert.Len(t, invites, 2)
+	})
 }
