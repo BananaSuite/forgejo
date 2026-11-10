@@ -98,8 +98,10 @@ func LoadIssuesFromColumnList(ctx context.Context, bs project_model.ColumnList, 
 	return issuesMap, nil
 }
 
-// issueAssignOrRemoveProject changes the project associated with an issue.
+// IssueAssignOrRemoveProject changes the project associated with an issue.
 // If projectIssue.ProjectID is 0, the issue is removed from the project.
+// If projectIssue.ProjectColumnID is 0, the issue is assigned to the default
+// column of the project.
 func IssueAssignOrRemoveProject(
 	ctx context.Context,
 	issue *Issue,

@@ -29,12 +29,11 @@ func ValidIssueIDs(ctx context.Context, ownerID int64, issues issues_model.Issue
 
 // CreateIssueInProject creates a ProjectIssue in a Project in the column with the given ID.
 // If columnID is 0, adds to the DefaultColumn.
-func CreateIssueInProject(ctx context.Context, issue *issues_model.Issue, doer *user_model.User, projectID, colID int64) (*project_model.ProjectIssue, error) {
+func CreateIssueInProject(ctx context.Context, issue *issues_model.Issue, doer *user_model.User, projectID, columnID int64) (*project_model.ProjectIssue, error) {
 	projectIssue := &project_model.ProjectIssue{
 		ProjectID:       projectID,
-		ProjectColumnID: colID,
+		ProjectColumnID: columnID,
 	}
-	// CreateProjectIssue checks if the colID is 0 and then assigns to defaultCol
 	if err := issues_model.IssueAssignOrRemoveProject(ctx, issue, doer, projectIssue); err != nil {
 		return nil, fmt.Errorf("could not create issue in project %d: %w", projectID, err)
 	}
