@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	auth_model "forgejo.org/models/auth"
+	issues_model "forgejo.org/models/issues"
 	"forgejo.org/models/organization"
 	"forgejo.org/models/perm"
 	project_model "forgejo.org/models/project"
@@ -97,9 +98,14 @@ func createProjectColumn(t *testing.T, runOpts *runOpts, columnName string) api.
 }
 
 // createProjectIssue creates an issue.
-func createProjectIssue(t *testing.T, runOpts *runOpts, columnID int64, issueName string) api.ProjectIssue {
+func createProjectIssue(t *testing.T, runOpts *runOpts, columnID int64, issueName string, isPull bool) api.ProjectIssue {
 	// create issue
-	issue := forgery.CreateIssue(t, runOpts.owner, runOpts.repo, issueName, issueName)
+	var issue *issues_model.Issue
+	if isPull {
+		issue = forgery.CreatePullRequest(t, runOpts.owner, runOpts.repo, issueName, issueName)
+	} else {
+		issue = forgery.CreateIssue(t, runOpts.owner, runOpts.repo, issueName, issueName)
+	}
 
 	// create project issue
 	var projectIssue api.ProjectIssue
@@ -300,7 +306,7 @@ func TestProjectAPIListProjectIssuesPagination(t *testing.T) {
 					repo:      repo,
 					projectID: project.ID,
 					ownerType: project_module.APIOwnerTypeRepository,
-				}, column.ID, n))
+				}, column.ID, n, false))
 	}
 
 	// list issues
@@ -794,7 +800,7 @@ func TestProjectAPICRUD(t *testing.T) {
 					repo:      tt.repo,
 					projectID: project.ID,
 					ownerType: tt.ownerType,
-				}, 0, "TestIssue")
+				}, 0, "TestIssue", false)
 
 			assert.NotZero(t, projectIssue1.ID)
 			assert.Equal(t, project.ID, projectIssue1.ProjectID)
@@ -809,7 +815,7 @@ func TestProjectAPICRUD(t *testing.T) {
 					repo:      tt.repo,
 					projectID: project.ID,
 					ownerType: tt.ownerType,
-				}, projectColumn1.ID, "TestIssue2")
+				}, projectColumn1.ID, "TestIssue2", true)
 
 			assert.NotZero(t, projectIssue2.ID)
 			assert.NotEqual(t, projectIssue1.ID, projectIssue2.ID)
