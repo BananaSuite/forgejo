@@ -4,6 +4,8 @@
 package mailer
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 
 	actions_model "forgejo.org/models/actions"
@@ -16,6 +18,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestReadLastActionJobLogLines(t *testing.T) {
+	lines := make([]string, actionJobFailureLogMaxLines+1)
+	for i := range lines {
+		lines[i] = "line " + strconv.Itoa(i)
+	}
+
+	got, err := readLastActionJobLogLines(strings.NewReader(strings.Join(lines, "\n")))
+	require.NoError(t, err)
+	assert.NotContains(t, got, "line 0\n")
+	assert.Contains(t, got, "line 1\n")
+	assert.True(t, strings.HasSuffix(got, "line 500"))
+}
 
 func Test_sendActionRunJobFailureNotification(t *testing.T) {
 	t.Run("Skipped if not failed", func(t *testing.T) {

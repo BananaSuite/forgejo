@@ -4,20 +4,50 @@
 package mailer
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"strings"
 
 	actions_model "forgejo.org/models/actions"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/actions"
 	"forgejo.org/modules/base"
+	"forgejo.org/modules/log"
+	"forgejo.org/modules/optional"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/translation"
+	actions_service "forgejo.org/services/actions"
 )
 
 const (
-	tplActionJobFailure base.TplName = "actions/job_failure"
+	tplActionJobFailure         base.TplName = "actions/job_failure"
+	actionJobFailureLogMaxLines              = 500
+	actionJobFailureLogMaxBytes              = 128 * 1024
 )
+
+func readLastActionJobLogLines(reader io.Reader) (string, error) {
+	scanner := bufio.NewScanner(reader)
+	scanner.Buffer(make([]byte, actions.MaxStoredLineSize), actions.MaxStoredLineSize)
+
+	var lines []string
+	size := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		lines = append(lines, line)
+		size += len(line) + 1
+		for len(lines) > actionJobFailureLogMaxLines || size > actionJobFailureLogMaxBytes {
+			size -= len(lines[0]) + 1
+			lines = lines[1:]
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("could not read job log: %w", err)
+	}
+	return strings.Join(lines, "\n"), nil
+}
 
 var sendActionRunJobFailureNotification = func(ctx context.Context, job *actions_model.ActionRunJob) error {
 	if !job.Status.IsFailure() {
@@ -51,12 +81,30 @@ var sendActionRunJobFailureNotification = func(ctx context.Context, job *actions
 		return fmt.Errorf("could not generate link to job results: %w", err)
 	}
 
+	var jobLog string
+	reader, _, _, err := actions_service.OpenJobLogReader(
+		ctx, job.Run.Repo, job.ID, optional.None[int64](), optional.None[int](),
+	)
+	if err != nil {
+		log.Warn("SendActionRunJobFailureNotification: could not open log for job %d: %v", job.ID, err)
+	} else {
+		jobLog, err = readLastActionJobLogLines(reader)
+		if err != nil {
+			log.Warn("SendActionRunJobFailureNotification: could not read log for job %d: %v", job.ID, err)
+			jobLog = ""
+		}
+		if err := reader.Close(); err != nil {
+			log.Warn("SendActionRunJobFailureNotification: could not close log for job %d: %v", job.ID, err)
+		}
+	}
+
 	locale := translation.NewLocale(user.Language)
 	data := map[string]any{
 		"locale":   locale,
 		"Language": locale.Language(),
 		"Link":     jobLink,
 		"Job":      job,
+		"Log":      jobLog,
 	}
 
 	var content bytes.Buffer

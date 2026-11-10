@@ -22,6 +22,10 @@
 	<p>
 		{{.locale.Tr "mail.actions.job_failure_view_results" .Link}}
 	</p>
+	{{if .Log}}
+	<p>{{.locale.Tr "mail.actions.job_failure_log"}}</p>
+	<pre style="white-space:pre-wrap; overflow-wrap:anywhere">{{.Log}}</pre>
+	{{end}}
 	<div class="footer">
 		<p>
 			---

@@ -520,6 +520,7 @@
 	"mail.actions.job_failure_info_duration": "Duration: %[1]s",
 	"mail.actions.job_failure_info_finished": "Finished: %[1]s",
 	"mail.actions.job_failure_view_results": "View results on %[1]s.",
+	"mail.actions.job_failure_log": "Last lines of the job log (up to 500 lines):",
 	"mail.issue.action.close_by_commit": "%[1]s closed %[2]s in commit %[3]s.",
 	"mail.team_invite.expiration": {
 		"one": "This invitation will expire in %d day.",
