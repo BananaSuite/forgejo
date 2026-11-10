@@ -76,7 +76,6 @@ func newPullrequestPayload(
 	sender *user_model.User,
 	opts *payloadOpts,
 ) (*api.PullRequestPayload, error) {
-
 	res := &api.PullRequestPayload{
 		Action:      action,
 		Index:       idx,
@@ -113,10 +112,8 @@ func newPullrequestPayload(
 		res.PullRequest = convert.ToAPIPullRequest(ctx, pr, opts.review.Reviewer)
 		res.Sender = convert.ToUser(ctx, opts.review.Reviewer, nil)
 		res.RequestedReviewer = convert.ToUser(ctx, opts.review.Reviewer, nil)
-		break
 	case api.HookIssueReviewRequested, api.HookIssueReviewRequestRemoved:
 		res.RequestedReviewer = convert.ToUser(ctx, opts.review.Reviewer, nil)
-		break
 	case api.HookIssueAction(api.HookIssueCommentCreated):
 		err := addParticipants(ctx, pr, res)
 		if err != nil {
