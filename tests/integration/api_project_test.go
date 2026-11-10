@@ -16,6 +16,7 @@ import (
 	"forgejo.org/models/organization"
 	"forgejo.org/models/perm"
 	project_model "forgejo.org/models/project"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
@@ -31,8 +32,8 @@ import (
 
 type runOpts struct {
 	token         string
-	owner         string
-	repo          string
+	owner         *user_model.User
+	repo          *repo_model.Repository
 	projectID     int64
 	shouldSucceed bool
 	ownerType     project_module.APIOwnerType
@@ -42,11 +43,11 @@ func getProjectAPIBaseString(opts *runOpts) string {
 	var projectAPIBaseString string
 	switch opts.ownerType {
 	case project_module.APIOwnerTypeIndividual:
-		projectAPIBaseString = "/api/v1/users/" + opts.owner
+		projectAPIBaseString = "/api/v1/users/" + opts.owner.LowerName
 	case project_module.APIOwnerTypeOrganization:
-		projectAPIBaseString = "/api/v1/orgs/" + opts.owner
+		projectAPIBaseString = "/api/v1/orgs/" + opts.owner.LowerName
 	case project_module.APIOwnerTypeRepository:
-		projectAPIBaseString = "/api/v1/repos/" + opts.owner + "/" + opts.repo
+		projectAPIBaseString = "/api/v1/repos/" + opts.owner.LowerName + "/" + opts.repo.LowerName
 	}
 	return projectAPIBaseString
 }
@@ -98,16 +99,7 @@ func createProjectColumn(t *testing.T, runOpts *runOpts, columnName string) api.
 // createProjectIssue creates an issue.
 func createProjectIssue(t *testing.T, runOpts *runOpts, columnID int64, issueName string) api.ProjectIssue {
 	// create issue
-	var issue api.Issue
-	resp := jsonRequestWithAuth(t, runOpts.token, "POST",
-		fmt.Sprintf("/api/v1/repos/%s/%s/issues", runOpts.owner, runOpts.repo),
-		http.StatusCreated,
-		&api.CreateIssueOption{
-			Body:  issueName,
-			Title: issueName,
-		},
-	)
-	DecodeJSON(t, resp, &issue)
+	issue := forgery.CreateIssue(t, runOpts.owner, runOpts.repo, issueName, issueName)
 
 	// create project issue
 	var projectIssue api.ProjectIssue
@@ -115,7 +107,7 @@ func createProjectIssue(t *testing.T, runOpts *runOpts, columnID int64, issueNam
 	if columnID == 0 {
 		endpoint = getProjectAPIBaseString(runOpts) + fmt.Sprintf("/projects/%d/issues", runOpts.projectID)
 	}
-	resp = jsonRequestWithAuth(t, runOpts.token, "POST", endpoint,
+	resp := jsonRequestWithAuth(t, runOpts.token, "POST", endpoint,
 		http.StatusCreated,
 		&api.CreateProjectIssueOptions{
 			IssueID: issue.ID,
@@ -226,8 +218,8 @@ func TestProjectAPIListProjectColumnsPagination(t *testing.T) {
 		columns = append(columns,
 			createProjectColumn(t, &runOpts{
 				token:     token,
-				owner:     user.LowerName,
-				repo:      repo.LowerName,
+				owner:     user,
+				repo:      repo,
 				ownerType: project_module.APIOwnerTypeRepository,
 				projectID: project.ID,
 			}, n))
@@ -289,8 +281,8 @@ func TestProjectAPIListProjectIssuesPagination(t *testing.T) {
 	// create column
 	column := createProjectColumn(t, &runOpts{
 		token:     token,
-		owner:     user.LowerName,
-		repo:      repo.LowerName,
+		owner:     user,
+		repo:      repo,
 		ownerType: project_module.APIOwnerTypeRepository,
 		projectID: project.ID,
 	}, "test-column")
@@ -304,8 +296,8 @@ func TestProjectAPIListProjectIssuesPagination(t *testing.T) {
 			createProjectIssue(t,
 				&runOpts{
 					token:     token,
-					owner:     user.LowerName,
-					repo:      repo.LowerName,
+					owner:     user,
+					repo:      repo,
 					projectID: project.ID,
 					ownerType: project_module.APIOwnerTypeRepository,
 				}, column.ID, n))
@@ -383,13 +375,13 @@ func TestProjectAPIGetUpdateDeleteProjectColumnErrors(t *testing.T) {
 	project := forgery.CreateProject(t, user, nil)
 	_ = createProjectColumn(t, &runOpts{
 		token:     token,
-		owner:     user.LowerName,
+		owner:     user,
 		ownerType: project_module.APIOwnerTypeIndividual,
 		projectID: project.ID,
 	}, "Default Column")
 	column := createProjectColumn(t, &runOpts{
 		token:     token,
-		owner:     user.LowerName,
+		owner:     user,
 		ownerType: project_module.APIOwnerTypeIndividual,
 		projectID: project.ID,
 	}, "Test Column")
@@ -451,7 +443,7 @@ func TestProjectAPIListProjectColumnIssuesErrors(t *testing.T) {
 	project := forgery.CreateProject(t, user, nil)
 	column := createProjectColumn(t, &runOpts{
 		token:     token,
-		owner:     user.LowerName,
+		owner:     user,
 		ownerType: project_module.APIOwnerTypeIndividual,
 		projectID: project.ID,
 	}, "Test Column")
@@ -495,7 +487,7 @@ func TestProjectAPICreateProjectColumnIssueErrors(t *testing.T) {
 	project := forgery.CreateProject(t, user, nil)
 	column := createProjectColumn(t, &runOpts{
 		token:     token,
-		owner:     user.LowerName,
+		owner:     user,
 		ownerType: project_module.APIOwnerTypeIndividual,
 		projectID: project.ID,
 	}, "Test Column")
@@ -562,13 +554,13 @@ func TestProjectAPIGetUpdateDeleteProjectColumnIssueErrors(t *testing.T) {
 	project := forgery.CreateProject(t, user, nil)
 	column1 := createProjectColumn(t, &runOpts{
 		token:     token,
-		owner:     user.LowerName,
+		owner:     user,
 		ownerType: project_module.APIOwnerTypeIndividual,
 		projectID: project.ID,
 	}, "Test Column 1")
 	column2 := createProjectColumn(t, &runOpts{
 		token:     token,
-		owner:     user.LowerName,
+		owner:     user,
 		ownerType: project_module.APIOwnerTypeIndividual,
 		projectID: project.ID,
 	}, "Test Column 2")
@@ -603,7 +595,7 @@ func TestProjectAPIGetUpdateDeleteProjectColumnIssueErrors(t *testing.T) {
 	otherProject := forgery.CreateProject(t, otherUser, nil)
 	otherColumn := createProjectColumn(t, &runOpts{
 		token:     otherToken,
-		owner:     otherUser.LowerName,
+		owner:     otherUser,
 		ownerType: project_module.APIOwnerTypeIndividual,
 		projectID: otherProject.ID,
 	}, "Test Column 2")
@@ -690,37 +682,37 @@ func TestProjectAPICRUD(t *testing.T) {
 
 	for _, tt := range []struct {
 		name      string
-		owner     string
+		owner     *user_model.User
 		ownerType project_module.APIOwnerType
-		repo      string
+		repo      *repo_model.Repository
 		baseURL   string
 	}{
 		{
 			name:      "User",
-			owner:     user.Name,
+			owner:     user,
 			ownerType: project_module.APIOwnerTypeIndividual,
-			repo:      userRepo.Name,
+			repo:      userRepo,
 			baseURL:   fmt.Sprintf("/api/v1/users/%s", user.Name),
 		},
 		{
 			name:      "Org",
-			owner:     org.Name,
+			owner:     org.AsUser(),
 			ownerType: project_module.APIOwnerTypeOrganization,
-			repo:      orgRepo.Name,
+			repo:      orgRepo,
 			baseURL:   fmt.Sprintf("/api/v1/orgs/%s", org.Name),
 		},
 		{
 			name:      "User Repo",
-			owner:     user.Name,
+			owner:     user,
 			ownerType: project_module.APIOwnerTypeRepository,
-			repo:      userRepo.Name,
+			repo:      userRepo,
 			baseURL:   fmt.Sprintf("/api/v1/repos/%s/%s", user.Name, userRepo.Name),
 		},
 		{
 			name:      "Org Repo",
-			owner:     org.Name,
+			owner:     org.AsUser(),
 			ownerType: project_module.APIOwnerTypeRepository,
-			repo:      orgRepo.Name,
+			repo:      orgRepo,
 			baseURL:   fmt.Sprintf("/api/v1/repos/%s/%s", org.Name, orgRepo.Name),
 		},
 	} {
@@ -740,9 +732,9 @@ func TestProjectAPICRUD(t *testing.T) {
 			assert.Equal(t, "Project 1", project.Description)
 			if tt.ownerType == project_module.APIOwnerTypeRepository {
 				assert.Empty(t, project.OwnerName)
-				assert.Equal(t, tt.repo, project.RepoName)
+				assert.Equal(t, tt.repo.Name, project.RepoName)
 			} else {
-				assert.Equal(t, tt.owner, project.OwnerName)
+				assert.Equal(t, tt.owner.Name, project.OwnerName)
 				assert.Empty(t, project.RepoName)
 			}
 			assert.Equal(t, "open", project.Status)
@@ -1271,7 +1263,7 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 		// Run actions
 		runOpts := &runOpts{
 			token:         user2WriteToken,
-			owner:         privUser2Org.Name,
+			owner:         privUser2Org.AsUser(),
 			shouldSucceed: true,
 			ownerType:     project_module.APIOwnerTypeOrganization,
 		}
@@ -1286,8 +1278,8 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 		// Run actions
 		runOpts := &runOpts{
 			token:         user2WriteToken,
-			owner:         user2.Name,
-			repo:          user2Repo.Name,
+			owner:         user2,
+			repo:          user2Repo,
 			shouldSucceed: true,
 			ownerType:     project_module.APIOwnerTypeRepository,
 		}
@@ -1300,7 +1292,7 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 		// Run actions
 		runOpts := &runOpts{
 			token:         user2WriteToken,
-			owner:         user2.Name,
+			owner:         user2,
 			shouldSucceed: true,
 			ownerType:     project_module.APIOwnerTypeIndividual,
 		}
@@ -1333,7 +1325,7 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 		// Run actions
 		runOpts := &runOpts{
 			token:         user2WriteToken,
-			owner:         privUser1Org.Name,
+			owner:         privUser1Org.AsUser(),
 			shouldSucceed: true,
 			ownerType:     project_module.APIOwnerTypeOrganization,
 		}
@@ -1352,8 +1344,8 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 		// Run actions
 		runOpts := &runOpts{
 			token:         user2WriteToken,
-			owner:         user1.Name,
-			repo:          user1Repo.Name,
+			owner:         user1,
+			repo:          user1Repo,
 			shouldSucceed: true,
 			ownerType:     project_module.APIOwnerTypeRepository,
 		}
@@ -1366,8 +1358,8 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 		user1Repo := forgery.CreateRepository(t, user1, nil)
 		runOpts := &runOpts{
 			token:         user2WriteToken,
-			owner:         user1.Name,
-			repo:          user1Repo.Name,
+			owner:         user1,
+			repo:          user1Repo,
 			shouldSucceed: false,
 			ownerType:     project_module.APIOwnerTypeRepository,
 		}
@@ -1386,8 +1378,8 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 		// Run actions
 		runOpts := &runOpts{
 			token:         user2WriteToken,
-			owner:         user1.Name,
-			repo:          user1Repo.Name,
+			owner:         user1,
+			repo:          user1Repo,
 			shouldSucceed: false,
 			ownerType:     project_module.APIOwnerTypeRepository,
 		}
@@ -1409,7 +1401,7 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 			})
 		runOpts := &runOpts{
 			token:         user2WriteToken,
-			owner:         privUser1Org.Name,
+			owner:         privUser1Org.AsUser(),
 			shouldSucceed: false,
 			ownerType:     project_module.APIOwnerTypeOrganization,
 		}
@@ -1430,7 +1422,7 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 		delProj := forgery.CreateProject(t, privUser1Org, nil)
 		runOpts := &runOpts{
 			token:         user2ReadToken,
-			owner:         privUser1Org.Name,
+			owner:         privUser1Org.AsUser(),
 			shouldSucceed: false,
 			ownerType:     project_module.APIOwnerTypeOrganization,
 		}
