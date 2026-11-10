@@ -214,12 +214,6 @@ func createProjectColumnIssue(ctx *context.APIContext) {
 		return
 	}
 
-	// skip pull request
-	if issue.IsPull {
-		ctx.Error(http.StatusUnprocessableEntity, "Invalid Arguments", "Issue was pull request")
-		return
-	}
-
 	// check issue permissions
 	if err := issue.LoadRepo(ctx); err != nil {
 		ctx.ServerError("CreateProjectColumnIssue", err)
