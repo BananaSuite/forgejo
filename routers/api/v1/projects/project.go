@@ -190,11 +190,11 @@ func ListProjectIssues(ctx *context.APIContext) {
 
 // CreateProjectIssue creates an issue in the default column of the project
 func CreateProjectIssue(ctx *context.APIContext) {
-	createProjectColumnIssue(ctx, true)
+	createProjectColumnIssue(ctx)
 }
 
 // createProjectColumnIssue creates an issue in a column of a project.
-func createProjectColumnIssue(ctx *context.APIContext, defaultColumn bool) {
+func createProjectColumnIssue(ctx *context.APIContext) {
 	// get form parameters
 	form := web.GetForm(ctx).(*api.CreateProjectIssueOptions)
 	issueID := form.IssueID
