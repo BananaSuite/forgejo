@@ -42,7 +42,7 @@ func TestSubmitReviewForm_IsEmpty(t *testing.T) {
 
 func TestIssueLock_HasValidReason(t *testing.T) {
 	// Init settings
-	_ = setting.Repository
+	setting.InitWorkPathAndCommonConfig(func(_ string) string { return "" }, setting.ArgWorkPathAndCustomConf{})
 
 	cases := []struct {
 		form     IssueLockForm

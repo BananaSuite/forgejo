@@ -50,6 +50,8 @@ owner/repo!123456789
 }
 
 func TestFindAllIssueReferences(t *testing.T) {
+	// Init settings
+	setting.InitWorkPathAndCommonConfig(func(_ string) string { return "" }, setting.ArgWorkPathAndCustomConf{})
 	fixtures := []testFixture{
 		{
 			"Simply closes: #29 yes",
