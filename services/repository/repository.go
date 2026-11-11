@@ -130,6 +130,8 @@ func ConvertMirrorToNormalRepo(ctx context.Context, repo *repo_model.Repository)
 	return repo_model.DeleteMirrorByRepoID(ctx, repo.ID)
 }
 
+var ErrAttachmentNotLinked = errors.New("attachment is not linked to a repository")
+
 // LinkedRepository returns the linked repo if any
 func LinkedRepository(ctx context.Context, a *repo_model.Attachment) (*repo_model.Repository, unit.Type, error) {
 	if a.IssueID != 0 {
@@ -151,5 +153,5 @@ func LinkedRepository(ctx context.Context, a *repo_model.Attachment) (*repo_mode
 		repo, err := repo_model.GetRepositoryByID(ctx, rel.RepoID)
 		return repo, unit.TypeReleases, err
 	}
-	return nil, -1, nil
+	return nil, -1, ErrAttachmentNotLinked
 }

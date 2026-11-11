@@ -4,6 +4,7 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -125,12 +126,12 @@ func ServeAttachment(ctx *context.Context, uuid string) {
 	}
 
 	repository, unitType, err := repo_service.LinkedRepository(ctx, attach)
-	if err != nil {
+	if err != nil && !errors.Is(err, repo_service.ErrAttachmentNotLinked) {
 		ctx.ServerError("LinkedRepository", err)
 		return
 	}
 
-	if repository == nil { // If not linked
+	if errors.Is(err, repo_service.ErrAttachmentNotLinked) {
 		if !ctx.IsSigned || attach.UploaderID != ctx.Doer.ID { // We block if not the uploader
 			ctx.Error(http.StatusNotFound)
 			return

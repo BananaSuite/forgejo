@@ -4,9 +4,12 @@
 package repository
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var giteaTemplate = []byte(`
@@ -132,6 +135,27 @@ func TestTransformers(t *testing.T) {
 
 			got := transform.Transform(input)
 			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestCheckGiteaTemplate(t *testing.T) {
+	t.Run("NotFound", func(t *testing.T) {
+		gt, err := checkGiteaTemplate(t.TempDir())
+		require.ErrorIs(t, err, errGiteaTemplateNotFound)
+		assert.Nil(t, gt)
+	})
+
+	for _, dir := range []string{".forgejo", ".gitea"} {
+		t.Run(dir, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			require.NoError(t, os.Mkdir(filepath.Join(tmpDir, dir), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(tmpDir, dir, "template"), giteaTemplate, 0o644))
+
+			gt, err := checkGiteaTemplate(tmpDir)
+			require.NoError(t, err)
+			assert.Equal(t, filepath.Join(dir, "template"), gt.Path)
+			assert.Equal(t, giteaTemplate, gt.Content)
 		})
 	}
 }

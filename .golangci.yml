@@ -338,15 +338,6 @@ linters:
       - path: services/remote/promote.go
         linters:
           - nilnil
-      - path: services/repository/archiver/archiver.go
-        linters:
-          - nilnil
-      - path: services/repository/generate_repo_commit.go
-        linters:
-          - nilnil
-      - path: services/repository/repository.go
-        linters:
-          - nilnil
     paths:
       - node_modules
       - public

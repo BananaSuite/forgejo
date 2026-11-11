@@ -22,22 +22,25 @@ func TestLinkedRepository(t *testing.T) {
 		attachID         int64
 		expectedRepo     *repo_model.Repository
 		expectedUnitType unit.Type
+		expectedErr      error
 	}{
-		{"LinkedIssue", 1, &repo_model.Repository{ID: 1}, unit.TypeIssues},
-		{"LinkedComment", 3, &repo_model.Repository{ID: 1}, unit.TypePullRequests},
-		{"LinkedRelease", 9, &repo_model.Repository{ID: 1}, unit.TypeReleases},
-		{"Notlinked", 10, nil, -1},
+		{"LinkedIssue", 1, &repo_model.Repository{ID: 1}, unit.TypeIssues, nil},
+		{"LinkedComment", 3, &repo_model.Repository{ID: 1}, unit.TypePullRequests, nil},
+		{"LinkedRelease", 9, &repo_model.Repository{ID: 1}, unit.TypeReleases, nil},
+		{"Notlinked", 10, nil, -1, ErrAttachmentNotLinked},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			attach, err := repo_model.GetAttachmentByID(db.DefaultContext, tc.attachID)
 			require.NoError(t, err)
 			repo, unitType, err := LinkedRepository(db.DefaultContext, attach)
-			require.NoError(t, err)
-			if tc.expectedRepo != nil {
+			if tc.expectedErr == nil {
+				require.NoError(t, err)
 				assert.Equal(t, tc.expectedRepo.ID, repo.ID)
+				assert.Equal(t, tc.expectedUnitType, unitType)
+			} else {
+				require.ErrorIs(t, err, tc.expectedErr)
 			}
-			assert.Equal(t, tc.expectedUnitType, unitType)
 		})
 	}
 }

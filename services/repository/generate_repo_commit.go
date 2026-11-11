@@ -5,6 +5,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -47,11 +48,11 @@ func generateRepoCommit(ctx context.Context, repo, templateRepo, generateRepo *r
 
 	// Variable expansion
 	gt, err := checkGiteaTemplate(tmpDir)
-	if err != nil {
+	if err != nil && !errors.Is(err, errGiteaTemplateNotFound) {
 		return fmt.Errorf("checkGiteaTemplate: %w", err)
 	}
 
-	if gt != nil {
+	if err == nil {
 		// All file access should be done through `root` to avoid file traversal attacks, especially with symlinks
 		root, err := os.OpenRoot(tmpDir)
 		if err != nil {
@@ -145,6 +146,8 @@ func generateRepoCommit(ctx context.Context, repo, templateRepo, generateRepo *r
 	return initRepoCommit(ctx, tmpDir, repo, repo.Owner, defaultBranch)
 }
 
+var errGiteaTemplateNotFound = errors.New("template file not found")
+
 func checkGiteaTemplate(tmpDir string) (*GiteaTemplate, error) {
 	configDirs := []string{".forgejo", ".gitea"}
 	var templateFilePath string
@@ -167,7 +170,7 @@ func checkGiteaTemplate(tmpDir string) (*GiteaTemplate, error) {
 	}
 
 	if templateFilePath == "" {
-		return nil, nil
+		return nil, errGiteaTemplateNotFound
 	}
 
 	content, err := root.ReadFile(templateFilePath)

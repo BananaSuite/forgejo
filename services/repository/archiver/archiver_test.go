@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"forgejo.org/models/db"
+	repo_model "forgejo.org/models/repo"
 	"forgejo.org/models/unittest"
 	"forgejo.org/modules/git"
 	"forgejo.org/services/contexttest"
@@ -125,4 +126,20 @@ func TestArchive_Basic(t *testing.T) {
 	// Ideally, the extension would match what we originally requested.
 	assert.NotEqual(t, zipReq.GetArchiveName(), tgzReq.GetArchiveName())
 	assert.NotEqual(t, zipReq.GetArchiveName(), secondReq.GetArchiveName())
+}
+
+func TestDoArchive_Generating(t *testing.T) {
+	require.NoError(t, unittest.PrepareTestDatabase())
+
+	req := &ArchiveRequest{RepoID: 49, Type: git.ZIP, CommitID: "51f84af231345367fd5d61ceb89efb3b6d757061"}
+	require.NoError(t, db.Insert(t.Context(), &repo_model.RepoArchiver{
+		RepoID:   req.RepoID,
+		Type:     req.Type,
+		CommitID: req.CommitID,
+		Status:   repo_model.ArchiverGenerating,
+	}))
+
+	archiver, err := doArchive(t.Context(), req)
+	require.ErrorIs(t, err, errArchiveGenerating)
+	assert.Nil(t, archiver)
 }
