@@ -61,11 +61,7 @@ type CreateOrganisationOptions struct {
 	Visibility structs.VisibleType
 }
 
-func CreateOrganisation(t testing.TB, owner *user_model.User) *org_model.Organization {
-	return CreateOrganisationWithOptions(t, owner, nil)
-}
-
-func CreateOrganisationWithOptions(t testing.TB, owner *user_model.User, opts *CreateOrganisationOptions) *org_model.Organization {
+func CreateOrganisation(t testing.TB, owner *user_model.User, opts *CreateOrganisationOptions) *org_model.Organization {
 	t.Helper()
 
 	if opts == nil {
