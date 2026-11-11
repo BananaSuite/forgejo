@@ -205,13 +205,49 @@ func (u *User) BeforeUpdate() {
 // AfterLoad is invoked from XORM after filling all the fields of this object.
 func (u *User) AfterLoad() {
 	if !IsThemeValid(u.Theme) {
-		u.Theme = setting.UI.DefaultTheme
+		var theme string
+		ok := false
+		switch {
+		case strings.HasSuffix(u.Theme, "-auto"):
+			theme, ok = defaultThemes["auto"]
+		case strings.HasSuffix(u.Theme, "-dark"):
+			theme, ok = defaultThemes["dark"]
+		case strings.HasSuffix(u.Theme, "-light"):
+			theme, ok = defaultThemes["light"]
+		}
+		if ok {
+			u.Theme = theme
+		} else {
+			u.Theme = setting.UI.DefaultTheme
+		}
 	}
 }
 
 func IsThemeValid(theme string) bool {
 	return slices.Contains(setting.UI.Themes, theme)
 }
+
+var defaultThemes = func() map[string]string {
+	defaultThemes := make(map[string]string)
+	defaultThemeWithoutSuffix := ""
+	switch {
+	case strings.HasSuffix(setting.UI.DefaultTheme, "-auto"):
+		defaultThemeWithoutSuffix = strings.TrimSuffix(setting.UI.DefaultTheme, "-auto")
+	case strings.HasSuffix(setting.UI.DefaultTheme, "-dark"):
+		defaultThemeWithoutSuffix = strings.TrimSuffix(setting.UI.DefaultTheme, "-dark")
+	case strings.HasSuffix(setting.UI.DefaultTheme, "-light"):
+		defaultThemeWithoutSuffix = strings.TrimSuffix(setting.UI.DefaultTheme, "-light")
+	}
+	if defaultThemeWithoutSuffix != "" {
+		for _, variant := range []string{"auto", "dark", "light"} {
+			defaultThemeVariant := defaultThemeWithoutSuffix + "-" + variant
+			if IsThemeValid(defaultThemeVariant) {
+				defaultThemes[variant] = defaultThemeVariant
+			}
+		}
+	}
+	return defaultThemes
+}()
 
 // SetLastLogin set time to last login
 func (u *User) SetLastLogin() {

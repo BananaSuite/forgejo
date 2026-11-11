@@ -1190,3 +1190,30 @@ func TestMustShowServiceMessage(t *testing.T) {
 	u.SetConfirm(sm.Type, confirmed)
 	assert.True(t, u.MustShowServiceMessage(sm.Type, sm.UpdatedUnix))
 }
+
+func TestUserTheme(t *testing.T) {
+	t.Run("Exists", func(t *testing.T) {
+		for _, variant := range []string{"auto", "dark", "light"} {
+			user := &user_model.User{Theme: "forgejo-" + variant}
+			assert.True(t, user_model.IsThemeValid(user.Theme))
+			user.AfterLoad()
+			assert.Equal(t, "forgejo-"+variant, user.Theme)
+		}
+	})
+
+	t.Run("Fall back to default theme", func(t *testing.T) {
+		user := &user_model.User{Theme: "frogejo"}
+		assert.False(t, user_model.IsThemeValid(user.Theme))
+		user.AfterLoad()
+		assert.Equal(t, "forgejo-auto", user.Theme)
+	})
+
+	t.Run("Fall back to default theme variant", func(t *testing.T) {
+		for _, variant := range []string{"auto", "dark", "light"} {
+			user := &user_model.User{Theme: "frogejo-" + variant}
+			assert.False(t, user_model.IsThemeValid(user.Theme))
+			user.AfterLoad()
+			assert.Equal(t, "forgejo-"+variant, user.Theme)
+		}
+	})
+}
