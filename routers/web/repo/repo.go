@@ -496,22 +496,8 @@ func RedirectDownload(ctx *context.Context) {
 
 // Download an archive of a repository
 func Download(ctx *context.Context) {
-	uri := ctx.Params("*")
-	ext, tp, err := archiver_service.ParseFileName(uri)
-	if err != nil {
-		ctx.NotFound("ParseFileName", err)
-		return
-	}
-	aReq, err := archiver_service.NewRequest(ctx, ctx.Repo.Repository.ID, ctx.Repo.GitRepo, strings.TrimSuffix(uri, ext), tp)
-	if err != nil {
-		if archiver_service.IsUnknownArchiveFormatError(err) {
-			// Unreachable because archiver_service.ParseFileName performs the same check
-			ctx.Error(http.StatusBadRequest, err.Error())
-		} else if archiver_service.IsRepoRefNotFoundError(err) {
-			ctx.Error(http.StatusNotFound, err.Error())
-		} else {
-			ctx.ServerError("archiver_service.NewRequest", err)
-		}
+	aReq := archivRequest(ctx)
+	if aReq == nil {
 		return
 	}
 
@@ -577,19 +563,8 @@ func download(ctx *context.Context, archiveName string, archiver *repo_model.Rep
 // a request that's already in-progress, but the archiver service will just
 // kind of drop it on the floor if this is the case.
 func InitiateDownload(ctx *context.Context) {
-	uri := ctx.Params("*")
-	ext, tp, err := archiver_service.ParseFileName(uri)
-	if err != nil {
-		ctx.NotFound("ParseFileName", err)
-		return
-	}
-	aReq, err := archiver_service.NewRequest(ctx, ctx.Repo.Repository.ID, ctx.Repo.GitRepo, strings.TrimSuffix(uri, ext), tp)
-	if err != nil {
-		ctx.ServerError("archiver_service.NewRequest", err)
-		return
-	}
+	aReq := archivRequest(ctx)
 	if aReq == nil {
-		ctx.Error(http.StatusNotFound)
 		return
 	}
 
@@ -613,6 +588,31 @@ func InitiateDownload(ctx *context.Context) {
 	ctx.JSON(http.StatusOK, map[string]any{
 		"complete": completed,
 	})
+}
+
+func archivRequest(ctx *context.Context) *archiver_service.ArchiveRequest {
+	uri := ctx.Params("*")
+	ext, tp, err := archiver_service.ParseFileName(uri)
+	if err != nil {
+		ctx.NotFound("ParseFileName", err)
+		return nil
+	}
+	aReq, err := archiver_service.NewRequest(ctx, ctx.Repo.Repository.ID, ctx.Repo.GitRepo, strings.TrimSuffix(uri, ext), tp)
+	if err != nil {
+		if archiver_service.IsUnknownArchiveFormatError(err) {
+			// Unreachable because archiver_service.ParseFileName performs the same check
+			ctx.Error(http.StatusBadRequest, err.Error())
+		} else if archiver_service.IsRepoRefNotFoundError(err) {
+			ctx.Error(http.StatusNotFound, err.Error())
+		} else {
+			ctx.ServerError("archiver_service.NewRequest", err)
+		}
+		return nil
+	}
+	if aReq == nil {
+		ctx.Error(http.StatusNotFound)
+	}
+	return aReq
 }
 
 // SearchRepo repositories via options
