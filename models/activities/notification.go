@@ -162,7 +162,7 @@ func GetIssueNotification(ctx context.Context, userID, issueID int64) (*Notifica
 func createOrUpdateReleaseNotificationForUser(ctx context.Context, userID int64, release *repo_model.Release) error {
 	user, err := user_model.GetUserByID(ctx, userID)
 	if err != nil {
-		return err
+		return fmt.Errorf("GetUserByID [%d]: %w", userID, err)
 	}
 
 	if !access_model.CheckRepoUnitUser(ctx, release.Repo, user, unit.TypeReleases) {
@@ -175,14 +175,14 @@ func createOrUpdateReleaseNotificationForUser(ctx context.Context, userID int64,
 		And("release_id = ?", release.ID).
 		Get(notification)
 	if err != nil {
-		return err
+		return fmt.Errorf("Could not check if a notification for this release already exists: %w", err)
 	}
 
 	if has {
 		notification.Status = NotificationStatusUnread
 		notification.UpdatedUnix = timeutil.TimeStampNow()
 		_, err = db.GetEngine(ctx).ID(notification.ID).Cols("status", "updated_unix").NoAutoTime().Update(notification)
-		return err
+		return fmt.Errorf("Could not mark an existing release notification as unread: %w", err)
 	}
 
 	notification.UserID = userID
@@ -191,7 +191,7 @@ func createOrUpdateReleaseNotificationForUser(ctx context.Context, userID int64,
 	notification.Status = NotificationStatusUnread
 	notification.Source = NotificationSourceRelease
 	_, err = db.GetEngine(ctx).Insert(notification)
-	return err
+	return fmt.Errorf("Could not create a new notification for a release: %w", err)
 }
 
 // GetReleaseNotification return the notification about a release
@@ -214,7 +214,7 @@ func (n *Notification) LoadAttributes(ctx context.Context) (err error) {
 		return err
 	}
 	if err = n.loadRelease(ctx); err != nil {
-		return err
+		return fmt.Errorf("loadRelease: %w", err)
 	}
 	return err
 }
@@ -276,7 +276,7 @@ func (n *Notification) loadRelease(ctx context.Context) (err error) {
 
 		err = n.loadRepo(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("loadRepo: %w", err)
 		}
 
 		n.Release.Repo = n.Repository
@@ -398,7 +398,7 @@ func SetRepoReadBy(ctx context.Context, userID, repoID int64) error {
 func SetReleaseReadBy(ctx context.Context, releaseID, userID int64) error {
 	notification, found, err := GetReleaseNotification(ctx, userID, releaseID)
 	if err != nil {
-		return err
+		return fmt.Errorf("GetReleaseNotification: %w", err)
 	}
 
 	if !found || notification.Status != NotificationStatusUnread {
@@ -408,7 +408,7 @@ func SetReleaseReadBy(ctx context.Context, releaseID, userID int64) error {
 	notification.Status = NotificationStatusRead
 
 	_, err = db.GetEngine(ctx).ID(notification.ID).Cols("status").Update(notification)
-	return err
+	return fmt.Errorf("Could not update the notification status: %w", err)
 }
 
 // SetNotificationStatus change the notification status

@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"fmt"
 
 	"forgejo.org/models/db"
 	issues_model "forgejo.org/models/issues"
@@ -183,17 +184,17 @@ func createOrUpdateIssueNotifications(ctx context.Context, issueID, commentID, n
 func CreateOrUpdateReleaseNotifications(ctx context.Context, releaseID int64) error {
 	release, err := repo_model.GetReleaseByID(ctx, releaseID)
 	if err != nil {
-		return err
+		return fmt.Errorf("GetReleaseByID: %w", err)
 	}
 
 	err = release.LoadRepo(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("LoadRepo: %w", err)
 	}
 
 	watcherIDList, err := repo_model.GetSelectWatcherIDs(ctx, release.RepoID, repo_model.WatchSelection{Issues: false, PullRequests: false, Releases: true})
 	if err != nil {
-		return err
+		return fmt.Errorf("GetSelectWatcherIDs: %w", err)
 	}
 
 	return db.WithTx(ctx, func(ctx context.Context) error {
@@ -228,7 +229,7 @@ func (nl NotificationList) LoadAttributes(ctx context.Context) error {
 		return err
 	}
 	if _, err := nl.LoadReleases(ctx); err != nil {
-		return err
+		return fmt.Errorf("LoadReleases: %w", err)
 	}
 	return nil
 }
@@ -432,7 +433,7 @@ func (nl NotificationList) LoadReleases(ctx context.Context) ([]int, error) {
 	releaseIDs := nl.getPendingReleaseIDs()
 	releases, err := db.GetByIDs(ctx, "id", releaseIDs, &repo_model.Release{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetByIDs[Release]: %w", err)
 	}
 
 	failures := []int{}
