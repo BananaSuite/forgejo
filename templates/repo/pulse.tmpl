@@ -27,13 +27,13 @@
 			{{if gt .Activity.ActivePRCount 0}}
 			<div class="stats-table">
 				{{if gt .Activity.MergedPRPerc 0}}
-					<a href="#merged-pull-requests" class="table-cell tiny tw-bg-purple" style="width: {{.Activity.MergedPRPerc}}%"></a>
+					<a href="#merged-pull-requests" class="table-cell tiny purple" style="width: {{.Activity.MergedPRPerc}}%"></a>
 				{{end}}
-				<a href="#proposed-pull-requests" class="table-cell tiny tw-bg-green"></a>
+				<a href="#proposed-pull-requests" class="table-cell tiny green"></a>
 			</div>
 			{{else}}
 			<div class="stats-table">
-				<a class="table-cell tiny tw-bg-grey"></a>
+				<a class="table-cell tiny grey"></a>
 			</div>
 			{{end}}
 			{{ctx.Locale.TrPluralString .Activity.ActivePRCount "pulse.n_active_prs" (printf "<strong>%d</strong>" .Activity.ActivePRCount | TrustHTML)}}
@@ -44,13 +44,13 @@
 			{{if gt .Activity.ActiveIssueCount 0}}
 			<div class="stats-table">
 				{{if gt .Activity.ClosedIssuePerc 0}}
-					<a href="#closed-issues" class="table-cell tiny tw-bg-red" style="width: {{.Activity.ClosedIssuePerc}}%"></a>
+					<a href="#closed-issues" class="table-cell tiny red" style="width: {{.Activity.ClosedIssuePerc}}%"></a>
 				{{end}}
-				<a href="#new-issues" class="table-cell tiny tw-bg-green"></a>
+				<a href="#new-issues" class="table-cell tiny green"></a>
 			</div>
 			{{else}}
 			<div class="stats-table">
-				<a class="table-cell tiny tw-bg-grey"></a>
+				<a class="table-cell tiny grey"></a>
 			</div>
 			{{end}}
 			{{ctx.Locale.TrPluralString .Activity.ActiveIssueCount "pulse.n_active_issues" (printf "<strong>%d</strong>" .Activity.ActiveIssueCount | TrustHTML)}}

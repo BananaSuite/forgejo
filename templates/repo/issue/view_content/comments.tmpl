@@ -80,7 +80,7 @@
 			</div>
 		{{else if eq .Type 1}}
 			<div class="timeline-item event" id="{{.HashTag}}">
-				<span class="badge tw-bg-green tw-text-white">{{svg "octicon-dot-fill"}}</span>
+				<span class="badge green">{{svg "octicon-dot-fill"}}</span>
 				{{if not .OriginalAuthor}}
 					{{template "shared/user/avatarlink" dict "user" .Poster}}
 				{{end}}
@@ -95,7 +95,7 @@
 			</div>
 		{{else if eq .Type 2}}
 			<div class="timeline-item event" id="{{.HashTag}}">
-				<span class="badge tw-bg-red tw-text-white">{{svg "octicon-circle-slash"}}</span>
+				<span class="badge red">{{svg "octicon-circle-slash"}}</span>
 				{{if not .OriginalAuthor}}
 					{{template "shared/user/avatarlink" dict "user" .Poster}}
 				{{end}}
@@ -110,7 +110,7 @@
 			</div>
 		{{else if eq .Type 28}}
 			<div class="timeline-item event" id="{{.HashTag}}">
-				<span class="badge tw-bg-purple tw-text-white">{{svg "octicon-git-merge"}}</span>
+				<span class="badge purple">{{svg "octicon-git-merge"}}</span>
 				{{if not .OriginalAuthor}}
 					{{template "shared/user/avatarlink" dict "user" .Poster}}
 				{{end}}
@@ -405,7 +405,7 @@
 						{{ctx.AvatarUtils.Avatar .Poster 40}}
 					</a>
 					{{end}}
-					<span class="badge{{if eq .Review.Type 1}} tw-bg-green tw-text-white{{else if eq .Review.Type 3}} tw-bg-red tw-text-white{{end}}">{{svg (printf "octicon-%s" .Review.Type.Icon)}}</span>
+					<span class="badge{{if eq .Review.Type 1}} green{{else if eq .Review.Type 3}} bg-red{{end}}">{{svg (printf "octicon-%s" .Review.Type.Icon)}}</span>
 					<span class="text grey muted-links">
 						{{template "repo/issue/view_content/comments_authorlink" dict "ctxData" $ "comment" .}}
 						{{if eq .Review.Type 1}}
@@ -742,7 +742,7 @@
 						<!-- OPEN / CLOSE -->
 						{{if and .Aggregator.PrevClosed (not .Aggregator.IsClosed)}}
 							<li>
-							<span class="badge tw-bg-green tw-text-white">{{svg "octicon-dot-fill"}}</span>
+							<span class="badge green">{{svg "octicon-dot-fill"}}</span>
 							{{if .Issue.IsPull}}
 								{{ctx.Locale.Tr "repo.pulls.reopened_at" ""}}
 							{{else}}
@@ -750,7 +750,7 @@
 							{{end}}
 							</li>
 						{{else if and (not .Aggregator.PrevClosed) .Aggregator.IsClosed}}
-							<span class="badge tw-bg-red tw-text-white">{{svg "octicon-circle-slash"}}</span>
+							<span class="badge red">{{svg "octicon-circle-slash"}}</span>
 							<li>
 							{{if .Issue.IsPull}}
 								{{ctx.Locale.Tr "repo.pulls.closed_at" ""}}

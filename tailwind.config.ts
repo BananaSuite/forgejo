@@ -6,25 +6,6 @@ import type {Config} from 'tailwindcss';
 
 const isProduction = env.NODE_ENV !== 'development';
 
-function extractRootVars(css: string): string[] {
-  const root = parse(css);
-  const vars = new Set<string>();
-  root.walkRules((rule) => {
-    if (rule.selector !== ':root') return;
-    rule.each((decl) => {
-      if (decl.type === 'decl' && decl.value && decl.prop.startsWith('--')) {
-        vars.add(decl.prop.substring(2));
-      }
-    });
-  });
-  return Array.from(vars);
-}
-
-const vars = extractRootVars([
-  readFileSync(new URL('web_src/css/themes/theme-forgejo-light.css', import.meta.url), 'utf8'),
-  readFileSync(new URL('web_src/css/themes/theme-forgejo-dark.css', import.meta.url), 'utf8'),
-].join('\n'));
-
 export default {
   prefix: 'tw-',
   important: true, // the frameworks are mixed together, so tailwind needs to override other framework's styles
@@ -50,16 +31,6 @@ export default {
     'hidden',
   ],
   theme: {
-    colors: {
-      // make `tw-bg-red` etc work with our CSS variables
-      ...Object.fromEntries(vars.filter((prop) => prop.startsWith('color-')).map((prop) => {
-        const color = prop.substring(6);
-        return [color, `var(--color-${color})`];
-      })),
-      inherit: 'inherit',
-      current: 'currentcolor',
-      transparent: 'transparent',
-    },
     borderRadius: {
       'none': '0',
       'sm': '2px',

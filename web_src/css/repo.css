@@ -417,6 +417,11 @@ td .commit-summary {
   cursor: default;
 }
 
+.code-search {
+  background: var(--color-box-header);
+  border-color: var(--color-secondary);
+}
+
 .code-search + #repo-files-table {
   border-top-left-radius: 0; /* stylelint-disable-line logical-css/require-logical-properties */
   border-top-right-radius: 0; /* stylelint-disable-line logical-css/require-logical-properties */
@@ -847,6 +852,21 @@ citation-information .tab:not(.active) {
   color: var(--color-text);
   align-items: center;
   justify-content: center;
+}
+
+.repository.view.issue .comment-list .timeline-item .badge.red {
+  background-color: var(--color-red);
+  color: var(--color-white);
+}
+
+.repository.view.issue .comment-list .timeline-item .badge.green {
+  background-color: var(--color-green);
+  color: var(--color-white);
+}
+
+.repository.view.issue .comment-list .timeline-item .badge.purple {
+  background-color: var(--color-purple);
+  color: var(--color-white);
 }
 
 .repository.view.issue .comment-list .timeline-item .badge .svg {
@@ -2131,6 +2151,22 @@ details.repo-search-result summary::marker {
 
 .stats-table .table-cell.tiny {
   height: 8px;
+}
+
+.stats-table .table-cell.tiny.red {
+  background: var(--color-red);
+}
+
+.stats-table .table-cell.tiny.green {
+  background: var(--color-green);
+}
+
+.stats-table .table-cell.tiny.purple {
+  background: var(--color-purple);
+}
+
+.stats-table .table-cell.tiny.grey {
+  background: var(--color-grey);
 }
 
 .stats-table .table-cell:first-child {
