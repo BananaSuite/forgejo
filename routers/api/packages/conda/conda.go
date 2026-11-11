@@ -44,14 +44,14 @@ func EnumeratePackages(ctx *context.Context) {
 	type PackageInfo struct {
 		Name          string   `json:"name"`
 		Version       string   `json:"version"`
-		NoArch        string   `json:"noarch"`
+		NoArch        string   `json:"noarch,omitempty"`
 		Subdir        string   `json:"subdir"`
 		Timestamp     int64    `json:"timestamp"`
 		Build         string   `json:"build"`
 		BuildNumber   int64    `json:"build_number"`
 		Dependencies  []string `json:"depends"`
 		License       string   `json:"license"`
-		LicenseFamily string   `json:"license_family"`
+		LicenseFamily string   `json:"license_family,omitempty"`
 		HashMD5       string   `json:"md5"`
 		HashSHA256    string   `json:"sha256"`
 		Size          int64    `json:"size"`
