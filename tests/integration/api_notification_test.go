@@ -180,15 +180,19 @@ func TestAPINotificationPUT(t *testing.T) {
 	assert.EqualValues(t, 5, apiNL[0].ID)
 	assert.True(t, apiNL[0].Unread)
 	assert.False(t, apiNL[0].Pinned)
+	assert.Nil(t, apiNL[0].Release)
 	assert.EqualValues(t, 4, apiNL[1].ID)
 	assert.True(t, apiNL[1].Unread)
 	assert.False(t, apiNL[1].Pinned)
+	assert.Nil(t, apiNL[1].Release)
 	assert.EqualValues(t, 3, apiNL[2].ID)
 	assert.False(t, apiNL[2].Unread)
 	assert.True(t, apiNL[2].Pinned)
+	assert.Nil(t, apiNL[2].Release)
 	assert.EqualValues(t, 2, apiNL[3].ID)
 	assert.False(t, apiNL[3].Unread)
 	assert.False(t, apiNL[3].Pinned)
+	assert.Nil(t, apiNL[3].Release)
 
 	//
 	// Notification ID 2 is the only one with status-type read & pinned
@@ -248,4 +252,13 @@ func TestAPINotificationRelease(t *testing.T) {
 
 	assert.Len(t, notifications, 1)
 	assert.Equal(t, release.ID, notifications[0].Release.ID)
+	assert.Equal(t, "releaseName", notifications[0].Release.TagName)
+	assert.Equal(t, "master", notifications[0].Release.Target)
+	assert.Equal(t, "releaseTitle", notifications[0].Release.Title)
+	assert.Empty(t, notifications[0].Release.Note)
+	assert.False(t, notifications[0].Release.IsDraft)
+	assert.Equal(t, "releaseTitle", notifications[0].Subject.Title)
+	assert.Equal(t, "user2/repo1", notifications[0].Repository.FullName)
+	assert.False(t, notifications[0].Pinned)
+	assert.True(t, notifications[0].Unread)
 }
