@@ -428,6 +428,10 @@ func IsRepositoryDownloadSourceArchiveDisabled(isSigned bool, extension, referen
 	return (Repository.DisableDownloadSourceArchives ||
 		slices.Contains(Repository.Download.DisabledExtensions, extension) ||
 		slices.Contains(Repository.Download.DisabledReferences, reference) ||
+		reference == "default-branch" && slices.Contains(Repository.Download.DisabledReferences, "branch") ||
+		reference == "branch" && slices.Contains(Repository.Download.DisabledReferences, "non-default-branch") ||
 		!isSigned && (slices.Contains(Repository.Download.DisabledExtensionsUnauthenticated, extension) ||
-			slices.Contains(Repository.Download.DisabledReferencesUnauthenticated, reference)))
+			slices.Contains(Repository.Download.DisabledReferencesUnauthenticated, reference) ||
+			reference == "default-branch" && slices.Contains(Repository.Download.DisabledReferencesUnauthenticated, "branch") ||
+			reference == "branch" && slices.Contains(Repository.Download.DisabledReferencesUnauthenticated, "non-default-branch")))
 }
