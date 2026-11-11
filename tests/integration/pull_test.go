@@ -111,8 +111,10 @@ func TestPullViewConversation(t *testing.T) {
 		assert.Equal(t, "9b93963cf6", forcePush.Find("a.ui.sha[href='/user2/commitsonpr/commit/9b93963cf6de4dc33f915bb67f192d099c301f43'] code").Text())
 		assert.Contains(t, forcePush.Text(), "2025-06-")
 
-		// followed by a Compare button:
+		// followed by a Compare Tree button:
 		assert.Equal(t, 1, forcePush.Find("span.compare a[href='/user2/commitsonpr/compare/1978192d98bb1b65e11c2cf37da854fbf94bffd6..9b93963cf6de4dc33f915bb67f192d099c301f43']").Length())
+		// and a Compare Commits button too:
+		assert.Equal(t, 1, forcePush.Find("span.compare a[href='/user2/commitsonpr/range-diff/cbff181af4c9c7fee3cf6c106699e07d9a3f54e6..1978192d98bb1b65e11c2cf37da854fbf94bffd6/cbff181af4c9c7fee3cf6c106699e07d9a3f54e6..9b93963cf6de4dc33f915bb67f192d099c301f43']").Length())
 	})
 
 	t.Run("ForcePush GC'd Commits", func(t *testing.T) {
@@ -152,6 +154,47 @@ func TestPullViewConversation(t *testing.T) {
 		assert.Equal(t, "9b93963cf6", forcePush.Find("a.ui.sha[href='/user2/commitsonpr/commit/9b93963cf6de4dc33f915bb67f192d099c301f43'] code").Text())
 		assert.Contains(t, forcePush.Text(), "2025-06-")
 		assert.NotContains(t, forcePush.Text(), "Compare") // no compare button as one of the commits is invalid
+	})
+
+	t.Run("ForcePush Commits wo/ Merge Base", func(t *testing.T) {
+		// https://codeberg.org/forgejo/forgejo/pulls/15252 added the storage of merge base information into force-push
+		// comments on a PR, but the data doesn't exist on the old comments.  This test ensures that old comments from
+		// before that PR don't get the "Compare Commits" button rendered, but otherwise appear correctly in the
+		// timeline.  To do that, we remove the merge base data from the stored comment #17:
+		c17 := unittest.AssertExistsAndLoadBean(t, &issues_model.Comment{ID: 17})
+		var data issues_model.PushActionContent
+		require.NoError(t, json.Unmarshal([]byte(c17.Content), &data))
+		require.True(t, data.IsForcePush)
+		require.Len(t, data.CommitIDs, 2)
+		data.CommitIDs[0] = "1978192d98bb1b65e11c2cf37da854fbf94bffd6" // revert fixture change made by "ForcePush GC'd Commits" test, if it was run
+		data.ForcePush = nil                                           // remove merge-base data
+		updated, err := json.Marshal(data)
+		require.NoError(t, err)
+		c17.Content = string(updated)
+		_, err = db.GetEngine(t.Context()).ID(c17.ID).Cols("content").Update(c17)
+		require.NoError(t, err)
+
+		// Re-request the PR page after the modified comment:
+		req := NewRequest(t, "GET", "/user2/commitsonpr/pulls/1")
+		resp := MakeRequest(t, req, http.StatusOK)
+		htmlDoc := NewHTMLParser(t, resp.Body)
+
+		// Similar to the "ForcePush" test above, but the markup will vary due to the invalid commit:
+		forcePush := htmlDoc.Find("#issuecomment-17")
+		require.Equal(t, 1, forcePush.Length())
+		html, err := forcePush.Html()
+		require.NoError(t, err)
+		t.Logf("issuecomment-17 HTML = %s", html) // useful for figuring out errors in the assertions
+
+		// match sections of the markup "user2 force-pushed branch 1 from 1978192d98 to 9b93963cf6 2025-06-...
+		assert.Equal(t, 1, forcePush.Find("svg.octicon-repo-push").Length())
+		assert.Equal(t, "user2", forcePush.Find("a.author").Text())
+		assert.Contains(t, forcePush.Text(), "force-pushed branch1 from")
+		assert.Equal(t, "1978192d98", forcePush.Find("a.ui.sha[href='/user2/commitsonpr/commit/1978192d98bb1b65e11c2cf37da854fbf94bffd6'] code").Text())
+		assert.Equal(t, "9b93963cf6", forcePush.Find("a.ui.sha[href='/user2/commitsonpr/commit/9b93963cf6de4dc33f915bb67f192d099c301f43'] code").Text())
+		assert.Contains(t, forcePush.Text(), "2025-06-")
+		assert.Contains(t, forcePush.Text(), "Compare Tree")      // direct comparison between the two commits is still possible
+		assert.NotContains(t, forcePush.Text(), "Compare Branch") // but range-diff link should be missing
 	})
 }
 

@@ -49,6 +49,7 @@ const (
 	tplCompare     base.TplName = "repo/diff/compare"
 	tplBlobExcerpt base.TplName = "repo/diff/blob_excerpt"
 	tplDiffBox     base.TplName = "repo/diff/box"
+	tplRangeDiff   base.TplName = "repo/diff/range_diff"
 )
 
 // setCompareContext sets context data.
@@ -1020,4 +1021,46 @@ func getExcerptLines(commit *git.Commit, filePath string, idxLeft, idxRight, chu
 		return nil, fmt.Errorf("getExcerptLines scan: %w", err)
 	}
 	return diffLines, nil
+}
+
+func RangeDiff(ctx *context.Context) {
+	old := ctx.Params("old")
+	oldCommits := strings.SplitN(old, "..", 2)
+	if len(oldCommits) != 2 {
+		ctx.Error(http.StatusBadRequest, "Must have two commits specified in old position")
+		return
+	}
+	oldBaseInput := oldCommits[0]
+	oldHeadInput := oldCommits[1]
+	ctx.Data["OldBaseInput"] = oldBaseInput
+	ctx.Data["OldHeadInput"] = oldHeadInput
+
+	new := ctx.Params("new")
+	newCommits := strings.SplitN(new, "..", 2)
+	if len(newCommits) != 2 {
+		ctx.Error(http.StatusBadRequest, "Must have two commits specified in new position")
+		return
+	}
+	newBaseInput := newCommits[0]
+	newHeadInput := newCommits[1]
+	ctx.Data["NewBaseInput"] = newBaseInput
+	ctx.Data["NewHeadInput"] = newHeadInput
+
+	commits := ctx.Repo.GitRepo.GetCommitsFromIDs([]string{oldBaseInput, oldHeadInput, newBaseInput, newHeadInput}, false)
+	if len(commits) != 4 {
+		ctx.NotFound("commits not found", nil)
+		return
+	}
+
+	oldBase := commits[0]
+	oldHead := commits[1]
+	newBase := commits[2]
+	newHead := commits[3]
+	ctx.Data["OldBase"] = oldBase.ID.String()
+	ctx.Data["OldHead"] = oldHead.ID.String()
+	ctx.Data["NewBase"] = newBase.ID.String()
+	ctx.Data["NewHead"] = newHead.ID.String()
+
+	ctx.Data["Repo"] = ctx.Repo.Repository
+	ctx.HTML(http.StatusOK, tplRangeDiff)
 }

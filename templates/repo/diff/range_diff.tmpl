@@ -1,0 +1,49 @@
+{{template "base/head" .}}
+<div role="main" aria-label="{{.Title}}" class="page-content repository diff {{if .PageIsComparePull}}compare pull{{end}}">
+	{{template "repo/header" .}}
+	<div class="ui container padded">
+	<h2 class="ui header">
+		{{ctx.Locale.Tr "compare.range-diff.title"}}
+	</h2>
+	</div>
+
+	<div class="ui container padded">
+		<div class="range-diff-description">
+			{{
+				ctx.Locale.Tr "compare.range-diff.desc"
+				(ExecuteTemplate ctx "repo/commit_link" (dict
+					"Repo" .Repo
+					"CommitID" .OldBase
+					"Status" (dict)
+					"Statuses" (dict)
+					"IsValid" true
+				))
+				(ExecuteTemplate ctx "repo/commit_link" (dict
+					"Repo" .Repo
+					"CommitID" .OldHead
+					"Status" (dict)
+					"Statuses" (dict)
+					"IsValid" true
+				))
+				(ExecuteTemplate ctx "repo/commit_link" (dict
+					"Repo" .Repo
+					"CommitID" .NewBase
+					"Status" (dict)
+					"Statuses" (dict)
+					"IsValid" true
+				))
+				(ExecuteTemplate ctx "repo/commit_link" (dict
+					"Repo" .Repo
+					"CommitID" .NewHead
+					"Status" (dict)
+					"Statuses" (dict)
+					"IsValid" true
+				))
+			}}
+		</div>
+		<div class="ui secondary segment tw-font-mono">
+			git range-diff {{ShortSha .OldBase}}..{{ShortSha .OldHead}} {{ShortSha .NewBase}}..{{ShortSha .NewHead}}
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}
