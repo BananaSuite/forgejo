@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"forgejo.org/modules/log"
@@ -77,6 +78,14 @@ type RepositorySetting struct {
 		FileMaxSize  int64
 		MaxFiles     int
 	} `ini:"repository.upload"`
+
+	// Repository download settings
+	Download struct {
+		DisabledExtensions                []string
+		DisabledExtensionsUnauthenticated []string
+		DisabledReferences                []string
+		DisabledReferencesUnauthenticated []string
+	} `ini:"repository.download"`
 
 	// Repository local settings
 	Local struct {
@@ -214,6 +223,19 @@ func loadRepositoryDefaults() {
 			AllowedTypes: "",
 			FileMaxSize:  50,
 			MaxFiles:     5,
+		},
+
+		// Repository download settings
+		Download: struct {
+			DisabledExtensions                []string
+			DisabledExtensionsUnauthenticated []string
+			DisabledReferences                []string
+			DisabledReferencesUnauthenticated []string
+		}{
+			DisabledExtensions:                []string{},
+			DisabledExtensionsUnauthenticated: []string{},
+			DisabledReferences:                []string{},
+			DisabledReferencesUnauthenticated: []string{},
 		},
 
 		// Repository local settings
@@ -400,4 +422,12 @@ func loadRepositoryFrom(rootCfg ConfigProvider) error {
 	}
 
 	return nil
+}
+
+func IsRepositoryDownloadSourceArchiveDisabled(isSigned bool, extension, reference string) bool {
+	return (Repository.DisableDownloadSourceArchives ||
+		slices.Contains(Repository.Download.DisabledExtensions, extension) ||
+		slices.Contains(Repository.Download.DisabledReferences, reference) ||
+		!isSigned && (slices.Contains(Repository.Download.DisabledExtensionsUnauthenticated, extension) ||
+			slices.Contains(Repository.Download.DisabledReferencesUnauthenticated, reference)))
 }

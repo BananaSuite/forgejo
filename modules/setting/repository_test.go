@@ -62,6 +62,10 @@ func TestSettingRepositoryMapping(t *testing.T) {
 		assert.IsType(t, "", Repository.Upload.AllowedTypes)
 		assert.Equal(t, int64(50), Repository.Upload.FileMaxSize)
 		assert.Equal(t, 5, Repository.Upload.MaxFiles)
+		assert.Equal(t, []string{}, Repository.Download.DisabledExtensions)
+		assert.Equal(t, []string{}, Repository.Download.DisabledExtensionsUnauthenticated)
+		assert.Equal(t, []string{}, Repository.Download.DisabledReferences)
+		assert.Equal(t, []string{}, Repository.Download.DisabledReferencesUnauthenticated)
 		assert.Equal(t, "tmp/local-repo", Repository.Local.LocalCopyPath)
 		assert.Equal(t, []string{"WIP:", "[WIP]"}, Repository.PullRequest.WorkInProgressPrefixes)
 		assert.Equal(t, []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}, Repository.PullRequest.CloseKeywords)
@@ -207,5 +211,67 @@ SIGNING_KEY = %s
 		assert.NotNil(t, SSHInstanceKey)
 		assert.Equal(t, "ssh-ed25519", SSHInstanceKey.Type())
 		assert.EqualValues(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFeRC8GfFyXtiy0f1E7hLv77BXW7e68tFvIcs8/29YqH\n", ssh.MarshalAuthorizedKey(SSHInstanceKey))
+	})
+}
+
+func TestSettingRepositoryDisableDownloadSourceArchives(t *testing.T) {
+	t.Run("Disabled", func(t *testing.T) {
+		require.NoError(t, loadRepositoryFromData(t, `
+[repository]
+DISABLE_DOWNLOAD_SOURCE_ARCHIVES = true
+`))
+		assert.True(t, Repository.DisableDownloadSourceArchives)
+		for _, isSigned := range []bool{true, false} {
+			for _, extension := range []string{".zip", ".tar.gz", ".bundle"} {
+				for _, reference := range []string{"branch", "commit", "tag", "non-default-branch"} {
+					assert.Truef(t, IsRepositoryDownloadSourceArchiveDisabled(isSigned, extension, reference), "%v %s %s", isSigned, extension, reference)
+				}
+			}
+		}
+	})
+
+	t.Run("Specified", func(t *testing.T) {
+		require.NoError(t, loadRepositoryFromData(t, `
+[repository.download]
+DISABLED_EXTENSIONS = .bundle
+DISABLED_EXTENSIONS_UNAUTHENTICATED = .zip
+DISABLED_REFERENCES =
+DISABLED_REFERENCES_UNAUTHENTICATED = commit
+`))
+		assert.False(t, Repository.DisableDownloadSourceArchives)
+		assert.Equal(t, []string{".bundle"}, Repository.Download.DisabledExtensions)
+		assert.Equal(t, []string{".zip"}, Repository.Download.DisabledExtensionsUnauthenticated)
+		assert.Equal(t, []string{}, Repository.Download.DisabledReferences)
+		assert.Equal(t, []string{"commit"}, Repository.Download.DisabledReferencesUnauthenticated)
+		assert.False(t, IsRepositoryDownloadSourceArchiveDisabled(true, ".zip", "branch"))
+		assert.False(t, IsRepositoryDownloadSourceArchiveDisabled(true, ".zip", "commit"))
+		assert.False(t, IsRepositoryDownloadSourceArchiveDisabled(true, ".zip", "tag"))
+		assert.False(t, IsRepositoryDownloadSourceArchiveDisabled(true, ".tar.gz", "branch"))
+		assert.False(t, IsRepositoryDownloadSourceArchiveDisabled(true, ".tar.gz", "commit"))
+		assert.False(t, IsRepositoryDownloadSourceArchiveDisabled(true, ".tar.gz", "tag"))
+		assert.True(t, IsRepositoryDownloadSourceArchiveDisabled(true, ".bundle", "branch"))
+		assert.True(t, IsRepositoryDownloadSourceArchiveDisabled(true, ".bundle", "commit"))
+		assert.True(t, IsRepositoryDownloadSourceArchiveDisabled(true, ".bundle", "tag"))
+		assert.True(t, IsRepositoryDownloadSourceArchiveDisabled(false, ".zip", "branch"))
+		assert.True(t, IsRepositoryDownloadSourceArchiveDisabled(false, ".zip", "commit"))
+		assert.True(t, IsRepositoryDownloadSourceArchiveDisabled(false, ".zip", "tag"))
+		assert.False(t, IsRepositoryDownloadSourceArchiveDisabled(false, ".tar.gz", "branch"))
+		assert.True(t, IsRepositoryDownloadSourceArchiveDisabled(false, ".tar.gz", "commit"))
+		assert.False(t, IsRepositoryDownloadSourceArchiveDisabled(false, ".tar.gz", "tag"))
+		assert.True(t, IsRepositoryDownloadSourceArchiveDisabled(false, ".bundle", "branch"))
+		assert.True(t, IsRepositoryDownloadSourceArchiveDisabled(false, ".bundle", "commit"))
+		assert.True(t, IsRepositoryDownloadSourceArchiveDisabled(false, ".bundle", "tag"))
+	})
+
+	t.Run("Default", func(t *testing.T) {
+		require.NoError(t, loadRepositoryFromData(t, ""))
+		assert.False(t, Repository.DisableDownloadSourceArchives)
+		for _, isSigned := range []bool{true, false} {
+			for _, extension := range []string{".zip", ".tar.gz", ".bundle"} {
+				for _, reference := range []string{"branch", "commit", "tag", "non-default-branch"} {
+					assert.Falsef(t, IsRepositoryDownloadSourceArchiveDisabled(isSigned, extension, reference), "%v %s %s", isSigned, extension, reference)
+				}
+			}
+		}
 	})
 }
