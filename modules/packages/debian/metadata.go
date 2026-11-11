@@ -16,7 +16,7 @@ import (
 	"forgejo.org/modules/validation"
 	"forgejo.org/modules/zstd"
 
-	"code.forgejo.org/crystal/ar"
+	"github.com/blakesmith/ar"
 	"github.com/ulikunitz/xz"
 )
 
