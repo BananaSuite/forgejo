@@ -597,7 +597,21 @@ func archivRequest(ctx *context.Context) *archiver_service.ArchiveRequest {
 		ctx.NotFound("ParseFileName", err)
 		return nil
 	}
-	aReq, err := archiver_service.NewRequest(ctx, ctx.Repo.Repository.ID, ctx.Repo.GitRepo, strings.TrimSuffix(uri, ext), tp)
+	refName := strings.TrimSuffix(uri, ext)
+	refKind := "commit"
+	headBranch, err := ctx.Repo.GitRepo.GetHEADBranch()
+	if err == nil && headBranch.Name == refName {
+		refKind = "default-branch"
+	} else if ctx.Repo.GitRepo.IsBranchExist(refName) {
+		refKind = "branch"
+	} else if ctx.Repo.GitRepo.IsTagExist(refName) {
+		refKind = "tag"
+	}
+	if setting.IsRepositoryDownloadSourceArchiveDisabled(ctx.IsSigned, ext, refKind) {
+		ctx.Error(http.StatusNotFound)
+		return nil
+	}
+	aReq, err := archiver_service.NewRequest(ctx, ctx.Repo.Repository.ID, ctx.Repo.GitRepo, refName, tp)
 	if err != nil {
 		if archiver_service.IsUnknownArchiveFormatError(err) {
 			// Unreachable because archiver_service.ParseFileName performs the same check
