@@ -383,7 +383,7 @@ func UpdateRelease(ctx context.Context, doer *user_model.User, gitRepo *git.Repo
 // DeleteReleaseByID deletes a release and corresponding Git tag by given ID.
 func DeleteReleaseByID(ctx context.Context, repo *repo_model.Repository, rel *repo_model.Release, doer *user_model.User, delTag bool) error {
 	if _, err := db.DeleteByBean(ctx, &activities_model.Notification{ReleaseID: optional.Some(rel.ID)}); err != nil {
-		return fmt.Errorf("DeleteReleaseNotification: %w", err)
+		return fmt.Errorf("DeleteByBean: %w", err)
 	}
 
 	if delTag {

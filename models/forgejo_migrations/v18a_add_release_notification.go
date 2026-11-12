@@ -4,6 +4,8 @@
 package forgejo_migrations
 
 import (
+	"fmt"
+
 	"forgejo.org/modules/optional"
 
 	"code.forgejo.org/xorm/xorm"
@@ -22,5 +24,5 @@ func addReleaseNotification(x *xorm.Engine) error {
 	}
 
 	_, err := x.SyncWithOptions(xorm.SyncOptions{IgnoreDropIndices: true}, new(Notification))
-	return err
+	return fmt.Errorf("SyncWithOptions: %w", err)
 }

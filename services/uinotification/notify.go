@@ -67,14 +67,14 @@ func handler(items ...notificationOpts) []notificationOpts {
 		switch opts.NotificationType {
 		case notificationTypeIssue:
 			if err := activities_model.CreateOrUpdateIssueNotifications(db.DefaultContext, opts.IssueID, opts.CommentID, opts.NotificationAuthorID, opts.ReceiverID); err != nil {
-				log.Error("Was unable to create issue notification: %v", err)
+				log.Error("Unable to create issue notification: %v", err)
 			}
 		case notificationTypeRelease:
 			if err := activities_model.CreateOrUpdateReleaseNotifications(db.DefaultContext, opts.ReleaseID); err != nil {
-				log.Error("Was unable to create release notification: %v", err)
+				log.Error("Unable to create release notification: %v", err)
 			}
 		default:
-			log.Error("unable to create notification of unknown type: %d", opts.NotificationType)
+			log.Error("Unable to create notification of unknown type: %d", opts.NotificationType)
 		}
 	}
 	return nil
