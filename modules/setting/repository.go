@@ -5,11 +5,13 @@
 package setting
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -19,11 +21,18 @@ import (
 )
 
 var (
-	ScriptType          string
-	Repository          RepositorySetting
-	MaxUserCardsPerPage int
-	MaxForksPerPage     int
-	SSHInstanceKey      ssh.PublicKey
+	ScriptType                    string
+	Repository                    RepositorySetting
+	MaxUserCardsPerPage           int
+	MaxForksPerPage               int
+	SSHInstanceKey                ssh.PublicKey
+	downloadSourceArchiveDisabled map[bool]map[string]map[bool]map[string]bool
+)
+
+var (
+	disableDownloadSourceArchiveReferences = []string{"default-branch", "non-default-branch", "commit", "tag"}
+	disableDownloadSourceArchiveExtensions = []string{".zip", ".tar.gz", ".bundle"}
+	disableDownloadSourceArchivePattern    = regexp.MustCompile(`^(?P<reference>any-branch|default-branch|non-default-branch|commit|tag|\*|)(?P<subdir>:?)(?P<extension>\.zip|\.tar\.gz|\.bundle|\.\*|\.)?$`)
 )
 
 // enumerates all the policy repository creating
@@ -35,35 +44,36 @@ const (
 
 // Repository settings
 type RepositorySetting struct {
-	RootPath                                string `ini:"ROOT"`
-	DetectedCharsetsOrder                   []string
-	DetectedCharsetScore                    map[string]int `ini:"-"`
-	AnsiCharset                             string
-	ForcePrivate                            bool
-	DefaultPrivate                          string
-	DefaultPushCreatePrivate                bool
-	MaxCreationLimit                        int
-	PreferredLicenses                       []string
-	DisableHTTPGit                          bool `ini:"DISABLE_HTTP_GIT"`
-	AccessControlAllowOrigin                string
-	UseCompatSSHURI                         bool   `ini:"USE_COMPAT_SSH_URI"`
-	GoGetCloneURLProtocol                   string `ini:"GO_GET_CLONE_URL_PROTOCOL"`
-	DefaultCloseIssuesViaCommitsInAnyBranch bool
-	EnablePushCreateUser                    bool
-	EnablePushCreateOrg                     bool
-	DisabledRepoUnits                       []string
-	DefaultRepoUnits                        []string
-	DefaultForkRepoUnits                    []string
-	DefaultMirrorRepoUnits                  []string
-	PrefixArchiveFiles                      bool
-	DisableMigrations                       bool
-	DisableStars                            bool
-	DisableForks                            bool
-	DefaultBranch                           string
-	AllowAdoptionOfUnadoptedRepositories    bool
-	AllowDeleteOfUnadoptedRepositories      bool
-	DisableDownloadSourceArchives           bool
-	AllowForkWithoutMaximumLimit            bool
+	RootPath                                     string `ini:"ROOT"`
+	DetectedCharsetsOrder                        []string
+	DetectedCharsetScore                         map[string]int `ini:"-"`
+	AnsiCharset                                  string
+	ForcePrivate                                 bool
+	DefaultPrivate                               string
+	DefaultPushCreatePrivate                     bool
+	MaxCreationLimit                             int
+	PreferredLicenses                            []string
+	DisableHTTPGit                               bool `ini:"DISABLE_HTTP_GIT"`
+	AccessControlAllowOrigin                     string
+	UseCompatSSHURI                              bool   `ini:"USE_COMPAT_SSH_URI"`
+	GoGetCloneURLProtocol                        string `ini:"GO_GET_CLONE_URL_PROTOCOL"`
+	DefaultCloseIssuesViaCommitsInAnyBranch      bool
+	EnablePushCreateUser                         bool
+	EnablePushCreateOrg                          bool
+	DisabledRepoUnits                            []string
+	DefaultRepoUnits                             []string
+	DefaultForkRepoUnits                         []string
+	DefaultMirrorRepoUnits                       []string
+	PrefixArchiveFiles                           bool
+	DisableMigrations                            bool
+	DisableStars                                 bool
+	DisableForks                                 bool
+	DefaultBranch                                string
+	AllowAdoptionOfUnadoptedRepositories         bool
+	AllowDeleteOfUnadoptedRepositories           bool
+	DisableDownloadSourceArchives                []string
+	DisableDownloadSourceArchivesUnauthenticated []string
+	AllowForkWithoutMaximumLimit                 bool
 
 	// Repository editor settings
 	Editor struct {
@@ -78,14 +88,6 @@ type RepositorySetting struct {
 		FileMaxSize  int64
 		MaxFiles     int
 	} `ini:"repository.upload"`
-
-	// Repository download settings
-	Download struct {
-		DisabledExtensions                []string
-		DisabledExtensionsUnauthenticated []string
-		DisabledReferences                []string
-		DisabledReferencesUnauthenticated []string
-	} `ini:"repository.download"`
 
 	// Repository local settings
 	Local struct {
@@ -175,33 +177,34 @@ func loadRepositoryDefaults() {
 			"IBM420_rtl",
 			"IBM420_ltr",
 		},
-		DetectedCharsetScore:                    map[string]int{},
-		AnsiCharset:                             "",
-		ForcePrivate:                            false,
-		DefaultPrivate:                          RepoCreatingLastUserVisibility,
-		DefaultPushCreatePrivate:                true,
-		MaxCreationLimit:                        -1,
-		PreferredLicenses:                       []string{"Apache-2.0", "MIT"},
-		DisableHTTPGit:                          false,
-		AccessControlAllowOrigin:                "",
-		UseCompatSSHURI:                         true,
-		GoGetCloneURLProtocol:                   "https",
-		DefaultCloseIssuesViaCommitsInAnyBranch: false,
-		EnablePushCreateUser:                    false,
-		EnablePushCreateOrg:                     false,
-		DisabledRepoUnits:                       []string{},
-		DefaultRepoUnits:                        []string{},
-		DefaultForkRepoUnits:                    []string{},
-		DefaultMirrorRepoUnits:                  []string{},
-		PrefixArchiveFiles:                      true,
-		DisableMigrations:                       false,
-		DisableStars:                            false,
-		DisableForks:                            false,
-		DefaultBranch:                           "main",
-		AllowAdoptionOfUnadoptedRepositories:    false,
-		AllowDeleteOfUnadoptedRepositories:      false,
-		DisableDownloadSourceArchives:           false,
-		AllowForkWithoutMaximumLimit:            true,
+		DetectedCharsetScore:                         map[string]int{},
+		AnsiCharset:                                  "",
+		ForcePrivate:                                 false,
+		DefaultPrivate:                               RepoCreatingLastUserVisibility,
+		DefaultPushCreatePrivate:                     true,
+		MaxCreationLimit:                             -1,
+		PreferredLicenses:                            []string{"Apache-2.0", "MIT"},
+		DisableHTTPGit:                               false,
+		AccessControlAllowOrigin:                     "",
+		UseCompatSSHURI:                              true,
+		GoGetCloneURLProtocol:                        "https",
+		DefaultCloseIssuesViaCommitsInAnyBranch:      false,
+		EnablePushCreateUser:                         false,
+		EnablePushCreateOrg:                          false,
+		DisabledRepoUnits:                            []string{},
+		DefaultRepoUnits:                             []string{},
+		DefaultForkRepoUnits:                         []string{},
+		DefaultMirrorRepoUnits:                       []string{},
+		PrefixArchiveFiles:                           true,
+		DisableMigrations:                            false,
+		DisableStars:                                 false,
+		DisableForks:                                 false,
+		DefaultBranch:                                "main",
+		AllowAdoptionOfUnadoptedRepositories:         false,
+		AllowDeleteOfUnadoptedRepositories:           false,
+		DisableDownloadSourceArchives:                []string{},
+		DisableDownloadSourceArchivesUnauthenticated: []string{},
+		AllowForkWithoutMaximumLimit:                 true,
 
 		// Repository editor settings
 		Editor: struct {
@@ -223,19 +226,6 @@ func loadRepositoryDefaults() {
 			AllowedTypes: "",
 			FileMaxSize:  50,
 			MaxFiles:     5,
-		},
-
-		// Repository download settings
-		Download: struct {
-			DisabledExtensions                []string
-			DisabledExtensionsUnauthenticated []string
-			DisabledReferences                []string
-			DisabledReferencesUnauthenticated []string
-		}{
-			DisabledExtensions:                []string{},
-			DisabledExtensionsUnauthenticated: []string{},
-			DisabledReferences:                []string{},
-			DisabledReferencesUnauthenticated: []string{},
 		},
 
 		// Repository local settings
@@ -421,17 +411,105 @@ func loadRepositoryFrom(rootCfg ConfigProvider) error {
 		}
 	}
 
+	// Prepare and fill map for IsRepositoryDownloadSourceArchiveDisabled function
+	downloadSourceArchiveDisabled = make(map[bool]map[string]map[bool]map[string]bool)
+	for _, isSigned := range []bool{true, false} {
+		downloadSourceArchiveDisabled[isSigned] = make(map[string]map[bool]map[string]bool)
+		for _, reference := range disableDownloadSourceArchiveReferences {
+			downloadSourceArchiveDisabled[isSigned][reference] = make(map[bool]map[string]bool)
+			for _, isSubdir := range []bool{true, false} {
+				downloadSourceArchiveDisabled[isSigned][reference][isSubdir] = make(map[string]bool)
+				for _, extension := range disableDownloadSourceArchiveExtensions {
+					downloadSourceArchiveDisabled[isSigned][reference][isSubdir][extension] = false
+				}
+			}
+		}
+	}
+	for _, value := range Repository.DisableDownloadSourceArchives {
+		references, isSubdir, extensions, err := parseDisableDownloadSourceArchive(value)
+		if err != nil {
+			return fmt.Errorf("[repository.download].DISABLED_SOURCE_ARCHIVES` not well formatted: %v", err)
+		}
+		for _, reference := range references {
+			for _, extension := range extensions {
+				downloadSourceArchiveDisabled[true][reference][true][extension] = true
+				downloadSourceArchiveDisabled[false][reference][true][extension] = true
+				if !isSubdir {
+					downloadSourceArchiveDisabled[true][reference][false][extension] = true
+					downloadSourceArchiveDisabled[false][reference][false][extension] = true
+				}
+			}
+		}
+	}
+	for _, value := range Repository.DisableDownloadSourceArchivesUnauthenticated {
+		references, isSubdir, extensions, err := parseDisableDownloadSourceArchive(value)
+		if err != nil {
+			return fmt.Errorf("[repository.download].DISABLED_SOURCE_ARCHIVES_UNAUTHENTICATED` not well formatted: %v", err)
+		}
+		for _, reference := range references {
+			for _, extension := range extensions {
+				downloadSourceArchiveDisabled[false][reference][true][extension] = true
+				if !isSubdir {
+					downloadSourceArchiveDisabled[false][reference][false][extension] = true
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
-func IsRepositoryDownloadSourceArchiveDisabled(isSigned bool, extension, reference string) bool {
-	return (Repository.DisableDownloadSourceArchives ||
-		slices.Contains(Repository.Download.DisabledExtensions, extension) ||
-		slices.Contains(Repository.Download.DisabledReferences, reference) ||
-		reference == "default-branch" && slices.Contains(Repository.Download.DisabledReferences, "branch") ||
-		reference == "branch" && slices.Contains(Repository.Download.DisabledReferences, "non-default-branch") ||
-		!isSigned && (slices.Contains(Repository.Download.DisabledExtensionsUnauthenticated, extension) ||
-			slices.Contains(Repository.Download.DisabledReferencesUnauthenticated, reference) ||
-			reference == "default-branch" && slices.Contains(Repository.Download.DisabledReferencesUnauthenticated, "branch") ||
-			reference == "branch" && slices.Contains(Repository.Download.DisabledReferencesUnauthenticated, "non-default-branch")))
+func parseDisableDownloadSourceArchive(value string) (references []string, isSubdir bool, extensions []string, err error) {
+	switch value {
+	case "":
+		return references, isSubdir, extensions, errors.New("value is empty")
+	case "true":
+		return disableDownloadSourceArchiveReferences, false, disableDownloadSourceArchiveExtensions, nil
+	case "false":
+		return []string{}, false, []string{}, nil
+	}
+	submatches := disableDownloadSourceArchivePattern.FindStringSubmatch(value)
+	if len(submatches) == 0 {
+		return references, isSubdir, extensions, fmt.Errorf("value `%s` not valid", value)
+	}
+	switch submatches[1] {
+	case "*", "":
+		references = disableDownloadSourceArchiveReferences
+	case "any-branch":
+		references = []string{"default-branch", "non-default-branch"}
+	default:
+		if !slices.Contains(disableDownloadSourceArchiveReferences, submatches[1]) {
+			// This should never be reached, because it is excluded from the regexp pattern
+			return references, isSubdir, extensions, fmt.Errorf("reference `%s` not valid", submatches[1])
+		}
+		references = []string{submatches[1]}
+	}
+	isSubdir = len(submatches[2]) != 0
+	switch submatches[3] {
+	case ".*", ".", "":
+		extensions = disableDownloadSourceArchiveExtensions
+	default:
+		if !slices.Contains(disableDownloadSourceArchiveExtensions, submatches[3]) {
+			// This should never be reached, because it is excluded from the regexp pattern
+			return references, isSubdir, extensions, fmt.Errorf("extension `%s` not valid", submatches[3])
+		}
+		extensions = []string{submatches[3]}
+	}
+	return references, isSubdir, extensions, nil
+}
+
+func IsRepositoryDownloadSourceArchiveDisabled(isSigned bool, reference string, isSubdir bool, extension string) (disabled bool, err error) {
+	disabled, ok := downloadSourceArchiveDisabled[isSigned][reference][isSubdir][extension]
+	if !ok {
+		if _, ok := downloadSourceArchiveDisabled[isSigned]; !ok {
+			err = fmt.Errorf("key error: isSigned: %v not valid", isSigned)
+		} else if _, ok = downloadSourceArchiveDisabled[isSigned][reference]; !ok {
+			err = fmt.Errorf("key error: reference: \"%s\" not valid", reference)
+		} else if _, ok = downloadSourceArchiveDisabled[isSigned][reference][isSubdir]; !ok {
+			err = fmt.Errorf("key error: isSubdir: %v not valid", isSubdir)
+		} else if _, ok = downloadSourceArchiveDisabled[isSigned][reference][isSubdir][extension]; !ok {
+			err = fmt.Errorf("key error: extension: \"%s\" not valid", extension)
+		}
+	}
+	return disabled, err
 }
