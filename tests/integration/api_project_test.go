@@ -1261,7 +1261,7 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 	t.Run("Private Org where User2 is owner", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		privUser2Org := forgery.CreateOrganisationWithOptions(t, user2,
+		privUser2Org := forgery.CreateOrganisation(t, user2,
 			&forgery.CreateOrganisationOptions{
 				Visibility: api.VisibleTypePrivate,
 			})
@@ -1309,7 +1309,7 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
 		// private user1 org with user2 write access
-		privUser1Org := forgery.CreateOrganisationWithOptions(t, user1,
+		privUser1Org := forgery.CreateOrganisation(t, user1,
 			&forgery.CreateOrganisationOptions{
 				Visibility: api.VisibleTypePrivate,
 			})
@@ -1401,7 +1401,7 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 	t.Run("Private Org where User2 is not member", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		privUser1Org := forgery.CreateOrganisationWithOptions(t, user1,
+		privUser1Org := forgery.CreateOrganisation(t, user1,
 			&forgery.CreateOrganisationOptions{
 				Visibility: api.VisibleTypePrivate,
 			})
@@ -1421,7 +1421,7 @@ func TestProjectAPIPermissionHandling(t *testing.T) {
 	t.Run("Project where User2 is not owner", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 
-		privUser1Org := forgery.CreateOrganisationWithOptions(t, user1,
+		privUser1Org := forgery.CreateOrganisation(t, user1,
 			&forgery.CreateOrganisationOptions{
 				Visibility: api.VisibleTypePrivate,
 			})

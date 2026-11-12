@@ -82,29 +82,3 @@ func CreateOrganisation(t testing.TB, owner *user_model.User, opts *CreateOrgani
 	require.NoError(t, err)
 	return o
 }
-
-type CreateOrganisationOptions struct {
-	Visibility structs.VisibleType
-}
-
-func CreateOrganisationWithOptions(t testing.TB, owner *user_model.User, opts *CreateOrganisationOptions) *org_model.Organization {
-	t.Helper()
-
-	if opts == nil {
-		opts = &CreateOrganisationOptions{}
-	}
-	if owner == nil {
-		owner = CreateUser(t, nil) // if specific options are needed, create the owner manually
-	}
-	o := &org_model.Organization{
-		Visibility: opts.Visibility,
-	}
-
-	name := "org-" + uniqueSafeName(t.Name())
-
-	o.Name = name
-
-	err := org_model.CreateOrganization(t.Context(), o, owner)
-	require.NoError(t, err)
-	return o
-}
