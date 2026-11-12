@@ -1117,6 +1117,24 @@ func RangeDiff(ctx *context.Context) {
 	ctx.Data["CommitAdded"] = git.CommitAdded
 	ctx.Data["CommitRemoved"] = git.CommitRemoved
 
+	// A "clean rebase" here is defined that the author moved a commit-set from one merge-base to another merge-base
+	// without any modifications to the commits.  Typically when reviewing a PR, a clean rebase can be ignored, which is
+	// why it is worth highlighting.
+	cleanRebase := true
+	for _, c := range parsedOutput {
+		switch c.Status {
+		case git.CommitAdded, git.CommitRemoved, git.CommitChanged:
+			cleanRebase = false
+		case git.CommitEqual:
+			// Even with equal commits, if they were reordered then it isn't a clean rebase
+			cleanRebase = c.Old.ValueOrZeroValue().Index == c.New.ValueOrZeroValue().Index
+		}
+		if !cleanRebase {
+			break
+		}
+	}
+	ctx.Data["CleanRebase"] = cleanRebase
+
 	ctx.Data["Repo"] = ctx.Repo.Repository
 	ctx.HTML(http.StatusOK, tplRangeDiff)
 }

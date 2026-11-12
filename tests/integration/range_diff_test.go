@@ -130,6 +130,7 @@ func TestRangeDiff(t *testing.T) {
 			req := NewRequestf(t, "GET", "/user2/%s/range-diff/%s..%s/%s..%s", repo.Name, leftBaseCommitID, leftHeadCommitID, rightBaseCommitID, rightHeadCommitID)
 			resp := session.MakeRequest(t, req, http.StatusOK)
 			doc := NewHTMLParser(t, resp.Body)
+			doc.AssertElement(t, "#clean-rebase", false)
 
 			doc.AssertElementPredicate(t, "#range-diff-list .flex-item:nth-child(1)", func(listItem *goquery.Selection) {
 				title := listItem.Find(".flex-item-title")
@@ -206,6 +207,54 @@ func TestRangeDiff(t *testing.T) {
 			session.MakeRequest(t,
 				NewRequestf(t, "GET", "/user2/%s/range-diff/%s..%s/%s..%s", repo.Name, baseCommitID, headCommitID, "main", "main"),
 				http.StatusBadRequest)
+		})
+
+		t.Run("Clean Rebase", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+				Files: forgery.MapFS{
+					"README.md": forgery.MapFile("This is the base README file.\n"),
+				},
+			})
+
+			// Clone to create a working directory for editing.
+			repoURL := fmt.Sprintf("%s%s.git", u.String(), repo.FullName())
+			clonePath := forcePushRefClone(t, repoURL, user2.Name)
+			leftBaseCommitID := forcePushRefRevParse(t, clonePath, "main")
+
+			// From the base branch, we want to create two series of commits that are similar, but exercise each of the
+			// commit differences: equal, added, removed, and changed.
+			leftBranch, rightBranch := "left-branch", "right-branch"
+			branches := []string{leftBranch, rightBranch}
+
+			// Left branch creation:
+			require.NoError(t, git.NewCommand(t.Context(), "switch", "-c").AddDynamicArguments(leftBranch, "main").Run(&git.RunOpts{Dir: clonePath}))
+			require.NoError(t, os.WriteFile(filepath.Join(clonePath, "CONTRIBUTING.md"), []byte("This is CONTRIBUTING.md.\n"), 0o600))
+			require.NoError(t, git.NewCommand(t.Context(), "add", "CONTRIBUTING.md").Run(&git.RunOpts{Dir: clonePath}))
+			require.NoError(t, git.NewCommand(t.Context(), "commit", "-m", "Add CONTRIBUTING.md").Run(&git.RunOpts{Dir: clonePath}))
+			equalCommitLeftID := forcePushRefRevParse(t, clonePath, leftBranch)
+
+			// Create a new base commit in `main`, so that range-diff has different bases between the two commit ranges:
+			require.NoError(t, git.NewCommand(t.Context(), "switch", "main").Run(&git.RunOpts{Dir: clonePath}))
+			require.NoError(t, git.NewCommand(t.Context(), "commit", "--allow-empty", "-m", "empty main commit").Run(&git.RunOpts{Dir: clonePath}))
+			rightBaseCommitID := forcePushRefRevParse(t, clonePath, "main")
+
+			// Right branch creation:
+			require.NoError(t, git.NewCommand(t.Context(), "switch", "-c").AddDynamicArguments(rightBranch, "main").Run(&git.RunOpts{Dir: clonePath}))
+			require.NoError(t, git.NewCommand(t.Context(), "cherry-pick").AddDynamicArguments(equalCommitLeftID).Run(&git.RunOpts{Dir: clonePath}))
+
+			leftHeadCommitID := forcePushRefRevParse(t, clonePath, leftBranch)
+			rightHeadCommitID := forcePushRefRevParse(t, clonePath, rightBranch)
+			for _, branch := range branches {
+				require.NoError(t, git.NewCommand(t.Context(), "push", "origin").AddDynamicArguments(branch).Run(&git.RunOpts{Dir: clonePath}))
+			}
+
+			req := NewRequestf(t, "GET", "/user2/%s/range-diff/%s..%s/%s..%s", repo.Name, leftBaseCommitID, leftHeadCommitID, rightBaseCommitID, rightHeadCommitID)
+			resp := session.MakeRequest(t, req, http.StatusOK)
+			doc := NewHTMLParser(t, resp.Body)
+
+			doc.AssertElement(t, "#clean-rebase", true)
 		})
 	})
 }

@@ -716,6 +716,7 @@
 	"compare.range-diff.view-changed": "View Changed",
 	"compare.range-diff.view-added": "View Added",
 	"compare.range-diff.view-removed": "View Removed",
+	"compare.range-diff.clean-rebase": "Commit set was rebased without any modifications.",
 	"migrate.pagure.description": "Migrate data from pagure.io or other Pagure instances.",
 	"migrate.pagure.incorrect_url": "Incorrect source repository URL has been provided",
 	"migrate.pagure.project_url": "Pagure project URL",

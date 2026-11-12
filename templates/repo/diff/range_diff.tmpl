@@ -42,6 +42,12 @@
 			}}
 		</div>
 
+		{{if .CleanRebase}}
+			<div id="clean-rebase" class="ui positive message">
+				<p>{{ctx.Locale.Tr "compare.range-diff.clean-rebase"}}</p>
+			</div>
+		{{end}}
+
 		<div id="range-diff-list" class="flex-list">
 			{{range .RangeDiff}}
 				{{$old := .Old.ValueOrZeroValue}}
