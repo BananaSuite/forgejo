@@ -42,8 +42,8 @@ code.forgejo.org/go-chi/captcha v1.0.3 h1:ii3VrlhSJeSyJA2GD/UvjY3tbzGB0ZH/og1ZPV
 code.forgejo.org/go-chi/captcha v1.0.3/go.mod h1:YXw47044t3pHWdigYyn+NMnccv0Y9h69kDwpMsCO2C4=
 code.forgejo.org/go-chi/session v1.1.0 h1:xIxqNHh4G0lrgoXlBfFSd5BL7qcOXHW26gCPOplGnzc=
 code.forgejo.org/go-chi/session v1.1.0/go.mod h1:/JtAY2Ny3oC5GNUwBfsjM34NKcZe08+P/g115IHWLSM=
-code.forgejo.org/xorm/xorm v1.5.1-0.20261110181820-51dea0f1cf1c h1:ArMNn1SpmAAHKE7MQFnj3kfal9vC/uPlmQmaLRYjRg8=
-code.forgejo.org/xorm/xorm v1.5.1-0.20261110181820-51dea0f1cf1c/go.mod h1:K3CIJUx7B/jbs/yPYwbeOveyU7/eET/AYqw+xe0utfU=
+code.forgejo.org/xorm/xorm v1.5.1-0.20261112002248-8e8e59c19d99 h1:/tRsGu4mq1vN6p1I0wlyGKwxbF1RhOSkOclCcgOUQdc=
+code.forgejo.org/xorm/xorm v1.5.1-0.20261112002248-8e8e59c19d99/go.mod h1:oVcS/n57HnYYWPZdrXAOwv9bM8lvly0LenM5bn2+i7k=
 code.gitea.io/sdk/gitea v0.21.0 h1:69n6oz6kEVHRo1+APQQyizkhrZrLsTLXey9142pfkD4=
 code.gitea.io/sdk/gitea v0.21.0/go.mod h1:tnBjVhuKJCn8ibdyyhvUyxrR1Ca2KHEoTWoukNhXQPA=
 code.pfad.fr/check v1.1.0 h1:GWvjdzhSEgHvEHe2uJujDcpmZoySKuHQNrZMfzfO0bE=
@@ -441,8 +441,8 @@ github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsI
 github.com/jackc/pgpassfile v1.0.0/go.mod h1:CEx0iS5ambNFdcRtxPj5JhEz+xB6uRky5eyVu/W2HEg=
 github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 h1:iCEnooe7UlwOQYpKFhBabPMi4aNAfoODPEFNiAnClxo=
 github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761/go.mod h1:5TJZWKEWniPve33vlWYSoGYefn3gLQRzjfDlhSJ9ZKM=
-github.com/jackc/pgx/v5 v5.12.0 h1:hWwax8YiGT0YiN50U1oIDn5kgR7KC2tG3rmavwpPkxY=
-github.com/jackc/pgx/v5 v5.12.0/go.mod h1:u2Fi6no03HCSBYE+ZVdLxbwdu3xyi2vU+K/YNJioSds=
+github.com/jackc/pgx/v5 v5.13.0 h1:Hl08k64maU0nrRyVUEbwCnK6/gT0EhMrtAqBHz9/gA4=
+github.com/jackc/pgx/v5 v5.13.0/go.mod h1:u2Fi6no03HCSBYE+ZVdLxbwdu3xyi2vU+K/YNJioSds=
 github.com/jackc/puddle/v2 v2.2.3 h1:f8HoREISb3l5eO9coPgK7U3hKLhWGokOFVcThl5jrao=
 github.com/jackc/puddle/v2 v2.2.3/go.mod h1:vriiEXHvEE654aYKXXjOvZM39qJ0q+azkZFrfEOc3H4=
 github.com/jcmturner/aescts/v2 v2.0.0 h1:9YKLH6ey7H4eDBXW8khjYslgyqG2xZikXP0EQFKrle8=
