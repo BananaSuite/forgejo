@@ -598,17 +598,35 @@ func archivRequest(ctx *context.Context) *archiver_service.ArchiveRequest {
 		return nil
 	}
 	refName := strings.TrimSuffix(uri, ext)
-	refKind := "commit"
-	headBranch, err := ctx.Repo.GitRepo.GetHEADBranch()
-	if err == nil && headBranch.Name == refName {
-		refKind = "default-branch"
-	} else if ctx.Repo.GitRepo.IsBranchExist(refName) {
-		refKind = "branch"
-	} else if ctx.Repo.GitRepo.IsTagExist(refName) {
-		refKind = "tag"
+	var refNameReal, refKind string
+	var isSigned, isSubdir bool
+	if ctx.IsSigned {
+		isSigned = true
 	}
-	if setting.IsRepositoryDownloadSourceArchiveDisabled(ctx.IsSigned, ext, refKind) {
-		ctx.Error(http.StatusNotFound)
+	if split := strings.SplitN(refName, ":", 2); len(split) == 2 {
+		refNameReal = split[0]
+		isSubdir = true
+	} else {
+		refNameReal = refName
+		isSubdir = false
+	}
+	headBranch, err := ctx.Repo.GitRepo.GetHEADBranch()
+	if err == nil && headBranch.Name == refNameReal {
+		refKind = "default-branch"
+	} else if ctx.Repo.GitRepo.IsBranchExist(refNameReal) {
+		refKind = "non-default-branch"
+	} else if ctx.Repo.GitRepo.IsTagExist(refNameReal) {
+		refKind = "tag"
+	} else {
+		refKind = "commit"
+	}
+	downloadSourceArchiveDisabled, err := setting.IsRepositoryDownloadSourceArchiveDisabled(isSigned, refKind, isSubdir, ext)
+	if err != nil {
+		// Unreachable with above definitions of arguments
+		ctx.Error(http.StatusBadRequest, err.Error())
+		return nil
+	} else if downloadSourceArchiveDisabled {
+		ctx.Error(http.StatusForbidden)
 		return nil
 	}
 	aReq, err := archiver_service.NewRequest(ctx, ctx.Repo.Repository.ID, ctx.Repo.GitRepo, refName, tp)

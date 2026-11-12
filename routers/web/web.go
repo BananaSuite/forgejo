@@ -1946,13 +1946,6 @@ func registerGitRoutes(m *web.Route) {
 }
 
 func registerMixedRoutes(m *web.Route) {
-	dlSourceEnabled := func(ctx *context.Context) {
-		if setting.Repository.DisableDownloadSourceArchives {
-			ctx.Error(http.StatusNotFound)
-			return
-		}
-	}
-
 	m.Group("/{username}/{reponame}", func() {
 		m.Group("/raw", func() {
 			m.Get("/branch/*", context.RepoRefByType(context.RepoRefBranch), repo.SingleDownloadRaw)
@@ -1966,7 +1959,7 @@ func registerMixedRoutes(m *web.Route) {
 		m.Group("/archive", func() {
 			m.Get("/*", repo.Download)
 			m.Post("/*", repo.InitiateDownload)
-		}, repo.MustBeNotEmpty, dlSourceEnabled, reqRepoCodeReader)
+		}, repo.MustBeNotEmpty, reqRepoCodeReader)
 	}, ignSignIn, context.RepoAssignment, context.UnitTypes())
 
 	m.Group("/{username}/{reponame}", func() {
