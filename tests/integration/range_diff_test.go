@@ -177,5 +177,35 @@ func TestRangeDiff(t *testing.T) {
 				assert.Equal(t, 1, body.Find(fmt.Sprintf("a[href='/user2/%s/commit/%s']", repo.Name, modifiedCommitRightID)).Length())
 			})
 		})
+
+		t.Run("Limit Range-Diff Size", func(t *testing.T) {
+			defer tests.PrintCurrentTest(t)()
+
+			repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+				Files: forgery.MapFS{
+					"README.md": forgery.MapFile("This is the base README file.\n"),
+				},
+			})
+
+			// Clone to create a working directory for editing.
+			repoURL := fmt.Sprintf("%s%s.git", u.String(), repo.FullName())
+			clonePath := forcePushRefClone(t, repoURL, user2.Name)
+			baseCommitID := forcePushRefRevParse(t, clonePath, "main")
+
+			// Create a branch with > 100 commits on it:
+			require.NoError(t, git.NewCommand(t.Context(), "switch", "-c", "branch", "main").Run(&git.RunOpts{Dir: clonePath}))
+			for i := range 102 {
+				require.NoError(t, git.NewCommand(t.Context(), "commit", "--allow-empty", "-m").AddDynamicArguments(fmt.Sprintf("commit %d", i)).Run(&git.RunOpts{Dir: clonePath}))
+			}
+			headCommitID := forcePushRefRevParse(t, clonePath, "branch")
+			require.NoError(t, git.NewCommand(t.Context(), "push", "origin", "branch").Run(&git.RunOpts{Dir: clonePath}))
+
+			session.MakeRequest(t,
+				NewRequestf(t, "GET", "/user2/%s/range-diff/%s..%s/%s..%s", repo.Name, "main", "main", baseCommitID, headCommitID),
+				http.StatusBadRequest)
+			session.MakeRequest(t,
+				NewRequestf(t, "GET", "/user2/%s/range-diff/%s..%s/%s..%s", repo.Name, baseCommitID, headCommitID, "main", "main"),
+				http.StatusBadRequest)
+		})
 	})
 }

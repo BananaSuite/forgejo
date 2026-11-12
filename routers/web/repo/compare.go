@@ -1062,6 +1062,23 @@ func RangeDiff(ctx *context.Context) {
 	ctx.Data["NewBase"] = newBase.ID.String()
 	ctx.Data["NewHead"] = newHead.ID.String()
 
+	// Minimize risk of resource utilization parsing and comparing commitsets by checking size of the commitset:
+	maxCommits := int64(100)
+	if baseCommitSetCount, err := ctx.Repo.GitRepo.CommitsCountBetween(oldBase.ID.String(), oldHead.ID.String()); err != nil {
+		ctx.ServerError("range-diff CommitsCountBetween on base had error", err)
+		return
+	} else if baseCommitSetCount > maxCommits {
+		ctx.Error(http.StatusBadRequest, fmt.Sprintf("Maximum %d commits in range-diff, found %d commits in base range", maxCommits, baseCommitSetCount))
+		return
+	}
+	if headCommitSetCount, err := ctx.Repo.GitRepo.CommitsCountBetween(newBase.ID.String(), newHead.ID.String()); err != nil {
+		ctx.ServerError("range-diff CommitsCountBetween on head had error", err)
+		return
+	} else if headCommitSetCount > maxCommits {
+		ctx.Error(http.StatusBadRequest, fmt.Sprintf("Maximum %d commits in range-diff, found %d commits in head range", maxCommits, headCommitSetCount))
+		return
+	}
+
 	cmd := git.NewCommand(ctx,
 		"range-diff",
 		"--no-patch",  // patch content is not displayed, and PargeRangeDiff does not support it
