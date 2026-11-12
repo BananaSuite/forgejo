@@ -6,6 +6,7 @@ package integration
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -19,10 +20,12 @@ import (
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
+	base "forgejo.org/modules/migration"
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
 	"forgejo.org/routers/private"
+	"forgejo.org/services/migrations/allowlist"
 	pull_service "forgejo.org/services/pull"
 	repo_service "forgejo.org/services/repository"
 	"forgejo.org/tests"
@@ -405,9 +408,19 @@ func TestGitPushMirror(t *testing.T) {
 		doGitCreateBranch(repoPath, branchName)(t)
 		doGitAddSomeCommits(repoPath, branchName)(t)
 
+		divergingBranch := "diverging-branch"
+		doGitCheckoutBranch(repoPath, "main")(t)
+		doGitCreateBranch(repoPath, divergingBranch)(t)
+		doGitAddSomeCommits(repoPath, divergingBranch)(t)
+
 		// create an agit PR (1)
 		err := git.NewCommand(git.DefaultContext, "push", "origin").
 			AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/first-pr", branchName)).Run(&git.RunOpts{Dir: repoPath})
+		require.NoError(t, err)
+
+		// force-push to this PR to create a refs/pr-force-push/XX/comment/YY/{old,new} reference
+		err = git.NewCommand(git.DefaultContext, "push", "origin", "-o", "force-push=true").
+			AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/first-pr", divergingBranch)).Run(&git.RunOpts{Dir: repoPath})
 		require.NoError(t, err)
 
 		// create a branch PR (2)
@@ -438,6 +451,7 @@ func TestGitPushMirror(t *testing.T) {
 		var stderr bytes.Buffer
 		err = git.NewCommand(git.DefaultContext, "push", "--mirror").Run(&git.RunOpts{Dir: repoPath, Stderr: &stderr})
 		assert.Contains(t, stderr.String(), "(Forgejo ignored PR deletion attempt)")
+		assert.NotContains(t, stderr.String(), git.PullRequestForcePush) // refs/pull-force-push should be hidden
 		require.NoError(t, err, stderr.String())
 
 		// ensure both PRs can still be fetched
@@ -449,6 +463,77 @@ func TestGitPushMirror(t *testing.T) {
 			AddDynamicArguments(fmt.Sprintf("refs/pull/%d/head:%s", 2, "second-branch-pr")).
 			Run(&git.RunOpts{Dir: repoPath})
 		require.NoError(t, err)
+
+		// Create a mirror (via a migration) and convert it to a pushed mirror
+		// https://codeberg.org/forgejo/forgejo/pulls/14885
+		t.Run("CloneMirror", func(t *testing.T) {
+			defer allowlist.Init() // reset allowlist to not disturb the other tests
+
+			defer test.MockVariableValue(&setting.Migrations.AllowUnencrypted, true)()
+			defer test.MockVariableValue(&setting.Migrations.AllowLocalNetworks, true)()
+			allowlist.Init() // reads the variables defined above
+
+			mirror := forgery.CreateRepository(t, owner, &forgery.CreateRepositoryOptions{})
+			mirror, err = repo_service.MigrateRepositoryGitData(t.Context(), mirror.Owner, mirror, base.MigrateOptions{
+				RepoName:  mirror.Name,
+				CloneAddr: repo.HTMLURL(),
+			}, http.DefaultTransport)
+			require.NoError(t, err)
+
+			// check that the refs got mirrored (shouldn't happen, but would invalidate the rest of the test)
+			// https://codeberg.org/forgejo/forgejo/pulls/14885
+			err = git.NewCommand(git.DefaultContext, "fetch").
+				AddDynamicArguments(
+					mirror.HTMLURL(),
+					fmt.Sprintf("refs/pull/%d/head:%s", 2, "second-branch-pr"),
+				).
+				Run(&git.RunOpts{Dir: repoPath})
+			require.NoError(t, err, "if exit code = 128, check if the rest of this test is still relevant")
+
+			// setup push mirror
+			session := loginUser(t, owner.Name)
+			session.MakeRequest(t, NewRequestWithValues(t, "POST", repo.HTMLURL()+"/settings", map[string]string{
+				"action":                     "push-mirror-add",
+				"push_mirror_address":        mirror.HTMLURL(),
+				"push_mirror_username":       owner.Name,
+				"push_mirror_password":       userPassword,
+				"push_mirror_sync_on_commit": "on",
+				"push_mirror_interval":       "8h0m0s",
+			}), http.StatusSeeOther)
+
+			// check initialSha of mirror
+			gitMirror, err := git.OpenRepository(git.DefaultContext, mirror.RepoPath())
+			require.NoError(t, err)
+			defer gitMirror.Close()
+
+			initialSha, err := gitMirror.GetBranchCommitID(mirror.DefaultBranch)
+			require.NoError(t, err)
+
+			// push some commits to original repo
+			err = git.NewCommand(git.DefaultContext, "push", "origin").
+				AddDynamicArguments(fmt.Sprintf("%s:%s", branchName, repo.DefaultBranch)).
+				Run(&git.RunOpts{Dir: repoPath})
+			require.NoError(t, err)
+
+			// wait for new commit to arrive to the mirror
+			const maxDelay = 30 * time.Second
+			require.Eventuallyf(t, func() bool {
+				updatedSha, err := gitMirror.GetBranchCommitID(mirror.DefaultBranch)
+				require.NoError(t, err)
+				return updatedSha != initialSha
+			}, maxDelay, time.Second, "mirror not updated with %s", maxDelay)
+
+			// check that the refs got deleted from the mirror and cannot be fetched anymore
+			require.EventuallyWithTf(t, func(t *assert.CollectT) {
+				err = git.NewCommand(git.DefaultContext, "fetch").
+					AddDynamicArguments(
+						mirror.HTMLURL(),
+						fmt.Sprintf("refs/pull/%d/head:%s", 2, "second-branch-pr"),
+					).
+					Run(&git.RunOpts{Dir: repoPath})
+				require.True(t, git.IsErrorExitCode(err, 128), err)
+			}, maxDelay, time.Second, "pull ref not deleted within %s", maxDelay)
+		})
 	})
 }
 
@@ -561,15 +646,22 @@ func TestGitPushAGit(t *testing.T) {
 
 		newAgitPR := func(repoPath string) (string, error) {
 			branchName := "agit-pr"
+			topicName := "agit-topic"
 			doGitCreateBranch(repoPath, branchName)(t)
 			doGitAddSomeCommits(repoPath, branchName)(t)
 			_, stdErr, err := git.NewCommand(git.DefaultContext, "push", "origin").
-				AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/%s", branchName, branchName)).RunStdString(&git.RunOpts{Dir: repoPath})
+				AddDynamicArguments(fmt.Sprintf("%s:refs/for/main/%s", branchName, topicName)).RunStdString(&git.RunOpts{Dir: repoPath})
 			if err != nil {
 				return "", err
 			}
 			require.NoError(t, err)
-			return prRegex.FindStringSubmatch(stdErr)[1], nil
+
+			matches := prRegex.FindStringSubmatch(stdErr)
+			require.Len(t, matches, 2, stdErr)
+
+			assert.Contains(t, stdErr, "Visit the created pull request:")
+			assert.Contains(t, stdErr, fmt.Sprintf("git config set branch.%s.merge %s", topicName, matches[0]))
+			return matches[1], nil
 		}
 		fetchAgitPR := func(repoPath, branchName, prIndex string) error {
 			return git.NewCommand(git.DefaultContext, "fetch", "origin").
@@ -583,6 +675,11 @@ func TestGitPushAGit(t *testing.T) {
 			if err != nil {
 				return fmt.Errorf("%s: %w", stdErr, err)
 			}
+			matches := prRegex.FindStringSubmatch(stdErr)
+			require.Len(t, matches, 2, stdErr)
+
+			assert.Contains(t, stdErr, "Visit the existing pull request")
+			assert.NotContains(t, stdErr, "git config set branch.")
 			return nil
 		}
 

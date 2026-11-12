@@ -235,6 +235,11 @@ func HookPreReceive(ctx *app_context.PrivateContext) {
 			preReceiveFor(ourCtx, oldCommitID, newCommitID, refFullName)
 		case refFullName.IsPull():
 			preReceivePull(ourCtx, oldCommitID, newCommitID, refFullName)
+		case refFullName.IsPullComment():
+			ctx.JSON(http.StatusForbidden, private.Response{
+				UserMsg: fmt.Sprintf("Force push comment references (%sN/comment/D/{new,old}) are read-only, and cannot be written.", git.PullRequestForcePush),
+			})
+			return
 		default:
 			if ourCtx.isOverQuota {
 				ourCtx.quotaExceeded()
@@ -585,17 +590,12 @@ func preReceivePull(ctx *preReceiveContext, oldCommitID, newCommitID string, ref
 		return
 	}
 
-	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, pullIndex)
-	if err != nil {
-		ctx.JSON(http.StatusForbidden, private.Response{
-			UserMsg: fmt.Sprintf("Unable to get pull request %d", pullIndex),
-		})
-		return
-	}
-
 	// special case: when mirroring, refs/pull/... will get push-deleted
 	// let pre-receive pass and ignore deletion in agit.ProcReceive
 	// (returning an error here would prevent mirroring the other refs)
+	//
+	// check before fetching the pull request, since non-existing PRs may get deleted
+	// https://codeberg.org/forgejo/forgejo/pulls/14885
 	objectFormat := ctx.Repo.GetObjectFormat()
 	if newCommitID == objectFormat.EmptyObjectID().String() {
 		if ctx.canWriteCode() {
@@ -612,6 +612,13 @@ func preReceivePull(ctx *preReceiveContext, oldCommitID, newCommitID string, ref
 		return
 	}
 
+	pr, err := issues_model.GetPullRequestByIndex(ctx, ctx.Repo.Repository.ID, pullIndex)
+	if err != nil {
+		ctx.JSON(http.StatusForbidden, private.Response{
+			UserMsg: fmt.Sprintf("Unable to get pull request %d", pullIndex),
+		})
+		return
+	}
 	if pr.Flow != issues_model.PullRequestFlowAGit {
 		userMsg := fmt.Sprintf("Only AGit pull-requests can be pushed via %s", refFullName)
 

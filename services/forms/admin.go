@@ -55,6 +55,8 @@ type AdminEditUserForm struct {
 	Reset2FA                bool `form:"reset_2fa"`
 	Visibility              structs.VisibleType
 	HideEmail               bool `form:"hide_email"`
+	OldQuotaGroups          []string
+	NewQuotaGroups          []string
 }
 
 // Validate validates form fields
