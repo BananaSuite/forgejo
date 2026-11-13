@@ -32,9 +32,28 @@ var crytoAlgoyithms = []crypto.Hash{
 	crypto.BLAKE2b_512,
 }
 
+var secureCryptoAlgorithms = []crypto.Hash{
+	crypto.SHA256,
+	crypto.SHA384,
+	crypto.SHA3_256,
+	crypto.SHA3_384,
+	crypto.SHA3_512,
+	crypto.SHA512,
+	crypto.SHA512_256,
+	crypto.BLAKE2s_256,
+	crypto.BLAKE2b_256,
+	crypto.BLAKE2b_384,
+	crypto.BLAKE2b_512,
+}
+
 // Matches crypto algorythm from string
-func MatchCryptoAlgorithm(algo string) (crypto.Hash, error) {
-	for _, h := range crytoAlgoyithms {
+func MatchCryptoAlgorithm(algo string, allowInsecure bool) (crypto.Hash, error) {
+	algos := secureCryptoAlgorithms
+	if allowInsecure {
+		algos = crytoAlgoyithms
+	}
+
+	for _, h := range algos {
 		if strings.EqualFold(strings.Replace(algo, "_", "-", 1), h.String()) {
 			return h, nil
 		}
@@ -60,7 +79,7 @@ func VerifyRequestDigest(req *http.Request) error {
 		return fmt.Errorf("Error: invalid digest header: %s", digest)
 	}
 
-	digestAlgo, err := MatchCryptoAlgorithm(digestAlgoStr)
+	digestAlgo, err := MatchCryptoAlgorithm(digestAlgoStr, false)
 	if err != nil {
 		return err
 	}

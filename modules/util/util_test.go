@@ -299,22 +299,31 @@ func TestVerifyRequestDigest(t *testing.T) {
 
 func TestMatchCryptoAlgorithm(t *testing.T) {
 	t.Run("positiv_lower_case", func(t *testing.T) {
-		algo, err := util.MatchCryptoAlgorithm("sha-256")
+		algo, err := util.MatchCryptoAlgorithm("sha-256", false)
 		require.NoError(t, err)
 		require.Equal(t, crypto.SHA256, algo)
 	})
 	t.Run("positiv_capital_letters", func(t *testing.T) {
-		algo, err := util.MatchCryptoAlgorithm("SHA-256")
+		algo, err := util.MatchCryptoAlgorithm("SHA-256", false)
 		require.NoError(t, err)
 		require.Equal(t, crypto.SHA256, algo)
 	})
 	t.Run("positiv_underscore", func(t *testing.T) {
-		algo, err := util.MatchCryptoAlgorithm("SHA_256")
+		algo, err := util.MatchCryptoAlgorithm("SHA_256", false)
 		require.NoError(t, err)
 		require.Equal(t, crypto.SHA256, algo)
 	})
 	t.Run("unknow_algo", func(t *testing.T) {
-		_, err := util.MatchCryptoAlgorithm("SssHA_256")
+		_, err := util.MatchCryptoAlgorithm("SssHA_256", false)
 		require.Error(t, err)
+	})
+	t.Run("insecure_algo_flase", func(t *testing.T) {
+		_, err := util.MatchCryptoAlgorithm("MD5", false)
+		require.Error(t, err)
+	})
+	t.Run("insecure_algo_true", func(t *testing.T) {
+		algo, err := util.MatchCryptoAlgorithm("MD5", true)
+		require.NoError(t, err)
+		require.Equal(t, crypto.MD5, algo)
 	})
 }
