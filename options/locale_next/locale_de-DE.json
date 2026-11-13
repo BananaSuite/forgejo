@@ -1173,7 +1173,6 @@
 	"mail.actions.job_failure_info_duration": "Laufzeit: %[1]s",
 	"mail.actions.job_failure_info_finished": "Beendet: %[1]s",
 	"mail.actions.job_failure_view_results": "Details zur Ausführung auf %[1]s.",
-	"mail.actions.job_failure_log": "Letzte Zeilen des Auftragsprotokolls (bis zu 500 Zeilen):",
 	"admin.packages.last_download": "Zuletzt heruntergeladen",
 	"packages.owner.settings.cleanuprules.keep.last_download": "Versionen, die in der Vergangenheit heruntergeladen wurden, behalten",
 	"packages.owner.settings.cleanuprules.keep.last_download.no_download": "Wenn eine Version nicht heruntergeladen wurde, wird ihre Erstellungszeit verwendet.",
