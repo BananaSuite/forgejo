@@ -167,46 +167,31 @@ func getNotifications(ctx *context.Context) {
 		ctx.Flash.Error(fmt.Sprintf("ERROR: %d notifications were removed due to missing parts - check the logs", failCount))
 	}
 
-	teamInvite := (*org_model.TeamInvite)(nil)
-	teamsInvitedTo := []*org_model.Team{}
-	if page == 1 && status == activities_model.NotificationStatusUnread {
-		invites, err := db.Find[org_model.TeamInvite](ctx, org_model.SearchInvitesOptions{
-			// only select a single team invite, so that we don't show many different invites
-			// for teams from the same org, and so that we don't need pagination (as the pagination
-			// in place on this page is for the regular notifications)
-			ListOptions: db.ListOptions{
-				Page:     1,
-				PageSize: 5,
-			},
-			InvitedID: ctx.Doer.ID,
-			Expired:   optional.Some(false),
-		})
+	teamInvites, err := db.Find[org_model.TeamInvite](ctx, org_model.SearchInvitesOptions{
+		ListOptions: db.ListOptions{
+			Page:     1,
+			PageSize: 5,
+		},
+		InvitedID: ctx.Doer.ID,
+		Expired:   optional.Some(false),
+	})
+	if err != nil {
+		ctx.ServerError("db.Find[org_model.TeamInvite]", err)
+		return
+	}
+	for _, invite := range teamInvites {
+		err = invite.LoadOrg(ctx)
 		if err != nil {
-			ctx.ServerError("db.Find[org_model.TeamInvite]", err)
+			ctx.ServerError("LoadOrg", err)
 			return
 		}
-		if len(invites) > 0 {
-			teamInvite = invites[0]
-			err := teamInvite.LoadOrg(ctx)
-			if err != nil {
-				ctx.ServerError("LoadOrg", err)
-				return
-			}
-			teams, err := org_model.GetTeamsInvitedTo(ctx, teamInvite.OrgID, ctx.Doer.ID)
-			if err != nil {
-				ctx.ServerError("GetTeamsInvitedTo", err)
-				return
-			}
-			teamsInvitedTo = teams
-		}
 	}
+	ctx.Data["TeamInvites"] = teamInvites
 
 	ctx.Data["Title"] = ctx.Tr("notifications")
 	ctx.Data["Keyword"] = keyword
 	ctx.Data["Status"] = status
 	ctx.Data["Notifications"] = notifications
-	ctx.Data["TeamInvite"] = teamInvite
-	ctx.Data["TeamsInvitedTo"] = teamsInvitedTo
 
 	pager.SetDefaultParams(ctx)
 	ctx.Data["Page"] = pager
