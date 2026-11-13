@@ -48,6 +48,24 @@ test.describe('Workflow Authenticated user2', () => {
     await screenshot(page, page.locator('div.ui.container').filter({hasText: 'All workflows'}));
   });
 
+  test('workflow dispatch menu doesn\'t overflow', async ({page}) => {
+    await page.setViewportSize({
+      width: 500,
+      height: 1440,
+    });
+    await page.goto('/user2/test_workflows/actions?workflow=test-dispatch.yml&actor=0&status=0');
+
+    // a long input description could cause the workflow dispatch menu to overflow
+    await page.locator('#workflow_dispatch_dropdown .ui.checkbox strong').first().evaluate((elem) => {
+      elem.textContent = 'Extremely long description'.repeat(10);
+    });
+    await page.locator('#workflow_dispatch_dropdown>button').click();
+
+    await expect(page.locator('#workflow_dispatch_dropdown>.menu')).toBeInViewport({
+      ratio: 1,
+    });
+  });
+
   test('dispatch error: missing inputs', async ({page}) => {
     await page.goto('/user2/test_workflows/actions?workflow=test-dispatch.yml&actor=0&status=0');
 

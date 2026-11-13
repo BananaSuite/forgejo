@@ -165,8 +165,16 @@
   max-height: 500px;
 }
 @media (max-width: 640px) or (767.98px < width < 854px) {
-  #workflow_dispatch_dropdown .menu {
-    inset-inline: auto 0;
+  #workflow_dispatch_dropdown {
+    position: static;
+  }
+  #workflow_dispatch_dropdown > .menu {
+    inset-inline: 0;
+    min-width: 0;
+  }
+  #workflow_dispatch_dropdown > .menu > .message {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 
