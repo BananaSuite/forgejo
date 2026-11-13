@@ -19,6 +19,7 @@ import (
 
 	auth_model "forgejo.org/models/auth"
 	"forgejo.org/models/db"
+	org_model "forgejo.org/models/organization"
 	repo_model "forgejo.org/models/repo"
 	unit_model "forgejo.org/models/unit"
 	"forgejo.org/models/unittest"
@@ -1435,4 +1436,22 @@ func TestViewRepoSize(t *testing.T) {
 			assert.Equal(t, "git: 10 B, lfs: 1 B", attr)
 		})
 	})
+}
+
+func TestRepoWithOrgInvite(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	user10 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 10})
+	ownersTeam := unittest.AssertExistsAndLoadBean(t, &org_model.Team{ID: 1})
+
+	// create an invitation for user10 to org3
+	invite, err := org_model.CreateTeamInviteForUser(t.Context(), user2, user10, ownersTeam)
+	require.NoError(t, err)
+
+	session := loginUser(t, "user10")
+	doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", "/org3/repo21"), http.StatusOK).Body)
+
+	// the invitation is advertised on the org page
+	doc.AssertElement(t, fmt.Sprintf("a[href^='/org/invite/%s']", invite.Token), true)
 }

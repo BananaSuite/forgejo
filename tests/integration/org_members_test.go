@@ -61,6 +61,24 @@ func TestOrgMembersPage(t *testing.T) {
 		doc.AssertElement(t, "#add-org-member-button", false)
 	})
 
+	t.Run("Invited user PoV", func(t *testing.T) {
+		defer tests.PrintCurrentTest(t)()
+
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+		user10 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 10})
+		ownersTeam := unittest.AssertExistsAndLoadBean(t, &organization.Team{ID: 1})
+
+		// create an invitation for user10 to org3
+		invite, err := organization.CreateTeamInviteForUser(t.Context(), user2, user10, ownersTeam)
+		require.NoError(t, err)
+
+		session := loginUser(t, "user10")
+		doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", "/org/org3/members"), http.StatusOK).Body)
+
+		// the invitation is advertised on the org page
+		doc.AssertElement(t, fmt.Sprintf("a[href^='/org/invite/%s']", invite.Token), true)
+	})
+
 	t.Run("Owner PoV", func(t *testing.T) {
 		defer tests.PrintCurrentTest(t)()
 

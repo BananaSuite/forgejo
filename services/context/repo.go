@@ -20,6 +20,7 @@ import (
 	"forgejo.org/models/db"
 	git_model "forgejo.org/models/git"
 	issues_model "forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
 	packages_model "forgejo.org/models/packages"
 	access_model "forgejo.org/models/perm/access"
 	repo_model "forgejo.org/models/repo"
@@ -508,6 +509,10 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 	ctx.ContextUser = owner
 	ctx.Data["ContextUser"] = ctx.ContextUser
 	ctx.Data["Username"] = ctx.Repo.Owner.Name
+
+	if owner.IsOrganization() {
+		HandleOrgInviteAssignment(ctx, org_model.OrgFromUser(owner))
+	}
 
 	// redirect link to wiki
 	if strings.HasSuffix(repoName, ".wiki") {
