@@ -284,9 +284,9 @@ func (opts SearchInvitesOptions) ToConds() builder.Cond {
 	isSet, expired := opts.Expired.Get()
 	if isSet {
 		if expired {
-			cond = cond.And(builder.NewCond().And(builder.Lte{"expiry_unix": timeutil.TimeStampNow()}).And(builder.Neq{"expiry_unix": nil}))
+			cond = cond.And(builder.NewCond().And(builder.Lte{"expiry_unix": timeutil.TimeStampNow()}))
 		} else {
-			cond = cond.And(builder.NewCond().Or(builder.Gt{"expiry_unix": timeutil.TimeStampNow()}).Or(builder.Eq{"expiry_unix": nil}))
+			cond = cond.And(builder.NewCond().Or(builder.Gt{"expiry_unix": timeutil.TimeStampNow()}).Or(builder.IsNull{"expiry_unix"}))
 		}
 	}
 	return cond
