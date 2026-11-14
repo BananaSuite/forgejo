@@ -56,23 +56,24 @@ type PullRequest struct {
 // Repository contains information to operate a repository
 type Repository struct {
 	access_model.Permission
-	IsWatching   bool
-	IsViewBranch bool
-	IsViewTag    bool
-	IsViewCommit bool
-	Repository   *repo_model.Repository
-	Owner        *user_model.User
-	Commit       *git.Commit
-	Tag          *git.Tag
-	GitRepo      *git.Repository
-	RefName      string
-	BranchName   string
-	TagName      string
-	TreePath     string
-	CommitID     string
-	RepoLink     string
-	CloneLink    repo_model.CloneLink
-	CommitsCount int64
+	IsWatching    bool
+	IsViewBranch  bool
+	IsViewTag     bool
+	IsViewCommit  bool
+	Repository    *repo_model.Repository
+	Owner         *user_model.User
+	Commit        *git.Commit
+	Tag           *git.Tag
+	GitRepo       *git.Repository
+	RefName       string
+	BranchName    string
+	DefaultBranch string
+	TagName       string
+	TreePath      string
+	CommitID      string
+	RepoLink      string
+	CloneLink     repo_model.CloneLink
+	CommitsCount  int64
 
 	PullRequest *PullRequest
 }
@@ -762,18 +763,21 @@ func RepoAssignment(ctx *Context) context.CancelFunc {
 
 	ctx.Data["BranchesCount"] = branchesTotal
 
+	// Default branch
+	if len(ctx.Repo.Repository.DefaultBranch) > 0 && gitRepo.IsBranchExist(ctx.Repo.Repository.DefaultBranch) {
+		ctx.Repo.DefaultBranch = ctx.Repo.Repository.DefaultBranch
+	} else {
+		ctx.Repo.DefaultBranch, err = gitrepo.GetDefaultBranch(ctx, ctx.Repo.Repository)
+		if err != nil {
+			// If it still can't get a default branch, fall back to default branch from setting.
+			// Something might be wrong. Either site admin should fix the repo sync or Gitea should fix a potential bug.
+			ctx.Repo.DefaultBranch = setting.Repository.DefaultBranch
+		}
+	}
+
 	// If no branch is set in the request URL, try to guess a default one.
 	if len(ctx.Repo.BranchName) == 0 {
-		if len(ctx.Repo.Repository.DefaultBranch) > 0 && gitRepo.IsBranchExist(ctx.Repo.Repository.DefaultBranch) {
-			ctx.Repo.BranchName = ctx.Repo.Repository.DefaultBranch
-		} else {
-			ctx.Repo.BranchName, _ = gitrepo.GetDefaultBranch(ctx, ctx.Repo.Repository)
-			if ctx.Repo.BranchName == "" {
-				// If it still can't get a default branch, fall back to default branch from setting.
-				// Something might be wrong. Either site admin should fix the repo sync or Gitea should fix a potential bug.
-				ctx.Repo.BranchName = setting.Repository.DefaultBranch
-			}
-		}
+		ctx.Repo.BranchName = ctx.Repo.DefaultBranch
 		ctx.Repo.RefName = ctx.Repo.BranchName
 	}
 	ctx.Data["BranchName"] = ctx.Repo.BranchName
