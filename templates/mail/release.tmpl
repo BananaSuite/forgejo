@@ -24,21 +24,23 @@
 			{{.Release.RenderedNote}}
 		{{end -}}
 	</p>
-	<br><br>
-	<p>
-		---
-		<br>
-		{{.locale.Tr "mail.release.downloads"}}
-		<ul>
-			{{if not .DisableDownloadSourceArchives}}
-			<li>
-				<a href="{{.Release.ZipURL}}" rel="nofollow"><strong>{{.locale.Tr "mail.release.download.zip"}}</strong></a>
-			</li>
-			<li>
-				<a href="{{.Release.TarURL}}" rel="nofollow"><strong>{{.locale.Tr "mail.release.download.targz"}}</strong></a>
-			</li>
-			{{end}}
-			{{if .Release.Attachments}}
+	{{if or .Release.Attachments (not .DisabledZip) (not .DisabledTarGz)}}
+		<br><br>
+		<p>
+			---
+			<br>
+			{{.locale.Tr "mail.release.downloads"}}
+			<ul>
+				{{if not .DisabledZip}}
+					<li>
+						<a href="{{.Release.ZipURL}}" rel="nofollow"><strong>{{.locale.Tr "mail.release.download.zip"}}</strong></a>
+					</li>
+				{{end}}
+				{{if not .DisabledTarGz}}
+					<li>
+						<a href="{{.Release.TarURL}}" rel="nofollow"><strong>{{.locale.Tr "mail.release.download.targz"}}</strong></a>
+					</li>
+				{{end}}
 				{{range .Release.Attachments}}
 					<li>
 						<a target="_blank" rel="noopener noreferrer" href="{{.DownloadURL}}">
@@ -46,9 +48,9 @@
 						</a>
 					</li>
 				{{end}}
-			{{end}}
-		</ul>
-	</p>
+			</ul>
+		</p>
+	{{end}}
 	<div class="footer">
 	<p>
 		---

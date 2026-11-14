@@ -180,12 +180,35 @@ func renderDirectory(ctx *context.Context) {
 		ctx.Data["Title"] = ctx.Tr("repo.file.title", ctx.Repo.Repository.Name+"/"+ctx.Repo.TreePath, ctx.Repo.RefName)
 	}
 
+	// Archive links only for people that have access.
+	refType := "default-branch"
+	if ctx.Repo.IsViewCommit {
+		refType = "commit"
+	} else if ctx.Repo.IsViewTag {
+		refType = "tag"
+	} else if ctx.Repo.IsViewBranch && ctx.Repo.BranchName != ctx.Repo.DefaultBranch {
+		refType = "non-default-branch"
+	}
+	archiveLinkBase := ctx.Repo.RepoLink + "/archive/" + ctx.Repo.RefName
+	isSubdir := ctx.Repo.TreePath != ""
+	if isSubdir {
+		archiveLinkBase += ":" + util.PathEscapeSegments(ctx.Repo.TreePath)
+	}
+	if disabled, _ := setting.IsRepositoryDownloadSourceArchiveDisabled(ctx.IsSigned, refType, isSubdir, ".zip"); !disabled {
+		ctx.Data["ArchiveLinkZip"] = archiveLinkBase + ".zip"
+	}
+	if disabled, _ := setting.IsRepositoryDownloadSourceArchiveDisabled(ctx.IsSigned, refType, isSubdir, ".tar.gz"); !disabled {
+		ctx.Data["ArchiveLinkTarGz"] = archiveLinkBase + ".tar.gz"
+	}
+	if disabled, _ := setting.IsRepositoryDownloadSourceArchiveDisabled(ctx.IsSigned, refType, isSubdir, ".bundle"); !disabled {
+		ctx.Data["ArchiveLinkBundle"] = archiveLinkBase + ".bundle"
+	}
+
 	subfolder, readmeFile, err := FindReadmeFileInEntries(ctx, entries, true)
 	if err != nil {
 		ctx.ServerError("findReadmeFileInEntries", err)
 		return
 	}
-
 	renderReadmeFile(ctx, subfolder, readmeFile)
 }
 

@@ -41,12 +41,18 @@
 								{{if .EnableFeed}}
 									<a role="button" class="btn interact-bg tw-p-2" href="{{$.FeedURL}}/rss/branch/{{PathEscapeSegments .DefaultBranchBranch.DBBranch.Name}}" data-tooltip-content="{{ctx.Locale.Tr "rss_feed"}}">{{svg "octicon-rss"}}</a>
 								{{end}}
-								{{if not $.DisableDownloadSourceArchives}}
+								{{$isDisabledSourceArchiveZip := call .IsRepositoryDownloadSourceArchiveDisabled .IsSigned "default-branch" false ".zip"}}
+								{{$isDisabledSourceArchiveTarGz := call .IsRepositoryDownloadSourceArchiveDisabled .IsSigned "default-branch" false ".tar.gz"}}
+								{{if or (not $isDisabledSourceArchiveZip) (not $isDisabledSourceArchiveTarGz)}}
 									<div class="ui dropdown btn interact-bg tw-p-2" data-tooltip-content="{{ctx.Locale.Tr "repo.branch.download" ($.DefaultBranchBranch.DBBranch.Name)}}">
 										{{svg "octicon-download"}}
 										<div class="menu">
-											<a class="item archive-link" href="{{$.RepoLink}}/archive/{{PathEscapeSegments $.DefaultBranchBranch.DBBranch.Name}}.zip" rel="nofollow">{{svg "octicon-file-zip"}}&nbsp;ZIP</a>
-											<a class="item archive-link" href="{{$.RepoLink}}/archive/{{PathEscapeSegments $.DefaultBranchBranch.DBBranch.Name}}.tar.gz" rel="nofollow">{{svg "octicon-file-zip"}}&nbsp;TAR.GZ</a>
+											{{if not $isDisabledSourceArchiveZip}}
+												<a class="item archive-link" href="{{$.RepoLink}}/archive/{{PathEscapeSegments $.DefaultBranchBranch.DBBranch.Name}}.zip" rel="nofollow">{{svg "octicon-file-zip"}}&nbsp;ZIP</a>
+											{{end}}
+											{{if not $isDisabledSourceArchiveTarGz}}
+												<a class="item archive-link" href="{{$.RepoLink}}/archive/{{PathEscapeSegments $.DefaultBranchBranch.DBBranch.Name}}.tar.gz" rel="nofollow">{{svg "octicon-file-zip"}}&nbsp;TAR.GZ</a>
+											{{end}}
 										</div>
 									</div>
 								{{end}}
@@ -78,6 +84,9 @@
 			</form>
 		</div>
 
+		{{$isDisabledSourceArchiveZip := call .IsRepositoryDownloadSourceArchiveDisabled .IsSigned "non-default-branch" false ".zip"}}
+		{{$isDisabledSourceArchiveTarGz := call .IsRepositoryDownloadSourceArchiveDisabled .IsSigned "non-default-branch" false ".tar.gz"}}
+		{{$isDisabledSourceArchive := and $isDisabledSourceArchiveZip $isDisabledSourceArchiveTarGz}}
 		<div class="ui attached table segment">
 			<table class="ui very basic striped fixed table single line">
 				<tbody>
@@ -163,12 +172,16 @@
 								{{if $.EnableFeed}}
 									<a role="button" class="btn interact-bg tw-p-2" href="{{$.FeedURL}}/rss/branch/{{PathEscapeSegments .DBBranch.Name}}" data-tooltip-content="{{ctx.Locale.Tr "rss_feed"}}">{{svg "octicon-rss"}}</a>
 								{{end}}
-								{{if and (not .DBBranch.IsDeleted) (not $.DisableDownloadSourceArchives)}}
+								{{if and (not .DBBranch.IsDeleted) (not $isDisabledSourceArchive)}}
 									<div class="ui dropdown btn interact-bg tw-p-2" data-tooltip-content="{{ctx.Locale.Tr "repo.branch.download" (.DBBranch.Name)}}">
 										{{svg "octicon-download"}}
 										<div class="menu">
-											<a class="item archive-link" href="{{$.RepoLink}}/archive/{{PathEscapeSegments .DBBranch.Name}}.zip" rel="nofollow">{{svg "octicon-file-zip"}}&nbsp;ZIP</a>
-											<a class="item archive-link" href="{{$.RepoLink}}/archive/{{PathEscapeSegments .DBBranch.Name}}.tar.gz" rel="nofollow">{{svg "octicon-file-zip"}}&nbsp;TAR.GZ</a>
+											{{if not $isDisabledSourceArchiveZip}}
+												<a class="item archive-link" href="{{$.RepoLink}}/archive/{{PathEscapeSegments .DBBranch.Name}}.zip" rel="nofollow">{{svg "octicon-file-zip"}}&nbsp;ZIP</a>
+											{{end}}
+											{{if not $isDisabledSourceArchiveTarGz}}
+												<a class="item archive-link" href="{{$.RepoLink}}/archive/{{PathEscapeSegments .DBBranch.Name}}.tar.gz" rel="nofollow">{{svg "octicon-file-zip"}}&nbsp;TAR.GZ</a>
+											{{end}}
 										</div>
 									</div>
 								{{end}}

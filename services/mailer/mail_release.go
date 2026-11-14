@@ -78,12 +78,16 @@ func mailNewRelease(ctx context.Context, lang string, tos []*user_model.User, re
 	}
 
 	subject := locale.TrString("mail.release.new.subject", rel.TagName, rel.Repo.FullName())
+	disabledZip, _ := setting.IsRepositoryDownloadSourceArchiveDisabled(true, "tag", false, ".zip")
+	disabledTarGz, _ := setting.IsRepositoryDownloadSourceArchiveDisabled(true, "tag", false, ".tar.gz")
 	mailMeta := map[string]any{
-		"locale":   locale,
-		"Release":  rel,
-		"Subject":  subject,
-		"Language": locale.Language(),
-		"Link":     rel.HTMLURL(),
+		"locale":        locale,
+		"Release":       rel,
+		"Subject":       subject,
+		"Language":      locale.Language(),
+		"Link":          rel.HTMLURL(),
+		"DisabledZip":   disabledZip || rel.HideArchiveLinks,
+		"DisabledTarGz": disabledTarGz || rel.HideArchiveLinks,
 	}
 
 	var mailBody bytes.Buffer

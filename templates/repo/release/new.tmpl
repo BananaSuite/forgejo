@@ -122,13 +122,33 @@
 							{{ctx.Locale.Tr "repo.release.prerelease_desc"}}
 							<span class="help">{{ctx.Locale.Tr "repo.release.prerelease_helper"}}</span>
 						</label>
-						{{if not .DisableDownloadSourceArchives}}
-							<label>
-								<input type="checkbox" name="hide_archive_links" {{if .hide_archive_links}}checked{{end}}>
-								{{ctx.Locale.Tr "repo.release.hide_archive_links"}}
-								<span class="help">{{ctx.Locale.Tr "repo.release.hide_archive_links_helper"}}</span>
-							</label>
-						{{end}}
+						{{$isDisabledSourceArchiveZip := call .IsRepositoryDownloadSourceArchiveDisabled true "tag" false ".zip"}}
+						{{$isDisabledSourceArchiveTarGz := call .IsRepositoryDownloadSourceArchiveDisabled true "tag" false ".tar.gz"}}
+						{{$isDisabledSourceArchive := and $isDisabledSourceArchiveZip $isDisabledSourceArchiveTarGz}}
+						{{$isDisabledSourceArchiveZipUnauthenticated := call .IsRepositoryDownloadSourceArchiveDisabled false "tag" false ".zip"}}
+						{{$isDisabledSourceArchiveTarGzUnauthenticated := call .IsRepositoryDownloadSourceArchiveDisabled true "tag" false ".tar.gz"}}
+						{{$isDisabledSourceArchiveUnauthenticated := and $isDisabledSourceArchiveZipUnauthenticated $isDisabledSourceArchiveTarGzUnauthenticated}}
+						<label>
+							<input type="checkbox" name="hide_archive_links" {{if .hide_archive_links}}checked{{end}}>
+							{{ctx.Locale.Tr "repo.release.hide_archive_links"}}
+							<span class="help">{{ctx.Locale.Tr "repo.release.hide_archive_links_helper"}}</span>
+							{{if $isDisabledSourceArchive}}
+								<span class="help">{{ctx.Locale.Tr "repo.download.disabled"}}</span>
+							{{else}}
+								{{if $isDisabledSourceArchiveZip}}
+									<span class="help">{{ctx.Locale.Tr "repo.download.disabled.formats.one" "ZIP"}}</span>
+								{{else if $isDisabledSourceArchiveTarGz}}
+									<span class="help">{{ctx.Locale.Tr "repo.download.disabled.formats.one" "TAR.GZ"}}</span>
+								{{end}}
+								{{if $isDisabledSourceArchiveUnauthenticated}}
+									<span class="help">{{ctx.Locale.Tr "repo.download.disabled.unauthenticated"}}</span>
+								{{else if and (not $isDisabledSourceArchiveZip) $isDisabledSourceArchiveZipUnauthenticated}}
+									<span class="help">{{ctx.Locale.Tr "repo.download.disabled.unauthenticated.formats.one" "ZIP"}}</span>
+								{{else if and (not $isDisabledSourceArchiveTarGz) $isDisabledSourceArchiveTarGzUnauthenticated}}
+									<span class="help">{{ctx.Locale.Tr "repo.download.disabled.unauthenticated.formats.one" "TAR.GZ"}}</span>
+								{{end}}
+							{{end}}
+						</label>
 					</fieldset>
 					<div class="divider tw-mt-0"></div>
 					{{if .PageIsEditRelease}}

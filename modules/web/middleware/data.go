@@ -48,10 +48,11 @@ func CommonTemplateContextData() ContextData {
 	return ContextData{
 		"IsLandingPageOrganizations": setting.LandingPageURL == setting.LandingPageOrganizations,
 
-		"ShowRegistrationButton":        setting.Service.ShowRegistrationButton,
-		"ShowMilestonesDashboardPage":   setting.Service.ShowMilestonesDashboardPage,
-		"ShowFooterVersion":             setting.Other.ShowFooterVersion,
-		"DisableDownloadSourceArchives": setting.Repository.DisableDownloadSourceArchives,
+		"ShowRegistrationButton":      setting.Service.ShowRegistrationButton,
+		"ShowMilestonesDashboardPage": setting.Service.ShowMilestonesDashboardPage,
+		"ShowFooterVersion":           setting.Other.ShowFooterVersion,
+
+		"IsRepositoryDownloadSourceArchiveDisabled": setting.IsRepositoryDownloadSourceArchiveDisabled,
 
 		"EnableSwagger":      setting.API.EnableSwagger,
 		"EnableOpenIDSignIn": setting.Service.EnableOpenIDSignIn,

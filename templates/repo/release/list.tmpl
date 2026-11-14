@@ -5,6 +5,9 @@
 		<h1>{{ctx.Locale.Tr "repo.releases"}}</h1>
 		{{template "base/alert" .}}
 		{{template "repo/release_tag_header" .}}
+		{{$isDisabledSourceArchiveZip := call .IsRepositoryDownloadSourceArchiveDisabled .IsSigned "tag" false ".zip"}}
+		{{$isDisabledSourceArchiveTarGz := call .IsRepositoryDownloadSourceArchiveDisabled .IsSigned "tag" false ".tar.gz"}}
+		{{$isDisabledSourceArchive := and $isDisabledSourceArchiveZip $isDisabledSourceArchiveTarGz}}
 		<ul id="release-list">
 			{{range $idx, $info := .Releases}}
 				{{$release := $info.Release}}
@@ -69,7 +72,7 @@
 							</div>
 						{{end}}
 						{{$hasReleaseAttachment := gt (len $release.Attachments) 0}}
-						{{$hasArchiveLinks := and (not $.DisableDownloadSourceArchives) (not $release.IsDraft) (not $release.HideArchiveLinks) ($.Permission.CanRead $.UnitTypeCode)}}
+						{{$hasArchiveLinks := and (not $isDisabledSourceArchive) (not $release.IsDraft) (not $release.HideArchiveLinks) ($.Permission.CanRead $.UnitTypeCode)}}
 						{{if or $hasArchiveLinks $hasReleaseAttachment}}
 							<div class="divider not-mobile"></div>
 							<details class="download" {{if eq $idx 0}}open{{end}}>
@@ -97,7 +100,7 @@
 									{{end}}
 									{{if $hasArchiveLinks}}
 										{{if $hasReleaseAttachment}}<hr>{{end}}
-										<li>
+										{{if not $isDisabledSourceArchiveZip}}<li>
 											<a class="archive-link tw-flex-1 flex-text-inline tw-font-bold" href="{{$.RepoLink}}/archive/{{$release.TagName | PathEscapeSegments}}.zip" rel="nofollow" type="application/zip">
 												{{svg "octicon-file-zip" 16 "tw-mr-1"}}{{ctx.Locale.Tr "repo.release.source_code"}} (ZIP)
 											</a>
@@ -107,8 +110,8 @@
 											<span data-tooltip-content="{{ctx.Locale.Tr "repo.release.system_generated"}}">
 												{{svg "octicon-info"}}
 											</span>
-										</li>
-										<li>
+										</li>{{end}}
+										{{if not $isDisabledSourceArchiveTarGz}}<li>
 											<a class="archive-link tw-flex-1 flex-text-inline tw-font-bold" href="{{$.RepoLink}}/archive/{{$release.TagName | PathEscapeSegments}}.tar.gz" rel="nofollow" type="application/gzip">
 												{{svg "octicon-file-zip" 16 "tw-mr-1"}}{{ctx.Locale.Tr "repo.release.source_code"}} (TAR.GZ)
 											</a>
@@ -118,7 +121,7 @@
 											<span data-tooltip-content="{{ctx.Locale.Tr "repo.release.system_generated"}}">
 												{{svg "octicon-info"}}
 											</span>
-										</li>
+										</li>{{end}}
 									{{end}}
 								</ul>
 							</details>

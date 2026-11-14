@@ -1,0 +1,24 @@
+{{if or .ArchiveLinkZip .ArchiveLinkTarGz .ArchiveLinkBundle .CitationFile (and .OpenWithEditorApps (not .HasParentPath))}}
+	<button class="ui small jump dropdown icon button" data-tooltip-content="{{ctx.Locale.Tr "repo.more_operations"}}">
+		{{svg "octicon-kebab-horizontal"}}
+		<div class="menu">
+			{{if .ArchiveLinkZip}}
+				<a class="item archive-link" href="{{.ArchiveLinkZip}}" rel="nofollow">{{svg "octicon-file-zip" 16 "tw-mr-2"}}{{ctx.Locale.Tr "repo.download_zip"}}</a>
+			{{end}}
+			{{if .ArchiveLinkTarGz}}
+				<a class="item archive-link" href="{{.ArchiveLinkTarGz}}" rel="nofollow">{{svg "octicon-file-zip" 16 "tw-mr-2"}}{{ctx.Locale.Tr "repo.download_tar"}}</a>
+			{{end}}
+			{{if .ArchiveLinkBundle}}
+				<a class="item archive-link" href="{{.ArchiveLinkBundle}}" rel="nofollow">{{svg "octicon-package" 16 "tw-mr-2"}}{{ctx.Locale.Tr "repo.download_bundle"}}</a>
+			{{end}}
+			{{if .CitationFile}}
+				<a class="item citation-link" href="{{$.RepoLink}}/src/branch/{{PathEscapeSegments .BranchName}}/{{.CitationFile}}">{{svg "octicon-cross-reference" 16 "tw-mr-2"}}{{ctx.Locale.Tr "repo.cite_this_repo"}}</a>
+			{{end}}
+			{{if not .HasParentPath}}
+				{{range .OpenWithEditorApps}}
+					<a class="item js-clone-url-editor" data-href-template="{{.OpenURL}}">{{.IconHTML}}{{ctx.Locale.Tr "repo.open_with_editor" .DisplayName}}</a>
+				{{end}}
+			{{end}}
+		</div>
+	</button>
+{{end}}
