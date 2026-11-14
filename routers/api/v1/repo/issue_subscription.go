@@ -52,7 +52,7 @@ func AddIssueSubscription(ctx *context.APIContext) {
 	//   "201":
 	//     description: Successfully Subscribed
 	//   "403":
-	//     description: User can only subscribe itself if he is no admin
+	//     description: Not authorized to change other user's subscriptions
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 
@@ -87,7 +87,7 @@ func DelIssueSubscription(ctx *context.APIContext) {
 	//   required: true
 	// - name: user
 	//   in: path
-	//   description: user witch unsubscribe
+	//   description: user to unsubscribe
 	//   type: string
 	//   required: true
 	// responses:
@@ -96,7 +96,7 @@ func DelIssueSubscription(ctx *context.APIContext) {
 	//   "201":
 	//     description: Successfully Unsubscribed
 	//   "403":
-	//     description: User can only subscribe itself if he is no admin
+	//     description: Not authorized to change other user's subscriptions
 	//   "404":
 	//     "$ref": "#/responses/notFound"
 

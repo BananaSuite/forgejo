@@ -13666,7 +13666,7 @@
             "description": "Successfully Subscribed"
           },
           "403": {
-            "description": "User can only subscribe itself if he is no admin"
+            "description": "Not authorized to change other user's subscriptions"
           },
           "404": {
             "$ref": "#/responses/notFound"
@@ -13710,7 +13710,7 @@
           },
           {
             "type": "string",
-            "description": "user witch unsubscribe",
+            "description": "user to unsubscribe",
             "name": "user",
             "in": "path",
             "required": true
@@ -13724,7 +13724,7 @@
             "description": "Successfully Unsubscribed"
           },
           "403": {
-            "description": "User can only subscribe itself if he is no admin"
+            "description": "Not authorized to change other user's subscriptions"
           },
           "404": {
             "$ref": "#/responses/notFound"
