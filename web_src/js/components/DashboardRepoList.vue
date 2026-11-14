@@ -15,6 +15,9 @@ const commitStatus = {
   warning: {name: 'gitea-exclamation', color: 'yellow'},
 };
 
+// Only loads slower than this dim the list, so fast loads don't make it flicker
+const listLoadingDelay = 200;
+
 export default {
   components: {SvgIcon},
   data() {
@@ -37,6 +40,8 @@ export default {
       finalPage: 1,
       searchQuery,
       isLoading: false,
+      isLoadingSlowly: false,
+      listLoadingTimer: null,
       staticPrefix: assetUrlPrefix,
       counts: {},
       repoTypes: {
@@ -96,6 +101,16 @@ export default {
     },
     checkboxPrivateFilterProps() {
       return {checked: this.privateFilter === 'private', indeterminate: this.privateFilter === 'both'};
+    },
+  },
+
+  watch: {
+    isLoading(loading) {
+      clearTimeout(this.listLoadingTimer);
+      this.isLoadingSlowly = false;
+      if (loading) {
+        this.listLoadingTimer = setTimeout(() => this.isLoadingSlowly = true, listLoadingDelay);
+      }
     },
   },
 
@@ -391,7 +406,7 @@ export default {
           </div>
         </overflow-menu>
       </div>
-      <div v-if="repos.length" class="ui attached table segment">
+      <div v-if="repos.length" class="ui attached table segment repos-list" :class="{'repos-list-loading': isLoadingSlowly}">
         <ul class="repo-owner-name-list">
           <li class="tw-flex tw-items-center tw-py-2" v-for="repo, index in repos" :class="{'active': index === activeIndex}" :key="repo.id">
             <a class="repo-list-link muted" :href="repo.link">
@@ -498,6 +513,15 @@ ul li:not(:last-child) {
 
 .repos-filter .item {
   padding-inline: 6px !important;
+}
+
+/* Fade both ways, so a load ending just after the delay doesn't flicker */
+.repos-list > * {
+  transition: opacity 0.2s ease-in-out;
+}
+
+.repos-list-loading > * {
+  opacity: 0.3;
 }
 
 .repo-list-link {

@@ -22,6 +22,10 @@ function repoNames(wrapper) {
   return wrapper.findAll('.repo-owner-name-list li').map((li) => li.text());
 }
 
+function listIsLoading(wrapper) {
+  return wrapper.get('.repos-list').classes().includes('repos-list-loading');
+}
+
 // Search requests stay pending until the test resolves them, so the
 // component's state can be inspected while it is loading.
 async function mountRepoList() {
@@ -86,6 +90,41 @@ test('keeps showing the current repos and pagination while a new page is loading
   respondWithPage(requests[0]);
   await flushPromises();
   expect(repoNames(wrapper)).toEqual(['user1/repo3', 'user1/repo4']);
+});
+
+test('shows the loading state only when a load takes longer than 200ms', async () => {
+  vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']});
+  try {
+    const {wrapper, requests} = await mountRepoList();
+
+    await wrapper.get('.pagination .item[title="Next"]').trigger('click');
+    await vi.advanceTimersByTimeAsync(199);
+    expect(listIsLoading(wrapper)).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(listIsLoading(wrapper)).toBe(true);
+
+    respondWithPage(requests[0]);
+    await flushPromises();
+    expect(listIsLoading(wrapper)).toBe(false);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('does not show the loading state when a load finishes within 200ms', async () => {
+  vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']});
+  try {
+    const {wrapper, requests} = await mountRepoList();
+
+    await wrapper.get('.pagination .item[title="Next"]').trigger('click');
+    await vi.advanceTimersByTimeAsync(150);
+    respondWithPage(requests[0]);
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(listIsLoading(wrapper)).toBe(false);
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 test('ignores page changes while a page is loading', async () => {
