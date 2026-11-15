@@ -5,8 +5,13 @@
 				<div class="tw-mb-4">
 					<div class="ui info message tw-flex tw-items-center tw-justify-between">
 						<div>
-							{{$orgFormatted := HTMLFormat "<b>%s</b>" $TeamInvite.Org.Name}}
-							{{ctx.Locale.Tr "notification.pending_invite_notification" $orgFormatted}}
+							{{if eq $TeamInvite.Org.Visibility 2}}
+								{{$orgFormatted := HTMLFormat "<b>%s</b>" $TeamInvite.Org.Name}}
+								{{ctx.Locale.Tr "notification.pending_invite_notification" $orgFormatted}}
+							{{else}}
+								{{$orgFormatted := HTMLFormat "<b><a href=\"%s\">%s</a></b>" $TeamInvite.Org.HomeLink $TeamInvite.Org.Name}}
+								{{ctx.Locale.Tr "notification.pending_invite_notification" $orgFormatted}}
+							{{end}}
 						</div>
 						<div><a class="primary button" href="{{AppSubUrl}}/org/invite/{{$TeamInvite.Token}}">{{ctx.Locale.Tr "org.view_invite"}}</a></div>
 					</div>

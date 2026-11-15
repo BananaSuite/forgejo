@@ -43,10 +43,17 @@ func TestTeamInviteNotification(t *testing.T) {
 
 	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
 	user10 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 10})
-	ownersTeam := unittest.AssertExistsAndLoadBean(t, &org_model.Team{ID: 1})
+	publicTeam := unittest.AssertExistsAndLoadBean(t, &org_model.Team{ID: 1})
+	publicOrg := unittest.AssertExistsAndLoadBean(t, &org_model.Organization{ID: publicTeam.OrgID})
+
+	privateTeam := unittest.AssertExistsAndLoadBean(t, &org_model.Team{ID: 16})
+	privateOrg := unittest.AssertExistsAndLoadBean(t, &org_model.Organization{ID: privateTeam.OrgID})
 
 	// create an invitation for user10 to org3
-	invite, err := org_model.CreateTeamInviteForUser(t.Context(), user2, user10, ownersTeam)
+	invite, err := org_model.CreateTeamInviteForUser(t.Context(), user2, user10, publicTeam)
+	require.NoError(t, err)
+	// create an invitation for user10 to the private org
+	invitePrivateOrg, err := org_model.CreateTeamInviteForUser(t.Context(), user2, user10, privateTeam)
 	require.NoError(t, err)
 	// create an invitation for a deleted org/team (which will no longer be possible if/once we change those to foreign keys)
 	inviteWithDeletedOrg := &org_model.TeamInvite{
@@ -65,8 +72,12 @@ func TestTeamInviteNotification(t *testing.T) {
 	session := loginUser(t, "user10")
 	doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", "/notifications"), http.StatusOK).Body)
 
-	// the valid invitation is advertised on the org page
+	// the valid invitation to a public org is advertised on the notification page
 	doc.AssertElement(t, fmt.Sprintf("a[href^='/org/invite/%s']", invite.Token), true)
+	doc.AssertElement(t, fmt.Sprintf("a[href^='%s']", publicOrg.HomeLink()), true)
+	// the valid invitation to a private org is advertised too, but without a link to the org
+	doc.AssertElement(t, fmt.Sprintf("a[href^='/org/invite/%s']", invitePrivateOrg.Token), true)
+	doc.AssertElement(t, fmt.Sprintf("a[href^='%s']", privateOrg.HomeLink()), false)
 	// the invalid invitation is ignored
 	doc.AssertElement(t, fmt.Sprintf("a[href^='/org/invite/%s']", inviteWithDeletedOrg.Token), false)
 }
