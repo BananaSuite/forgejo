@@ -170,7 +170,7 @@ func getNotifications(ctx *context.Context) {
 	teamInvites, err := db.Find[org_model.TeamInvite](ctx, org_model.SearchInvitesOptions{
 		ListOptions: db.ListOptions{
 			Page:     1,
-			PageSize: 5,
+			PageSize: 10,
 		},
 		InvitedID: ctx.Doer.ID,
 		Expired:   optional.Some(false),
