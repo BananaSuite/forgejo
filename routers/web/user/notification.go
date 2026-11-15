@@ -67,6 +67,11 @@ func Notifications(ctx *context.Context) {
 	if ctx.Written() {
 		return
 	}
+	getTeamInvites(ctx)
+	if ctx.Written() {
+		return
+	}
+
 	if ctx.FormBool("div-only") {
 		ctx.Data["SequenceNumber"] = ctx.FormString("sequence-number")
 		ctx.HTML(http.StatusOK, tplNotificationDiv)
@@ -167,6 +172,16 @@ func getNotifications(ctx *context.Context) {
 		ctx.Flash.Error(fmt.Sprintf("ERROR: %d notifications were removed due to missing parts - check the logs", failCount))
 	}
 
+	ctx.Data["Title"] = ctx.Tr("notifications")
+	ctx.Data["Keyword"] = keyword
+	ctx.Data["Status"] = status
+	ctx.Data["Notifications"] = notifications
+
+	pager.SetDefaultParams(ctx)
+	ctx.Data["Page"] = pager
+}
+
+func getTeamInvites(ctx *context.Context) {
 	teamInvites, err := db.Find[org_model.TeamInvite](ctx, org_model.SearchInvitesOptions{
 		ListOptions: db.ListOptions{
 			Page:     1,
@@ -185,14 +200,6 @@ func getNotifications(ctx *context.Context) {
 		}
 	}
 	ctx.Data["TeamInvites"] = teamInvites
-
-	ctx.Data["Title"] = ctx.Tr("notifications")
-	ctx.Data["Keyword"] = keyword
-	ctx.Data["Status"] = status
-	ctx.Data["Notifications"] = notifications
-
-	pager.SetDefaultParams(ctx)
-	ctx.Data["Page"] = pager
 }
 
 // NotificationStatusPost is a route for changing the status of a notification
