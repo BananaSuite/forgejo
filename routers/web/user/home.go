@@ -134,6 +134,10 @@ func Dashboard(ctx *context.Context) {
 
 	ctx.Data["Feeds"] = feeds
 
+	if ctxUser != nil && ctxUser.ID == ctx.Doer.ID {
+		getTeamInvites(ctx)
+	}
+
 	pager := context.NewPagination(int(count), setting.UI.FeedPagingNum, page, 5)
 	pager.AddParam(ctx, "date", "Date")
 	ctx.Data["Page"] = pager

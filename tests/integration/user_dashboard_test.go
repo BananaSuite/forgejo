@@ -4,16 +4,20 @@
 package integration
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"testing"
 
 	"forgejo.org/models/issues"
+	org_model "forgejo.org/models/organization"
 	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/gitrepo"
 	issue_service "forgejo.org/services/issue"
 	pull_service "forgejo.org/services/pull"
+	"forgejo.org/tests"
 	"forgejo.org/tests/forgery"
 
 	"github.com/PuerkitoBio/goquery"
@@ -153,4 +157,24 @@ func TestDashboardReviewWorkflows(t *testing.T) {
 
 		assert.Equal(t, 4, count)
 	})
+}
+
+func TestShowTeamInviteNotificationOnDashboard(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	user10 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 10})
+	publicTeam := unittest.AssertExistsAndLoadBean(t, &org_model.Team{ID: 1})
+	publicOrg := unittest.AssertExistsAndLoadBean(t, &org_model.Organization{ID: publicTeam.OrgID})
+
+	// create an invitation for user10 to org3
+	invite, err := org_model.CreateTeamInviteForUser(t.Context(), user2, user10, publicTeam)
+	require.NoError(t, err)
+
+	session := loginUser(t, "user10")
+	doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", "/"), http.StatusOK).Body)
+
+	// the invitation to the org is advertised on the dashboard
+	doc.AssertElement(t, fmt.Sprintf("a[href^='/org/invite/%s']", invite.Token), true)
+	doc.AssertElement(t, fmt.Sprintf("a[href^='%s']", publicOrg.HomeLink()), true)
 }

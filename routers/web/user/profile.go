@@ -81,6 +81,11 @@ func userProfile(ctx *context.Context) {
 	prepareUserProfileFunding(ctx, profileFunding)
 	// call PrepareContextForProfileBigAvatar later to avoid re-querying the NumFollowers & NumFollowing
 	shared_user.PrepareContextForProfileBigAvatar(ctx)
+
+	if ctx.IsSigned && ctx.Doer.ID == ctx.ContextUser.ID {
+		getTeamInvites(ctx)
+	}
+
 	ctx.HTML(http.StatusOK, tplProfile)
 }
 

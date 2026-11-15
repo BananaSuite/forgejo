@@ -4,11 +4,15 @@
 package integration
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
 
+	org_model "forgejo.org/models/organization"
+	"forgejo.org/models/unittest"
+	user_model "forgejo.org/models/user"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/test"
@@ -215,4 +219,31 @@ quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequa
 			assert.True(t, profileRepo.IsPrivate, "Repository should be marked as private")
 		})
 	})
+}
+
+func TestShowTeamInviteNotificationOnUserProfile(t *testing.T) {
+	defer tests.PrepareTestEnv(t)()
+
+	user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+	user10 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 10})
+	publicTeam := unittest.AssertExistsAndLoadBean(t, &org_model.Team{ID: 1})
+	publicOrg := unittest.AssertExistsAndLoadBean(t, &org_model.Organization{ID: publicTeam.OrgID})
+
+	// create an invitation for user10 to org3
+	invite, err := org_model.CreateTeamInviteForUser(t.Context(), user2, user10, publicTeam)
+	require.NoError(t, err)
+
+	session := loginUser(t, "user10")
+	doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", "/user10"), http.StatusOK).Body)
+
+	// the invitation to the org is advertised on the the profile of user10 when they view it themselves
+	doc.AssertElement(t, fmt.Sprintf("a[href^='/org/invite/%s']", invite.Token), true)
+	doc.AssertElement(t, fmt.Sprintf("a[href^='%s']", publicOrg.HomeLink()), true)
+
+	session = loginUser(t, "user2")
+	doc = NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", "/user10"), http.StatusOK).Body)
+
+	// the invitation to the org is not advertised on the the profile of user10 when someone else views it
+	doc.AssertElement(t, fmt.Sprintf("a[href^='/org/invite/%s']", invite.Token), false)
+	doc.AssertElement(t, fmt.Sprintf("a[href^='%s']", publicOrg.HomeLink()), false)
 }
