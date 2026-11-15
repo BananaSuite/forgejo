@@ -1,6 +1,7 @@
 <div role="main" aria-label="{{.Title}}" class="page-content user notification" id="notification_div" data-sequence-number="{{.SequenceNumber}}">
 	<div class="ui container">
 		{{range $TeamInvite := .TeamInvites}}
+			{{if $TeamInvite.Org}}
 				<div class="tw-mb-4">
 					<div class="ui info message tw-flex tw-items-center tw-justify-between">
 						<div>
@@ -10,6 +11,7 @@
 						<div><a class="primary button" href="{{AppSubUrl}}/org/invite/{{$TeamInvite.Token}}">{{ctx.Locale.Tr "org.view_invite"}}</a></div>
 					</div>
 				</div>
+			{{end}}
 		{{end}}
 		{{$notificationUnreadCount := call .NotificationUnreadCount}}
 		<div class="tw-flex tw-items-center tw-justify-between tw-mb-4 tw-gap-2">

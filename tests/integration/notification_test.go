@@ -8,9 +8,12 @@ import (
 	"net/http"
 	"testing"
 
+	"forgejo.org/models/db"
 	org_model "forgejo.org/models/organization"
 	"forgejo.org/models/unittest"
 	user_model "forgejo.org/models/user"
+	"forgejo.org/modules/optional"
+	"forgejo.org/modules/timeutil"
 	"forgejo.org/tests"
 
 	"github.com/stretchr/testify/require"
@@ -45,10 +48,25 @@ func TestTeamInviteNotification(t *testing.T) {
 	// create an invitation for user10 to org3
 	invite, err := org_model.CreateTeamInviteForUser(t.Context(), user2, user10, ownersTeam)
 	require.NoError(t, err)
+	// create an invitation for a deleted org/team (which will no longer be possible if/once we change those to foreign keys)
+	inviteWithDeletedOrg := &org_model.TeamInvite{
+		Token:       "abcdefg",
+		InviterID:   user2.ID,
+		OrgID:       123456,
+		TeamID:      789012,
+		Email:       "some_email@example.com",
+		InvitedID:   optional.Some(user10.ID),
+		InvitedUser: user10,
+		ExpiryUnix:  optional.None[timeutil.TimeStamp](),
+	}
+	err = db.Insert(t.Context(), inviteWithDeletedOrg)
+	require.NoError(t, err)
 
 	session := loginUser(t, "user10")
 	doc := NewHTMLParser(t, session.MakeRequest(t, NewRequest(t, "GET", "/notifications"), http.StatusOK).Body)
 
-	// the invitation is advertised on the org page
+	// the valid invitation is advertised on the org page
 	doc.AssertElement(t, fmt.Sprintf("a[href^='/org/invite/%s']", invite.Token), true)
+	// the invalid invitation is ignored
+	doc.AssertElement(t, fmt.Sprintf("a[href^='/org/invite/%s']", inviteWithDeletedOrg.Token), false)
 }

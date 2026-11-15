@@ -176,14 +176,12 @@ func getNotifications(ctx *context.Context) {
 		Expired:   optional.Some(false),
 	})
 	if err != nil {
-		ctx.ServerError("db.Find[org_model.TeamInvite]", err)
-		return
+		log.Error("db.Find[org_model.TeamInvite]: %s", err)
 	}
 	for _, invite := range teamInvites {
 		err = invite.LoadOrg(ctx)
 		if err != nil {
-			ctx.ServerError("LoadOrg", err)
-			return
+			log.Error("LoadOrg: %s", err)
 		}
 	}
 	ctx.Data["TeamInvites"] = teamInvites
