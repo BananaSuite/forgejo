@@ -98,6 +98,7 @@ var (
 			DefaultUpdateStyle                       string
 			PopulateSquashCommentWithCommitMessages  bool
 			RetargetChildrenOnMerge                  bool
+			KeepForcePushRefs                        bool
 		} `ini:"repository.pull-request"`
 
 		// Issue Setting
@@ -228,6 +229,7 @@ var (
 			DefaultUpdateStyle                       string
 			PopulateSquashCommentWithCommitMessages  bool
 			RetargetChildrenOnMerge                  bool
+			KeepForcePushRefs                        bool
 		}{
 			WorkInProgressPrefixes: []string{"WIP:", "[WIP]"},
 			// Same as GitHub. See
@@ -243,6 +245,7 @@ var (
 			DefaultUpdateStyle:                       "merge",
 			PopulateSquashCommentWithCommitMessages:  false,
 			RetargetChildrenOnMerge:                  true,
+			KeepForcePushRefs:                        true,
 		},
 
 		// Issue settings
