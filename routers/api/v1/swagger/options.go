@@ -177,6 +177,9 @@ type swaggerParameterBodies struct {
 	CreatePullReviewCommentOptions api.CreatePullReviewCommentOptions
 
 	// in:body
+	CreatePullReviewCommentReplyOptions api.CreatePullReviewCommentReplyOptions
+
+	// in:body
 	SubmitPullReviewOptions api.SubmitPullReviewOptions
 
 	// in:body
@@ -250,4 +253,7 @@ type swaggerParameterBodies struct {
 
 	// in:body
 	RegisterRunnerOptions api.RegisterRunnerOptions
+
+	// in:body
+	CreateOrUpdateProjectOptions api.CreateOrUpdateProjectOptions
 }

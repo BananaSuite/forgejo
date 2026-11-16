@@ -34,6 +34,7 @@ import (
 	"forgejo.org/modules/test"
 	webhook_module "forgejo.org/modules/webhook"
 	actions_service "forgejo.org/services/actions"
+	"forgejo.org/services/forms"
 	issue_service "forgejo.org/services/issue"
 	pull_service "forgejo.org/services/pull"
 	release_service "forgejo.org/services/release"
@@ -1283,17 +1284,18 @@ func TestActionsWorkflowDispatchDynamicMatrix(t *testing.T) {
 			Name:      "repo-workflow-dispatch",
 			LatestSha: &sha,
 			Files: forgery.MapFS{
-				".forgejo/workflows/dispatch.yml": forgery.MapFile(
-					"name: test\n" +
-						"on: [workflow_dispatch]\n" +
-						"jobs:\n" +
-						"  test:\n" +
-						"    runs-on: ubuntu-latest\n" +
-						"    strategy:\n" +
-						"      matrix: \n" +
-						"        dim1: \"${{ fromJSON(needs.other-job.outputs.some-output) }}\"\n" +
-						"    steps:\n" +
-						"      - run: echo helloworld\n",
+				".forgejo/workflows/dispatch.yml": forgery.MapFile(`
+name: test
+on: [workflow_dispatch]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dim1: "${{ fromJSON(needs.other-job.outputs.some-output) }}"
+    steps:
+      - run: echo helloworld
+`,
 				),
 			},
 		})
@@ -1321,7 +1323,8 @@ func TestActionsWorkflowDispatchDynamicMatrix(t *testing.T) {
 }
 
 // Early in the job parsing, dynamic matrices may need to access workflow inputs.  Boolean inputs need special handling
-// which is what this test case covers.
+// (the string value 'false' provided as an input is treated as the boolean value false in evaluations), which is what
+// this test case covers.
 func TestActionsWorkflowDispatchDynamicMatrixBooleanInput(t *testing.T) {
 	onApplicationRun(t, func(t *testing.T, u *url.URL) {
 		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
@@ -1332,23 +1335,24 @@ func TestActionsWorkflowDispatchDynamicMatrixBooleanInput(t *testing.T) {
 			Name:      "repo-workflow-dispatch",
 			LatestSha: &sha,
 			Files: forgery.MapFS{
-				".forgejo/workflows/dispatch.yml": forgery.MapFile(
-					"name: test\n" +
-						"on:\n" +
-						"  workflow_dispatch:\n" +
-						"    inputs:\n" +
-						"      win32:\n" +
-						"        description: 'Boolean'\n" +
-						"        required: false\n" +
-						"        type: boolean\n" +
-						"jobs:\n" +
-						"  test:\n" +
-						"    runs-on: ubuntu-latest\n" +
-						"    strategy:\n" +
-						"      matrix:\n" +
-						"        runner: ${{ fromJSON(inputs.win32 && '[\"win32\", \"win64\"]' || '[\"win64\"]') }}\n" +
-						"    steps:\n" +
-						"      - run: echo helloworld\n",
+				".forgejo/workflows/dispatch.yml": forgery.MapFile(`
+name: test
+on:
+  workflow_dispatch:
+    inputs:
+      win32:
+        description: 'Boolean'
+        required: false
+        type: boolean
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runner: ${{ fromJSON(inputs.win32 && '["win32", "win64"]' || '["win64"]') }}
+    steps:
+      - run: echo helloworld
+`,
 				),
 			},
 		})
@@ -1494,6 +1498,146 @@ func TestActionsWorkflowDispatchConcurrencyGroup(t *testing.T) {
 		assert.Equal(t, actions_model.CancelInProgress, secondRun.ConcurrencyType)
 		firstRunReload := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{ID: firstRun.ID})
 		assert.Equal(t, actions_model.StatusCancelled, firstRunReload.Status)
+	})
+}
+
+// When a workflow dispatch has an incomplete job that needs to be evaluated based upon the output from another job,
+// ensure that it is still able to access a boolean workflow dispatch input correctly.
+func TestActionsWorkflowDispatchIncompleteJobBooleanInput(t *testing.T) {
+	if !setting.Database.Type.IsSQLite3() {
+		// mockRunner only supported with sqlite
+		t.Skip()
+	}
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		// create the repo
+		var sha string
+		repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+			Name:      "repo-workflow-dispatch",
+			LatestSha: &sha,
+			Files: forgery.MapFS{
+				".forgejo/workflows/dispatch.yml": forgery.MapFile(`
+name: test
+on:
+  workflow_dispatch:
+    inputs:
+      win32:
+        description: 'Boolean'
+        type: boolean
+jobs:
+  pre-req:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo helloworld # theoretically we provide an output from this job, but it is mocked
+  target-job:
+    needs: pre-req
+    runs-on: ${{ needs.pre-req.outputs.runs-on }} # makes this job incomplete until pre-req is complete
+    if: ${{ inputs.win32 }} # we'll provide a 'false' bool here so this job is skipped
+    steps:
+      - run: echo helloworld
+`,
+				),
+			},
+		})
+		forgery.EnableRepoUnit(t, repo, unit_model.TypeActions, nil)
+
+		gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
+		require.NoError(t, err)
+		defer gitRepo.Close()
+
+		workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, "main", "dispatch.yml")
+		require.NoError(t, err)
+
+		inputGetter := func(key string) string {
+			return "false" // the string false is interpreted as a boolean false because `type: boolean` on the input
+		}
+		run, _, err := workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
+		require.NoError(t, err)
+
+		runner := newMockRunner()
+		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"})
+
+		preReqTask := runner.fetchTask(t)
+		unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{TaskID: preReqTask.GetId()})
+		runner.execTask(t, preReqTask, &mockTaskOutcome{
+			result:  runnerv1.Result_RESULT_SUCCESS,
+			outputs: map[string]string{"runs-on": "ubunut-latest"},
+		})
+
+		// The input "false" should be considered the boolean value false and prevent the target-job from becoming
+		// available to run.  It should instead become skipped:
+		assert.Nil(t, runner.maybeFetchTask(t))
+		targetJob := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRunJob{
+			RunID: run.ID,
+			Name:  "target-job",
+		})
+		assert.Equal(t, actions_model.StatusSkipped.String(), targetJob.Status.String())
+	})
+}
+
+// Workflow with a boolean input should be consistently converted to a boolean value
+func TestActionsWorkflowDispatchBooleanInputConsistency(t *testing.T) {
+	if !setting.Database.Type.IsSQLite3() {
+		// mockRunner only supported with sqlite
+		t.Skip()
+	}
+
+	onApplicationRun(t, func(t *testing.T, u *url.URL) {
+		user2 := unittest.AssertExistsAndLoadBean(t, &user_model.User{ID: 2})
+
+		// create the repo
+		var sha string
+		repo := forgery.CreateRepository(t, user2, &forgery.CreateRepositoryOptions{
+			Name:      "repo-workflow-dispatch",
+			LatestSha: &sha,
+			Files: forgery.MapFS{
+				".forgejo/workflows/dispatch.yml": forgery.MapFile(`
+name: test
+on:
+  workflow_dispatch:
+    inputs:
+      win32:
+        description: 'Boolean'
+        type: boolean
+jobs:
+  job1:
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.win32 }} # verifies that input is in boolean type, not string
+    steps:
+      - run: echo helloworld
+`,
+				),
+			},
+		})
+		forgery.EnableRepoUnit(t, repo, unit_model.TypeActions, nil)
+
+		gitRepo, err := gitrepo.OpenRepository(db.DefaultContext, repo)
+		require.NoError(t, err)
+		defer gitRepo.Close()
+
+		workflow, err := actions_service.GetWorkflowFromCommit(gitRepo, "main", "dispatch.yml")
+		require.NoError(t, err)
+
+		inputGetter := func(key string) string {
+			return "false" // the string will be interpreted as a boolean because `type: boolean` on the input def in workflow
+		}
+		_, _, err = workflow.Dispatch(db.DefaultContext, inputGetter, repo, user2)
+		require.NoError(t, err)
+
+		runner := newMockRunner()
+		runner.registerAsRepoRunner(t, user2.Name, repo.Name, "mock-runner", []string{"ubuntu-latest"})
+
+		task := runner.fetchTask(t)
+
+		// Verify that ${{ forgejo.event.inputs.win32 }} would be the boolean value, not a string value
+		context := task.GetContext().AsMap()
+		event, ok := context["event"].(map[string]any)
+		require.True(t, ok)
+		inputs, ok := event["inputs"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, false, inputs["win32"])
 	})
 }
 
@@ -1906,6 +2050,26 @@ func TestActionsForkPullRequest(t *testing.T) {
 		closed := "closed"
 		editPR(t, baseRepo, pr, token, api.EditIssueOption{State: &closed})
 	}
+	mergePR := func(t *testing.T, baseRepo *repo_model.Repository, pr *issues_model.PullRequest, token string, merge *forms.MergePullRequestForm) {
+		url := fmt.Sprintf("/api/v1/repos/%s/pulls/%d/merge", baseRepo.FullName(), pr.Index)
+		req := NewRequestWithJSON(t, "POST", url, merge).AddTokenAuth(token)
+		MakeRequest(t, req, http.StatusOK)
+	}
+	mergePRWithMerge := func(t *testing.T, baseRepo *repo_model.Repository, pr *issues_model.PullRequest, token string) {
+		mergePR(t, baseRepo, pr, token, &forms.MergePullRequestForm{
+			Do: "merge",
+		})
+	}
+	mergePRWithSquash := func(t *testing.T, baseRepo *repo_model.Repository, pr *issues_model.PullRequest, token string) {
+		mergePR(t, baseRepo, pr, token, &forms.MergePullRequestForm{
+			Do: "squash",
+		})
+	}
+	mergePRWithFastForward := func(t *testing.T, baseRepo *repo_model.Repository, pr *issues_model.PullRequest, token string) {
+		mergePR(t, baseRepo, pr, token, &forms.MergePullRequestForm{
+			Do: "fast-forward-only",
+		})
+	}
 	reopenPR := func(t *testing.T, baseRepo *repo_model.Repository, pr *issues_model.PullRequest, token string) {
 		closePR(t, baseRepo, pr, token)
 		open := "open"
@@ -2026,12 +2190,23 @@ func TestActionsForkPullRequest(t *testing.T) {
 		// Workflow will be run without recognition that it is a pull request; for example when making a comment on a PR
 		// and triggering the issue_comment event.
 		runFromBaseWithoutPullRequest
+		// Workflow defined in the PR will be run, because it has been merged into the base.  Therefore it will not
+		// require approval, and will be provided secrets.
+		runFromMergedFork
+	)
+	type expectedRef int
+	const (
+		// forgejo.ref will be refs/pull/%d/head
+		refPullRequest expectedRef = iota
+		// refs/heads/main
+		refBaseBranch
 	)
 	type testCase struct {
 		name             string // must be safe to use in a repo name
 		workflowPreamble string
 		triggerEvent     func(t *testing.T, baseRepo *repo_model.Repository, pr *issues_model.PullRequest, token string)
 		expectedResult   expectedResult
+		expectedRef      expectedRef
 	}
 
 	testCases := []testCase{
@@ -2118,72 +2293,105 @@ func TestActionsForkPullRequest(t *testing.T) {
 			workflowPreamble: "on: { pull_request_target: { types: [assigned] } }\n",
 			triggerEvent:     assignPR,
 			expectedResult:   runFromBase,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "pull_request_target-unassigned",
 			workflowPreamble: "on: { pull_request_target: { types: [unassigned] } }\n",
 			triggerEvent:     unassignPR,
 			expectedResult:   runFromBase,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "pull_request_target-labeled",
 			workflowPreamble: "on: { pull_request_target: { types: [labeled] } }\n",
 			triggerEvent:     labelPR,
 			expectedResult:   runFromBase,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "pull_request_target-unlabeled",
 			workflowPreamble: "on: { pull_request_target: { types: [unlabeled] } }\n",
 			triggerEvent:     unlabelPR,
 			expectedResult:   runFromBase,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "pull_request_target-edited",
 			workflowPreamble: "on: { pull_request_target: { types: [edited] } }\n",
 			triggerEvent:     editPRTitle,
 			expectedResult:   runFromBase,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "pull_request_target-closed",
 			workflowPreamble: "on: { pull_request_target: { types: [closed] } }\n",
 			triggerEvent:     closePR,
 			expectedResult:   runFromBase,
+			expectedRef:      refBaseBranch,
+		},
+		{
+			name:             "pull_request_target-closed-merge",
+			workflowPreamble: "on: { pull_request_target: { types: [closed] } }\n",
+			triggerEvent:     mergePRWithMerge,
+			expectedResult:   runFromMergedFork,
+			expectedRef:      refBaseBranch,
+		},
+		{
+			name:             "pull_request_target-closed-merge-squash",
+			workflowPreamble: "on: { pull_request_target: { types: [closed] } }\n",
+			triggerEvent:     mergePRWithSquash,
+			expectedResult:   runFromMergedFork,
+			expectedRef:      refBaseBranch,
+		},
+		{
+			name:             "pull_request_target-closed-merge-fast-forward",
+			workflowPreamble: "on: { pull_request_target: { types: [closed] } }\n",
+			triggerEvent:     mergePRWithFastForward,
+			expectedResult:   runFromMergedFork,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "pull_request_target-reopened",
 			workflowPreamble: "on: { pull_request_target: { types: [reopened] } }\n",
 			triggerEvent:     reopenPR,
 			expectedResult:   runFromBase,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "pull_request_target-synchronize",
 			workflowPreamble: "on: { pull_request_target: { types: [synchronize] } }\n",
 			triggerEvent:     synchronizePR,
 			expectedResult:   runFromBase,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "pull_request_target-milestoned",
 			workflowPreamble: "on: { pull_request_target: { types: [milestoned] } }\n",
 			triggerEvent:     milestonePR,
 			expectedResult:   runFromBase,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "pull_request_target-demilestoned",
 			workflowPreamble: "on: { pull_request_target: { types: [demilestoned] } }\n",
 			triggerEvent:     demilestonePR,
 			expectedResult:   runFromBase,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "pull_request_target-review_requested",
 			workflowPreamble: "on: { pull_request_target: { types: [review_requested] } }\n",
 			triggerEvent:     requestReview,
 			expectedResult:   runFromBase,
+			expectedRef:      refPullRequest, // unexpected for pull_request_target, possible bug; generateGiteaContextForRun doesn't get a PR payload; out of scope for current patch
 		},
 		{
 			name:             "pull_request_target-review_request_removed",
 			workflowPreamble: "on: { pull_request_target: { types: [review_request_removed] } }\n",
 			triggerEvent:     removeReviewRequest,
 			expectedResult:   runFromBase,
+			expectedRef:      refPullRequest, // unexpected for pull_request_target, possible bug; generateGiteaContextForRun doesn't get a PR payload; out of scope for current patch
 		},
 		{
 			name:             "pull_request_review",
@@ -2214,18 +2422,21 @@ func TestActionsForkPullRequest(t *testing.T) {
 			workflowPreamble: "on: { issue_comment: { types: [created] } }",
 			triggerEvent:     createPRComment,
 			expectedResult:   runFromBaseWithoutPullRequest,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "issue_comment-edited",
 			workflowPreamble: "on: { issue_comment: { types: [edited] } }",
 			triggerEvent:     editPRComment,
 			expectedResult:   runFromBaseWithoutPullRequest,
+			expectedRef:      refBaseBranch,
 		},
 		{
 			name:             "issue_comment-deleted",
 			workflowPreamble: "on: { issue_comment: { types: [deleted] } }",
 			triggerEvent:     deletePRComment,
 			expectedResult:   runFromBaseWithoutPullRequest,
+			expectedRef:      refBaseBranch,
 		},
 	}
 
@@ -2325,7 +2536,7 @@ jobs:
 					assert.True(t, actionRun.IsForkPullRequest, "run must be marked as IsForkPullRequest")
 					assert.True(t, actionRun.NeedApproval, "run must be marked as NeedApproval")
 					require.NoError(t, actions_service.UpdateTrustedWithPullRequest(t.Context(), user2.ID, pullRequest, actions_service.UserTrustedOnce))
-				case runFromBase:
+				case runFromBase, runFromMergedFork:
 					actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{RepoID: baseRepo.ID})
 					assert.True(t, actionRun.IsForkPullRequest, "run must be !IsForkPullRequest")
 					assert.False(t, actionRun.NeedApproval, "run must be !NeedApproval")
@@ -2333,6 +2544,8 @@ jobs:
 					actionRun := unittest.AssertExistsAndLoadBean(t, &actions_model.ActionRun{RepoID: baseRepo.ID})
 					assert.False(t, actionRun.IsForkPullRequest, "run must be !IsForkPullRequest")
 					assert.False(t, actionRun.NeedApproval, "run must be !NeedApproval")
+				default:
+					assert.Failf(t, "unexpected tc.expectedResult", "tc.expectedResult=%d was not implemented", tc.expectedResult)
 				}
 				if t.Failed() {
 					return // faster test exit rather than waiting for fetchTask to fail, as it runs a check loop
@@ -2351,6 +2564,11 @@ jobs:
 					// runFromFork should give us a token that only has read permissions to the repo's units, so a write
 					// to the repo should fail:
 					writeToRepoCode(t, baseRepo, task.Secrets["FORGEJO_TOKEN"], http.StatusForbidden)
+				case runFromMergedFork:
+					assert.Contains(t, string(task.GetWorkflowPayload()), "job-fork:") // job-fork would be in the base branch now that the PR is merged
+					// secrets should be present
+					assert.Contains(t, task.Secrets, "MY_SECRET")
+					assert.Len(t, task.Secrets, 4)
 				case runFromBase:
 					assert.Contains(t, string(task.GetWorkflowPayload()), "job-base:") // running the workflow from the base branch, not the fork, which is why it can be trusted
 					assert.Contains(t, task.Secrets, "MY_SECRET")
@@ -2365,6 +2583,18 @@ jobs:
 					assert.Contains(t, task.Secrets, "MY_SECRET")
 					assert.Len(t, task.Secrets, 4)
 					writeToRepoCode(t, baseRepo, task.Secrets["FORGEJO_TOKEN"], http.StatusCreated)
+				default:
+					assert.Failf(t, "unexpected tc.expectedResult", "tc.expectedResult=%d was not implemented", tc.expectedResult)
+				}
+
+				ref, ok := task.Context.AsMap()["ref"]
+				switch tc.expectedRef {
+				case refPullRequest:
+					require.True(t, ok, "'ref' must exist in context")
+					assert.Equal(t, "refs/pull/1/head", ref)
+				case refBaseBranch:
+					require.True(t, ok, "'ref' must exist in context")
+					assert.Equal(t, "refs/heads/main", ref)
 				}
 
 				runner.execTask(t, task, &mockTaskOutcome{

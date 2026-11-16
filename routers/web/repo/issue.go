@@ -703,7 +703,7 @@ func RetrieveRepoReviewers(ctx *context.Context, repo *repo_model.Repository, is
 			posterID = 0
 		}
 
-		reviewers, err = repo_model.GetReviewers(ctx, repo, ctx.Doer.ID, posterID)
+		reviewers, err = repo_model.GetReviewers(ctx, repo, posterID)
 		if err != nil {
 			ctx.ServerError("GetReviewers", err)
 			return
@@ -902,12 +902,11 @@ func setTemplateIfExists(ctx *context.Context, ctxDataKey string, possibleFiles 
 
 	templateErrs := map[string]error{}
 	for _, filename := range templateCandidates {
-		if ok, _ := commit.HasFile(filename); !ok {
-			continue
-		}
 		template, err := issue_template.UnmarshalFromCommit(commit, filename)
 		if err != nil {
-			templateErrs[filename] = err
+			if _, ok := errors.AsType[git.ErrNotExist](err); !ok {
+				templateErrs[filename] = err
+			}
 			continue
 		}
 		ctx.Data[issueTemplateTitleKey] = template.Title

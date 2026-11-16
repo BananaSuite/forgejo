@@ -1,4 +1,5 @@
 // Copyright 2019 The Gitea Authors. All rights reserved.
+// Copyright 2026 The Forgejo Authors. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 package repo
@@ -14,6 +15,7 @@ import (
 	"forgejo.org/modules/charset"
 	"forgejo.org/modules/git"
 	"forgejo.org/modules/highlight"
+	lfs_reader "forgejo.org/modules/lfs/reader"
 	"forgejo.org/modules/log"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/templates"
@@ -67,12 +69,24 @@ func RefBlame(ctx *context.Context) {
 	ctx.Data["IsBlame"] = true
 
 	ctx.Data["BranchLink"] = ctx.Repo.RepoLink + "/src/" + ctx.Repo.BranchNameSubURL()
+	// Blame doesn't "support" Git LFS; it makes sense to show the "raw" version of
+	// the content that is otherwise visible as-is to the user.
 	ctx.Data["RawFileLink"] = ctx.Repo.RepoLink + "/raw/" + ctx.Repo.BranchNameSubURL() + "/" + util.PathEscapeSegments(ctx.Repo.TreePath)
 	ctx.Data["Paths"] = paths
 	ctx.Data["TreeNames"] = treeNames
 
 	ctx.Data["FileSize"] = blob.Size()
 	ctx.Data["FileName"] = blob.Name()
+
+	if setting.LFS.StartServer {
+		dataRc, fileInfo, err := lfs_reader.OpenReaderFromMaybeLFSBlob(ctx.Req.Context(), ctx.Repo.Repository.ID, blob)
+		if err != nil {
+			ctx.ServerError("OpenReaderFromMaybeLFSBlob", err)
+			return
+		}
+		ctx.Data["IsLFSFile"] = fileInfo.IsLFSFile
+		dataRc.Close()
+	}
 
 	// Do not display a blame view if the size of the file is
 	// larger than what is configured as the maximum.

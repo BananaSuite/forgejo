@@ -11,6 +11,7 @@ import (
 
 	"forgejo.org/models"
 	"forgejo.org/models/db"
+	quota_model "forgejo.org/models/quota"
 	repo_model "forgejo.org/models/repo"
 	user_model "forgejo.org/models/user"
 	"forgejo.org/models/webhook"
@@ -20,6 +21,7 @@ import (
 	repo_module "forgejo.org/modules/repository"
 	"forgejo.org/modules/setting"
 	"forgejo.org/modules/web"
+	webhook_module "forgejo.org/modules/webhook"
 	shared_user "forgejo.org/routers/web/shared/user"
 	user_setting "forgejo.org/routers/web/user/setting"
 	"forgejo.org/services/context"
@@ -58,6 +60,17 @@ func Settings(ctx *context.Context) {
 	if err != nil {
 		ctx.ServerError("LoadHeaderCount", err)
 		return
+	}
+
+	if ctx.Doer.IsAdmin {
+		defaultGroups, quotaGroups, err := quota_model.GetGroupsForUserMember(ctx, ctx.Org.Organization.AsUser().ID)
+		if err != nil {
+			ctx.ServerError("quota_model.GetGroupsForUserMember", err)
+			return
+		}
+
+		ctx.Data["DefaultGroups"] = defaultGroups
+		ctx.Data["QuotaGroups"] = quotaGroups
 	}
 
 	ctx.HTML(http.StatusOK, tplSettingsOptions)
@@ -156,6 +169,14 @@ func SettingsPost(ctx *context.Context) {
 		}
 	}
 
+	if ctx.Doer.IsAdmin {
+		err := quota_model.UpdateGroupsForUser(ctx, org.AsUser().ID, form.OldQuotaGroups, form.NewQuotaGroups)
+		if err != nil {
+			ctx.ServerError("quota_model.UpdateGroupsForUser", err)
+			return
+		}
+	}
+
 	log.Trace("Organization setting updated: %s", org.Name)
 	ctx.Flash.Success(ctx.Tr("org.settings.update_setting_success"))
 	ctx.Redirect(ctx.Org.OrgLink + "/settings")
@@ -229,7 +250,7 @@ func Webhooks(ctx *context.Context) {
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["BaseLink"] = ctx.Org.OrgLink + "/settings/hooks"
 	ctx.Data["BaseLinkNew"] = ctx.Org.OrgLink + "/settings/hooks"
-	ctx.Data["WebhookList"] = webhook_service.List()
+	ctx.Data["WebhookList"] = webhook_service.List(webhook_module.ScopeUser)
 	ctx.Data["Description"] = ctx.Tr("org.settings.hooks_desc")
 
 	ws, err := db.Find[webhook.Webhook](ctx, webhook.ListWebhookOptions{OwnerID: ctx.Org.Organization.ID})
