@@ -1302,5 +1302,10 @@
 	"admin.users.quota.default": "Výchozí skupiny kvót",
 	"admin.users.quota.default_configured": "Výchozí skupiny kvót se použijí, když nejsou vybrány žádné jiné skupiny. Aktuálně nastaveno: %[1]s",
 	"admin.notices.view_details": "Zobrazit podrobnosti oznámení %[1]d",
-	"packages.details.maintainer": "Správce"
+	"packages.details.maintainer": "Správce",
+	"repo.issues.force_push_comment": "Uživatel %[1]s vynuceně pushnul %[2]s z %[3]s do %[4]s %[5]s",
+	"repo.settings.lfs.pointers.delete_selection": "Smazat vybrané soubory",
+	"repo.settings.lfs.pointers.select_all": "Vybrat všechny ukazatele",
+	"repo.settings.lfs.pointers.delete.modal.header": "Smazat vybrané soubory Git LFS",
+	"repo.settings.lfs.pointers.delete.modal.description": "Vybrané soubory Git LFS budou odstraněny z úložiště obsahu Git LFS ve vašem repozitáři. Tato akce je trvalá a nevratná. Chcete pokračovat?"
 }
