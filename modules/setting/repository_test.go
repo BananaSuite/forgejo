@@ -73,7 +73,7 @@ func TestSSHInstanceKey(t *testing.T) {
 FORMAT = ssh
 `)
 		require.NoError(t, err)
-		require.Error(t, loadRepositoryFrom(cfg))
+		require.Errorf(t, loadRepositoryFrom(cfg), "missing [repository.signing].SIGNING_KEY for signing format ssh")
 	})
 
 	t.Run("No value", func(t *testing.T) {
@@ -83,7 +83,7 @@ FORMAT = ssh
 SIGNING_KEY =
 `)
 		require.NoError(t, err)
-		require.Error(t, loadRepositoryFrom(cfg))
+		require.Errorf(t, loadRepositoryFrom(cfg), "missing [repository.signing].SIGNING_KEY for signing format ssh")
 	})
 
 	t.Run("None value", func(t *testing.T) {
@@ -93,7 +93,7 @@ FORMAT = ssh
 SIGNING_KEY = none
 `)
 		require.NoError(t, err)
-		require.Error(t, loadRepositoryFrom(cfg))
+		require.Errorf(t, loadRepositoryFrom(cfg), "missing [repository.signing].SIGNING_KEY for signing format ssh")
 	})
 
 	t.Run("Key does not exist", func(t *testing.T) {
@@ -103,7 +103,7 @@ FORMAT = ssh
 SIGNING_KEY = /file/does/not/exist
 `)
 		require.NoError(t, err)
-		require.Error(t, loadRepositoryFrom(cfg))
+		require.ErrorContains(t, loadRepositoryFrom(cfg), "reading SSH signing key from [repository.signing].SIGNING_KEY failed:")
 	})
 
 	t.Run("Not a public SSH key", func(t *testing.T) {
@@ -116,7 +116,7 @@ SIGNING_KEY = %s
 `, sshSigningKeyPath)
 		cfg, err := NewConfigProviderFromData(iniStr)
 		require.NoError(t, err)
-		require.Error(t, loadRepositoryFrom(cfg))
+		require.ErrorContains(t, loadRepositoryFrom(cfg), "parsing SSH signing key from [repository.signing].SIGNING_KEY failed:")
 	})
 
 	t.Run("Normal", func(t *testing.T) {

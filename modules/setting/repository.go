@@ -317,7 +317,7 @@ func loadRepositoryFrom(rootCfg ConfigProvider) error {
 	}
 
 	if err = sec.MapTo(&Repository); err != nil {
-		return fmt.Errorf("Failed to map Repository settings: %v", err)
+		return fmt.Errorf("failed to map Repository settings: %w", err)
 	}
 
 	if !rootCfg.Section("packages").Key("ENABLED").MustBool(Packages.Enabled) {
@@ -372,21 +372,21 @@ func loadRepositoryFrom(rootCfg ConfigProvider) error {
 	}
 
 	if err := loadRepoArchiveFrom(rootCfg); err != nil {
-		return fmt.Errorf("loadRepoArchiveFrom: %v", err)
+		return fmt.Errorf("loadRepoArchiveFrom: %w", err)
 	}
 	Repository.EnableFlags = sec.Key("ENABLE_FLAGS").MustBool()
 
 	if Repository.Signing.Format == "ssh" {
 		if Repository.Signing.SigningKey == "none" || Repository.Signing.SigningKey == "" || Repository.Signing.SigningKey == "default" {
-			return fmt.Errorf("SIGNING_KEY key must be specified, if signing format ssh is chosen")
+			return fmt.Errorf("missing [repository.signing].SIGNING_KEY for signing format ssh")
 		}
 		sshPublicKey, err := os.ReadFile(Repository.Signing.SigningKey)
 		if err != nil {
-			return fmt.Errorf("Could not read repository signing key in %q: %v", Repository.Signing.SigningKey, err)
+			return fmt.Errorf("reading SSH signing key from [repository.signing].SIGNING_KEY failed: %w", err)
 		}
 		SSHInstanceKey, _, _, _, err = ssh.ParseAuthorizedKey(sshPublicKey)
 		if err != nil {
-			return fmt.Errorf("Could not parse the SSH signing key %q: %v", sshPublicKey, err)
+			return fmt.Errorf("parsing SSH signing key from [repository.signing].SIGNING_KEY failed: %w", err)
 		}
 	}
 
